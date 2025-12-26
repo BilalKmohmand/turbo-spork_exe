@@ -32,42 +32,15 @@ export class MemStorage implements IStorage {
   }
 
   private initializeSampleData() {
-    const sampleAssignments: Assignment[] = [
-      {
-        id: randomUUID(),
-        title: "Introduction to Python Programming",
-        subject: "Computer Science",
-        description: "Write a Python program that calculates the factorial of a number using recursion. Explain your approach and include comments.",
-        dueDate: "2025-01-15",
-        maxScore: 100,
-      },
-      {
-        id: randomUUID(),
-        title: "Essay on Climate Change",
-        subject: "Environmental Science",
-        description: "Write a 500-word essay discussing the main causes and effects of climate change, and propose three practical solutions.",
-        dueDate: "2025-01-20",
-        maxScore: 100,
-      },
-      {
-        id: randomUUID(),
-        title: "Mathematical Problem Set",
-        subject: "Mathematics",
-        description: "Solve the following calculus problems involving derivatives and integrals. Show all your work and explain each step.",
-        dueDate: "2025-01-18",
-        maxScore: 100,
-      },
-      {
-        id: randomUUID(),
-        title: "Literary Analysis: Shakespeare",
-        subject: "English Literature",
-        description: "Analyze the themes of ambition and guilt in Macbeth. Provide textual evidence to support your arguments.",
-        dueDate: "2025-01-25",
-        maxScore: 100,
-      },
-    ];
-
-    sampleAssignments.forEach(a => this.assignments.set(a.id, a));
+    const generalAssignment: Assignment = {
+      id: "general",
+      title: "General Submission",
+      subject: "General",
+      description: "Submit any work for AI evaluation",
+      dueDate: "2099-12-31",
+      maxScore: 100,
+    };
+    this.assignments.set(generalAssignment.id, generalAssignment);
   }
 
   async getUser(id: string): Promise<User | undefined> {
