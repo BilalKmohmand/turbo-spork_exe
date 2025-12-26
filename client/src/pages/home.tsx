@@ -1,20 +1,11 @@
 import { useState, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Send, Paperclip, Camera, X, FileText, Loader2, CheckCircle, Target, Lightbulb, Award } from "lucide-react";
-
-interface AIResult {
-  score: number;
-  accuracy: number;
-  completeness: number;
-  creativity: number;
-  feedback: string;
-}
+import { Upload, Camera, Loader2, CheckCircle, Target, Lightbulb, Award, RotateCcw } from "lucide-react";
 
 interface SubmissionResult {
   id: string;
@@ -28,10 +19,9 @@ interface SubmissionResult {
 }
 
 export default function Home() {
-  const [inputText, setInputText] = useState("");
-  const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [result, setResult] = useState<SubmissionResult | null>(null);
   const [isPolling, setIsPolling] = useState(false);
+  const [fileName, setFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -88,173 +78,68 @@ export default function Home() {
     poll();
   };
 
-  const handleSubmit = async () => {
-    let content = inputText.trim();
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-    if (attachedFile) {
-      const fileContent = await attachedFile.text();
-      content = content ? `${content}\n\n--- Attached File: ${attachedFile.name} ---\n${fileContent}` : fileContent;
-    }
+    setFileName(file.name);
+    setResult(null);
 
-    if (!content) {
+    try {
+      const content = await file.text();
+      submitMutation.mutate(`File: ${file.name}\n\n${content}`);
+    } catch {
       toast({
-        title: "Empty submission",
-        description: "Please enter some text or attach a file.",
+        title: "Error reading file",
+        description: "Could not read the file. Please try again.",
         variant: "destructive",
       });
-      return;
     }
 
+    e.target.value = "";
+  };
+
+  const handleReset = () => {
     setResult(null);
-    submitMutation.mutate(content);
-    setInputText("");
-    setAttachedFile(null);
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setAttachedFile(file);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit();
-    }
+    setFileName(null);
   };
 
   const getScoreColor = (score: number) => {
-    if (score >= 80) return "text-green-600 dark:text-green-400";
-    if (score >= 60) return "text-yellow-600 dark:text-yellow-400";
-    return "text-red-600 dark:text-red-400";
+    if (score >= 80) return "text-emerald-500";
+    if (score >= 60) return "text-amber-500";
+    return "text-rose-500";
   };
 
+  const getScoreBg = (score: number) => {
+    if (score >= 80) return "bg-emerald-500/10";
+    if (score >= 60) return "bg-amber-500/10";
+    return "bg-rose-500/10";
+  };
+
+  const isLoading = submitMutation.isPending || (isPolling && result?.status === "pending");
+
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-auto p-4 pb-32">
-        <div className="max-w-3xl mx-auto">
-          {!result && !submitMutation.isPending && (
-            <div className="text-center py-20">
-              <h1 className="text-3xl font-bold mb-4">AI Assignment Evaluator</h1>
-              <p className="text-muted-foreground text-lg mb-8">
-                Submit your work and get instant AI feedback
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-muted-foreground max-w-xl mx-auto">
-                <div className="flex flex-col items-center gap-2 p-4">
-                  <FileText className="w-8 h-8 text-primary/60" />
-                  <span>Type or paste text</span>
-                </div>
-                <div className="flex flex-col items-center gap-2 p-4">
-                  <Paperclip className="w-8 h-8 text-primary/60" />
-                  <span>Upload a file</span>
-                </div>
-                <div className="flex flex-col items-center gap-2 p-4">
-                  <Camera className="w-8 h-8 text-primary/60" />
-                  <span>Take a photo</span>
-                </div>
+    <div className="flex flex-col items-center justify-center min-h-full p-6">
+      <div className="w-full max-w-md">
+        {!result && !isLoading && (
+          <div className="text-center">
+            <div className="mb-8">
+              <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-primary/10 flex items-center justify-center">
+                <Award className="w-10 h-10 text-primary" />
               </div>
+              <h1 className="text-2xl font-bold mb-2">AI Assignment Evaluator</h1>
+              <p className="text-muted-foreground">
+                Upload your work to get instant feedback
+              </p>
             </div>
-          )}
 
-          {(submitMutation.isPending || isPolling) && result?.status === "pending" && (
-            <Card className="mb-4">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                  <span className="font-medium">Analyzing your submission...</span>
-                </div>
-                <div className="space-y-3">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-4 w-5/6" />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {result && result.status !== "pending" && (
-            <Card className="mb-4" data-testid="card-result">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-2 mb-6">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span className="font-medium">Evaluation Complete</span>
-                </div>
-
-                <div className="text-center mb-8">
-                  <p className="text-sm text-muted-foreground mb-2">Overall Score</p>
-                  <p className={`text-6xl font-bold ${getScoreColor(result.aiScore || 0)}`} data-testid="text-overall-score">
-                    {result.aiScore}
-                    <span className="text-2xl text-muted-foreground">/100</span>
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-3 gap-4 mb-8">
-                  <div className="text-center p-4 bg-muted/30 rounded-lg">
-                    <Target className="w-5 h-5 mx-auto mb-2 text-blue-500" />
-                    <p className="text-2xl font-bold" data-testid="text-accuracy-score">{result.aiAccuracy}</p>
-                    <p className="text-xs text-muted-foreground">Accuracy</p>
-                  </div>
-                  <div className="text-center p-4 bg-muted/30 rounded-lg">
-                    <Award className="w-5 h-5 mx-auto mb-2 text-purple-500" />
-                    <p className="text-2xl font-bold" data-testid="text-completeness-score">{result.aiCompleteness}</p>
-                    <p className="text-xs text-muted-foreground">Completeness</p>
-                  </div>
-                  <div className="text-center p-4 bg-muted/30 rounded-lg">
-                    <Lightbulb className="w-5 h-5 mx-auto mb-2 text-yellow-500" />
-                    <p className="text-2xl font-bold" data-testid="text-creativity-score">{result.aiCreativity}</p>
-                    <p className="text-xs text-muted-foreground">Creativity</p>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="font-medium mb-3">Feedback</h3>
-                  <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap" data-testid="text-feedback">
-                    {result.aiFeedback}
-                  </p>
-                </div>
-
-                <Button
-                  variant="outline"
-                  className="w-full mt-6"
-                  onClick={() => setResult(null)}
-                  data-testid="button-new-submission"
-                >
-                  Submit Another
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </div>
-
-      <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4">
-        <div className="max-w-3xl mx-auto">
-          {attachedFile && (
-            <div className="flex items-center gap-2 mb-2 p-2 bg-muted/50 rounded-lg w-fit">
-              <FileText className="w-4 h-4" />
-              <span className="text-sm">{attachedFile.name}</span>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-6 w-6"
-                onClick={() => setAttachedFile(null)}
-                data-testid="button-remove-file"
-              >
-                <X className="w-3 h-3" />
-              </Button>
-            </div>
-          )}
-
-          <div className="flex items-end gap-2">
-            <div className="flex gap-1">
+            <div className="grid grid-cols-2 gap-4">
               <input
                 type="file"
                 ref={fileInputRef}
                 onChange={handleFileSelect}
                 className="hidden"
-                accept=".txt,.md,.py,.js,.ts,.java,.c,.cpp,.html,.css,.json"
+                accept=".txt,.md,.py,.js,.ts,.java,.c,.cpp,.html,.css,.json,.pdf,.doc,.docx"
                 data-testid="input-file"
               />
               <input
@@ -266,54 +151,111 @@ export default function Home() {
                 capture="environment"
                 data-testid="input-camera"
               />
+
               <Button
-                size="icon"
-                variant="ghost"
+                variant="outline"
+                size="lg"
+                className="h-32 flex-col gap-3 text-base"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={submitMutation.isPending}
-                data-testid="button-attach"
+                data-testid="button-upload"
               >
-                <Paperclip className="w-5 h-5" />
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Upload className="w-6 h-6 text-primary" />
+                </div>
+                Upload File
               </Button>
+
               <Button
-                size="icon"
-                variant="ghost"
+                variant="outline"
+                size="lg"
+                className="h-32 flex-col gap-3 text-base"
                 onClick={() => cameraInputRef.current?.click()}
-                disabled={submitMutation.isPending}
                 data-testid="button-camera"
               >
-                <Camera className="w-5 h-5" />
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Camera className="w-6 h-6 text-primary" />
+                </div>
+                Take Photo
               </Button>
             </div>
 
-            <Textarea
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Paste your assignment here or upload a file..."
-              className="flex-1 min-h-[52px] max-h-32 resize-none"
-              disabled={submitMutation.isPending}
-              data-testid="textarea-input"
-            />
-
-            <Button
-              size="icon"
-              onClick={handleSubmit}
-              disabled={submitMutation.isPending || (!inputText.trim() && !attachedFile)}
-              data-testid="button-submit"
-            >
-              {submitMutation.isPending ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Send className="w-5 h-5" />
-              )}
-            </Button>
+            <p className="text-xs text-muted-foreground mt-6">
+              Supports text files, code, documents, and images
+            </p>
           </div>
+        )}
 
-          <p className="text-xs text-muted-foreground text-center mt-2">
-            Press Enter to submit, Shift+Enter for new line
-          </p>
-        </div>
+        {isLoading && (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-primary/10 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              </div>
+              <h2 className="text-lg font-semibold mb-2">Analyzing...</h2>
+              <p className="text-sm text-muted-foreground mb-6">
+                {fileName || "Your submission"}
+              </p>
+              <div className="space-y-3 max-w-xs mx-auto">
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-4/5" />
+                <Skeleton className="h-3 w-3/4" />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {result && result.status !== "pending" && (
+          <Card data-testid="card-result">
+            <CardContent className="p-6">
+              <div className="text-center mb-6">
+                <div className={`w-24 h-24 mx-auto mb-4 rounded-2xl ${getScoreBg(result.aiScore || 0)} flex items-center justify-center`}>
+                  <span className={`text-4xl font-bold ${getScoreColor(result.aiScore || 0)}`} data-testid="text-overall-score">
+                    {result.aiScore}
+                  </span>
+                </div>
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <CheckCircle className="w-4 h-4 text-emerald-500" />
+                  Evaluation Complete
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3 mb-6">
+                <div className="text-center p-3 bg-muted/40 rounded-xl">
+                  <Target className="w-4 h-4 mx-auto mb-1.5 text-blue-500" />
+                  <p className="text-lg font-bold" data-testid="text-accuracy-score">{result.aiAccuracy}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Accuracy</p>
+                </div>
+                <div className="text-center p-3 bg-muted/40 rounded-xl">
+                  <Award className="w-4 h-4 mx-auto mb-1.5 text-purple-500" />
+                  <p className="text-lg font-bold" data-testid="text-completeness-score">{result.aiCompleteness}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Complete</p>
+                </div>
+                <div className="text-center p-3 bg-muted/40 rounded-xl">
+                  <Lightbulb className="w-4 h-4 mx-auto mb-1.5 text-amber-500" />
+                  <p className="text-lg font-bold" data-testid="text-creativity-score">{result.aiCreativity}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Creative</p>
+                </div>
+              </div>
+
+              <div className="bg-muted/30 rounded-xl p-4 mb-6">
+                <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">Feedback</h3>
+                <p className="text-sm leading-relaxed" data-testid="text-feedback">
+                  {result.aiFeedback}
+                </p>
+              </div>
+
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={handleReset}
+                data-testid="button-new-submission"
+              >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Evaluate Another
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
