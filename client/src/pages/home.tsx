@@ -3,6 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { 
@@ -15,7 +16,8 @@ import {
   User, 
   Bot,
   Camera,
-  ImageIcon
+  ImageIcon,
+  Type
 } from "lucide-react";
 import type { Message } from "@shared/schema";
 
@@ -38,9 +40,32 @@ export default function Home() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [followUpQuestion, setFollowUpQuestion] = useState("");
   const [isAskingFollowUp, setIsAskingFollowUp] = useState(false);
+  const [textProblem, setTextProblem] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  const textMutation = useMutation({
+    mutationFn: async (problem: string) => {
+      const response = await apiRequest("POST", "/api/solve-text", { problem });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to solve");
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setResult(data);
+      setTextProblem("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to solve problem.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const submitMutation = useMutation({
     mutationFn: async ({ base64, mimeType }: { base64: string; mimeType: string }) => {
@@ -190,9 +215,16 @@ export default function Home() {
     setResult(null);
     setPreviewUrl(null);
     setFollowUpQuestion("");
+    setTextProblem("");
   };
 
-  const isLoading = submitMutation.isPending || isUploading || (isPolling && result?.status === "pending");
+  const handleTextSubmit = () => {
+    if (textProblem.trim()) {
+      textMutation.mutate(textProblem.trim());
+    }
+  };
+
+  const isLoading = submitMutation.isPending || textMutation.isPending || isUploading || (isPolling && result?.status === "pending");
 
   return (
     <div className="min-h-screen bg-background">
@@ -280,6 +312,32 @@ export default function Home() {
             <p className="text-center text-sm text-muted-foreground">
               Supports JPG, PNG, HEIC and other image formats up to 10MB
             </p>
+
+            <div className="relative flex items-center gap-4 my-6">
+              <div className="flex-1 h-px bg-border" />
+              <span className="text-sm text-muted-foreground px-2">or type your problem</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+
+            <div className="space-y-3">
+              <Textarea
+                placeholder="Type or paste your homework problem here..."
+                value={textProblem}
+                onChange={(e) => setTextProblem(e.target.value)}
+                className="min-h-[120px] text-base"
+                data-testid="input-text-problem"
+              />
+              <Button
+                onClick={handleTextSubmit}
+                disabled={!textProblem.trim()}
+                className="w-full"
+                size="lg"
+                data-testid="button-solve-text"
+              >
+                <Type className="w-5 h-5 mr-2" />
+                Solve Problem
+              </Button>
+            </div>
           </div>
         )}
 

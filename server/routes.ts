@@ -115,20 +115,23 @@ async function solveWithAI(content: string): Promise<{
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-5",
       max_tokens: 4096,
-      system: `You are an expert tutor that solves homework problems. You MUST respond with valid JSON only - no other text.
+      system: `You are an expert tutor that solves homework problems completely.
 
-Solve the given problem and respond with this exact JSON structure:
-{"solution": "final answer here", "steps": ["Step 1: description", "Step 2: description"], "explanation": "key concepts"}
+If there are MULTIPLE questions, solve ALL of them and combine into ONE response.
 
-Rules:
-- Output ONLY the JSON object, nothing else
-- No markdown, no explanations outside JSON
-- Include 3-6 clear steps
-- Make the solution educational`,
+Respond with ONLY a JSON object:
+{"solution": "Final answer(s) as a single string", "steps": ["Step 1: ...", "Step 2: ..."], "explanation": "Key concepts as a single string"}
+
+CRITICAL RULES:
+- solution MUST be a simple string, not an object
+- steps MUST be an array of strings
+- explanation MUST be a simple string
+- If multiple questions, format solution as "Q1: answer1, Q2: answer2" etc.
+- Output ONLY valid JSON`,
       messages: [
         {
           role: "user",
-          content: `Solve this problem and respond with JSON only:\n\n${content}`,
+          content: `Solve this problem. Return JSON with solution as a string, steps as string array, explanation as a string:\n\n${content}`,
         },
       ],
     });
@@ -136,7 +139,6 @@ Rules:
     const textContent = response.content.find(block => block.type === "text");
     let text = textContent?.type === "text" ? textContent.text : "";
     
-    // Try to extract JSON from the response
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       text = jsonMatch[0];
@@ -145,25 +147,20 @@ Rules:
     try {
       const result = JSON.parse(text);
       return {
-        solution: result.solution || "See steps below.",
-        steps: Array.isArray(result.steps) ? result.steps : ["Solution provided above."],
-        explanation: result.explanation || "Review the steps for understanding.",
+        solution: ensureString(result.solution) || "See steps below.",
+        steps: ensureStringArray(result.steps),
+        explanation: ensureString(result.explanation) || "Review the steps for understanding.",
       };
     } catch {
-      // If JSON parsing fails, use the raw text as the solution
       return {
-        solution: text.slice(0, 500) || "Solution generated.",
-        steps: ["The AI provided a response but it wasn't in the expected format."],
-        explanation: "Please review the solution above.",
+        solution: text.slice(0, 1000) || "Solution generated.",
+        steps: ["Review the answer above."],
+        explanation: "The problem has been solved.",
       };
     }
   } catch (error: any) {
     console.error("AI solution error:", error?.message || error);
-    return {
-      solution: "Unable to solve at this time.",
-      steps: ["Please try uploading a clearer image or a different problem."],
-      explanation: "There was an issue with the AI. Please try again.",
-    };
+    throw new Error("Failed to solve: " + (error?.message || "Please try again"));
   }
 }
 
@@ -255,6 +252,37 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Image submission error:", error?.message || error);
       res.status(500).json({ error: error?.message || "Failed to process image" });
+    }
+  });
+
+  app.post("/api/solve-text", async (req, res) => {
+    try {
+      const { problem } = req.body;
+      
+      if (!problem || typeof problem !== "string" || !problem.trim()) {
+        return res.status(400).json({ error: "Please enter a problem to solve" });
+      }
+
+      const aiResult = await solveWithAI(problem.trim());
+      
+      const submission = await storage.createSubmission({
+        assignmentId: "general",
+        studentName: "Student",
+        content: problem.trim(),
+      });
+      
+      await storage.updateSubmission(submission.id, {
+        status: "ai_graded",
+        aiSolution: aiResult.solution,
+        aiSteps: aiResult.steps,
+        aiExplanation: aiResult.explanation,
+      });
+
+      const updated = await storage.getSubmission(submission.id);
+      res.status(201).json(updated);
+    } catch (error: any) {
+      console.error("Text submission error:", error?.message || error);
+      res.status(500).json({ error: error?.message || "Failed to solve problem" });
     }
   });
 
