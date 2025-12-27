@@ -1,8 +1,7 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -15,10 +14,8 @@ import {
   Send, 
   User, 
   Bot,
-  ArrowRight,
-  Lightbulb,
-  BookOpen,
-  Zap
+  Camera,
+  ImageIcon
 } from "lucide-react";
 import type { Message } from "@shared/schema";
 
@@ -26,6 +23,7 @@ interface SubmissionResult {
   id: string;
   content: string;
   status: string;
+  extractedText?: string;
   aiSolution?: string;
   aiSteps?: string[];
   aiExplanation?: string;
@@ -33,32 +31,36 @@ interface SubmissionResult {
 }
 
 export default function Home() {
-  const [problemText, setProblemText] = useState("");
   const [result, setResult] = useState<SubmissionResult | null>(null);
   const [isPolling, setIsPolling] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [followUpQuestion, setFollowUpQuestion] = useState("");
   const [isAskingFollowUp, setIsAskingFollowUp] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const submitMutation = useMutation({
-    mutationFn: async (content: string) => {
-      const response = await apiRequest("POST", "/api/submissions", {
-        assignmentId: "general",
-        studentName: "Student",
-        content,
+    mutationFn: async ({ base64, mimeType }: { base64: string; mimeType: string }) => {
+      const response = await apiRequest("POST", "/api/solve-image", {
+        image: base64,
+        mimeType,
       });
       return response.json();
     },
     onSuccess: async (data) => {
       setResult(data);
       setIsPolling(true);
+      setIsUploading(false);
       pollForResult(data.id);
     },
     onError: () => {
+      setIsUploading(false);
       toast({
         title: "Error",
-        description: "Failed to submit. Please try again.",
+        description: "Failed to process image. Please try again.",
         variant: "destructive",
       });
     },
@@ -93,50 +95,71 @@ export default function Home() {
     poll();
   };
 
-  const handleSubmit = () => {
-    if (!problemText.trim()) {
+  const processFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
       toast({
-        title: "Enter a problem",
-        description: "Please type or paste your problem first.",
+        title: "Invalid file",
+        description: "Please upload an image file (JPG, PNG, etc.)",
         variant: "destructive",
       });
       return;
     }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please upload an image smaller than 10MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploading(true);
     setResult(null);
-    submitMutation.mutate(problemText.trim());
+
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(",")[1];
+      submitMutation.mutate({ base64, mimeType: file.type });
+    };
+    reader.onerror = () => {
+      setIsUploading(false);
+      toast({
+        title: "Error",
+        description: "Failed to read image. Please try again.",
+        variant: "destructive",
+      });
+    };
+    reader.readAsDataURL(file);
   };
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.type.startsWith("image/")) {
-      toast({
-        title: "Images not supported yet",
-        description: "Please upload a text file or type your problem directly.",
-        variant: "destructive",
-      });
-      e.target.value = "";
-      return;
-    }
-
-    try {
-      const content = await file.text();
-      setProblemText(content);
-      toast({
-        title: "File loaded",
-        description: `Loaded "${file.name}" - review and click Get Solution.`,
-      });
-    } catch {
-      toast({
-        title: "Error reading file",
-        description: "Could not read the file. Please try again.",
-        variant: "destructive",
-      });
-    }
-
+    if (file) processFile(file);
     e.target.value = "";
   };
+
+  const handleDrag = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    const file = e.dataTransfer.files?.[0];
+    if (file) processFile(file);
+  }, []);
 
   const handleFollowUp = async () => {
     if (!followUpQuestion.trim() || !result?.id) return;
@@ -162,11 +185,11 @@ export default function Home() {
 
   const handleReset = () => {
     setResult(null);
-    setProblemText("");
+    setPreviewUrl(null);
     setFollowUpQuestion("");
   };
 
-  const isLoading = submitMutation.isPending || (isPolling && result?.status === "pending");
+  const isLoading = submitMutation.isPending || isUploading || (isPolling && result?.status === "pending");
 
   return (
     <div className="min-h-screen bg-background">
@@ -178,95 +201,113 @@ export default function Home() {
                 <Sparkles className="w-8 h-8" />
               </div>
               <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
-                Solve Any Problem
+                Snap & Solve
               </h1>
               <p className="text-muted-foreground text-lg max-w-md mx-auto">
-                Type your math, science, or homework question and get a step-by-step solution instantly
+                Take a photo of your homework and get step-by-step solutions instantly
               </p>
             </div>
 
-            <Card className="border-2">
-              <CardContent className="p-6 space-y-4">
-                <Textarea
-                  value={problemText}
-                  onChange={(e) => setProblemText(e.target.value)}
-                  placeholder="Type or paste your problem here...&#10;&#10;Examples:&#10;- Solve for x: 2x + 5 = 13&#10;- What is the derivative of x^2 + 3x?&#10;- Explain the water cycle"
-                  className="min-h-[200px] text-base resize-none border-0 focus-visible:ring-0 bg-transparent"
-                  data-testid="input-problem"
-                />
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              className="hidden"
+              accept="image/*"
+              data-testid="input-file"
+            />
+            <input
+              type="file"
+              ref={cameraInputRef}
+              onChange={handleFileSelect}
+              className="hidden"
+              accept="image/*"
+              capture="environment"
+              data-testid="input-camera"
+            />
+
+            <div
+              className={`relative border-2 border-dashed rounded-2xl p-12 transition-colors ${
+                dragActive 
+                  ? "border-primary bg-primary/5" 
+                  : "border-muted-foreground/25 hover:border-primary/50"
+              }`}
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+              data-testid="dropzone"
+            >
+              <div className="flex flex-col items-center gap-6 text-center">
+                <div className="w-20 h-20 rounded-2xl bg-muted flex items-center justify-center">
+                  <ImageIcon className="w-10 h-10 text-muted-foreground" />
+                </div>
                 
-                <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileSelect}
-                    className="hidden"
-                    accept=".txt,.md,.py,.js,.ts,.java,.c,.cpp,.html,.css,.json"
-                    data-testid="input-file"
-                  />
-                  
+                <div className="space-y-2">
+                  <p className="text-lg font-medium">
+                    Drop your homework image here
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    or use the buttons below
+                  </p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button
+                    size="lg"
+                    onClick={() => cameraInputRef.current?.click()}
+                    data-testid="button-camera"
+                  >
+                    <Camera className="w-5 h-5 mr-2" />
+                    Take Photo
+                  </Button>
                   <Button
                     variant="outline"
+                    size="lg"
                     onClick={() => fileInputRef.current?.click()}
-                    className="sm:w-auto"
                     data-testid="button-upload"
                   >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload Text File
-                  </Button>
-                  
-                  <Button
-                    onClick={handleSubmit}
-                    disabled={!problemText.trim()}
-                    className="flex-1 sm:flex-none"
-                    size="lg"
-                    data-testid="button-submit"
-                  >
-                    Get Solution
-                    <ArrowRight className="w-4 h-4 ml-2" />
+                    <Upload className="w-5 h-5 mr-2" />
+                    Upload Image
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-
-            <div className="grid grid-cols-3 gap-4 text-center text-sm text-muted-foreground">
-              <div className="flex flex-col items-center gap-2">
-                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                  <Zap className="w-5 h-5" />
-                </div>
-                <span>Instant answers</span>
-              </div>
-              <div className="flex flex-col items-center gap-2">
-                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                  <BookOpen className="w-5 h-5" />
-                </div>
-                <span>All subjects</span>
-              </div>
-              <div className="flex flex-col items-center gap-2">
-                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                  <Lightbulb className="w-5 h-5" />
-                </div>
-                <span>Learn concepts</span>
               </div>
             </div>
+
+            <p className="text-center text-sm text-muted-foreground">
+              Supports JPG, PNG, HEIC and other image formats up to 10MB
+            </p>
           </div>
         )}
 
         {isLoading && (
           <Card className="border-2">
-            <CardContent className="p-12 text-center space-y-6">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-primary text-primary-foreground">
-                <Loader2 className="w-10 h-10 animate-spin" />
-              </div>
-              <div className="space-y-2">
-                <h2 className="text-xl font-semibold">Solving your problem...</h2>
-                <p className="text-muted-foreground">
-                  Claude is analyzing and creating a step-by-step solution
-                </p>
-              </div>
-              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                <span>This usually takes a few seconds</span>
+            <CardContent className="p-8 space-y-6">
+              {previewUrl && (
+                <div className="flex justify-center">
+                  <img 
+                    src={previewUrl} 
+                    alt="Uploaded homework" 
+                    className="max-h-48 rounded-lg object-contain"
+                    data-testid="img-preview"
+                  />
+                </div>
+              )}
+              <div className="text-center space-y-4">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary text-primary-foreground">
+                  <Loader2 className="w-8 h-8 animate-spin" />
+                </div>
+                <div className="space-y-2">
+                  <h2 className="text-xl font-semibold">
+                    {isPolling ? "Claude is solving..." : "Reading your image..."}
+                  </h2>
+                  <p className="text-muted-foreground">
+                    {isPolling 
+                      ? "Creating a step-by-step solution" 
+                      : "Extracting text and equations"
+                    }
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -274,7 +315,7 @@ export default function Home() {
 
         {result && result.status !== "pending" && (
           <div className="space-y-6" data-testid="card-result">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
                   <CheckCircle2 className="w-5 h-5 text-green-600" />
@@ -294,6 +335,24 @@ export default function Home() {
                 New Problem
               </Button>
             </div>
+
+            {previewUrl && (
+              <Card className="border">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-4">
+                    <img 
+                      src={previewUrl} 
+                      alt="Problem" 
+                      className="w-24 h-24 rounded-lg object-cover flex-shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-muted-foreground mb-1">Extracted Problem:</p>
+                      <p className="text-sm line-clamp-3">{result.content}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             <Card className="border-2">
               <CardContent className="p-6 space-y-6">
@@ -355,7 +414,7 @@ export default function Home() {
                     {result.messages.map((msg, index) => (
                       <div 
                         key={index} 
-                        className={`flex gap-3 ${msg.role === "user" ? "" : ""}`}
+                        className="flex gap-3"
                         data-testid={`message-${index}`}
                       >
                         <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${

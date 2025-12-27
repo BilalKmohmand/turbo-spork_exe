@@ -3,11 +3,48 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertSubmissionSchema, evaluationSchema } from "@shared/schema";
 import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 
 const anthropic = new Anthropic({
   apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
   baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
 });
+
+const openai = new OpenAI({
+  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+});
+
+async function extractTextFromImage(base64Image: string, mimeType: string): Promise<string> {
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: "Please extract and transcribe all text, equations, and problems from this image. If there are math problems, write them in a clear format. Be thorough and accurate.",
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:${mimeType};base64,${base64Image}`,
+              },
+            },
+          ],
+        },
+      ],
+      max_tokens: 1024,
+    });
+
+    return response.choices[0]?.message?.content || "Could not extract text from image.";
+  } catch (error) {
+    console.error("Image extraction error:", error);
+    throw new Error("Failed to process image");
+  }
+}
 
 async function solveWithAI(content: string): Promise<{
   solution: string;
@@ -110,6 +147,47 @@ export async function registerRoutes(
       })();
     } catch (error) {
       res.status(500).json({ error: "Failed to create submission" });
+    }
+  });
+
+  app.post("/api/solve-image", async (req, res) => {
+    try {
+      const { image, mimeType } = req.body;
+      
+      if (!image || !mimeType) {
+        return res.status(400).json({ error: "Image and mimeType are required" });
+      }
+
+      if (!mimeType.startsWith("image/")) {
+        return res.status(400).json({ error: "Invalid file type. Please upload an image." });
+      }
+
+      const extractedText = await extractTextFromImage(image, mimeType);
+      
+      const submission = await storage.createSubmission({
+        assignmentId: "general",
+        studentName: "Student",
+        content: extractedText,
+      });
+      
+      res.status(201).json({ ...submission, extractedText });
+
+      (async () => {
+        try {
+          const aiResult = await solveWithAI(extractedText);
+          await storage.updateSubmission(submission.id, {
+            status: "ai_graded",
+            aiSolution: aiResult.solution,
+            aiSteps: aiResult.steps,
+            aiExplanation: aiResult.explanation,
+          });
+        } catch (error) {
+          console.error("Background AI solution failed:", error);
+        }
+      })();
+    } catch (error) {
+      console.error("Image submission error:", error);
+      res.status(500).json({ error: "Failed to process image" });
     }
   });
 
