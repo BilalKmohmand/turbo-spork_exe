@@ -73,6 +73,11 @@ MATH FORMATTING RULES:
 - Use LaTeX syntax: fractions \\frac{a}{b}, exponents x^2, subscripts x_1, roots \\sqrt{x}
 - Always format mathematical expressions in LaTeX
 
+EXPLANATION RULES:
+- Each step MUST explain WHY we do this operation, not just what we do
+- Format: "Step title" followed by the math, then explain the reasoning
+- Example: "Divide total by number of groups $$\\frac{30}{6} = 5$$ Since there are 30 items split equally into 6 groups, dividing gives us 5 items per group."
+
 GRAPH RULES:
 - graphSpec: Include for equations/functions/inequalities. Use Desmos format (e.g., "y=2x+1", "x>3")
 - For inequalities like x > 3, use expressions: ["x=3"] with appropriate bounds
@@ -149,6 +154,11 @@ MATH FORMATTING RULES:
 - Use $$...$$ for important equations on their own line: "$$x^2 + 2x + 1 = 0$$"
 - Use LaTeX syntax: fractions \\frac{a}{b}, exponents x^2, subscripts x_1, roots \\sqrt{x}
 - Always format mathematical expressions in LaTeX
+
+EXPLANATION RULES:
+- Each step MUST explain WHY we do this operation, not just what we do
+- Format: "Step title" followed by the math, then explain the reasoning
+- Example: "Divide total by number of groups $$\\frac{30}{6} = 5$$ Since there are 30 items split equally into 6 groups, dividing gives us 5 items per group."
 
 GRAPH RULES:
 - graphSpec: Include for equations/functions/inequalities. Use Desmos format (e.g., "y=2x+1", "x>3")
