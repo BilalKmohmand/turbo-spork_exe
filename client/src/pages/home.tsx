@@ -1,25 +1,17 @@
 import { useState, useRef, useCallback } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { GraphPanel } from "@/components/graph-panel";
 import { renderMathText, SolutionStep } from "@/components/math-display";
 import { 
-  Upload, 
   Loader2, 
-  CheckCircle2, 
-  RotateCcw, 
-  Sparkles, 
   Send, 
-  Camera,
-  ImageIcon,
-  ArrowRight,
-  Zap,
-  BookOpen,
-  Brain,
+  Paperclip,
+  Plus,
+  Sparkles,
   ThumbsUp,
   ThumbsDown,
   Copy,
@@ -42,15 +34,24 @@ interface SubmissionResult {
 export default function Home() {
   const [result, setResult] = useState<SubmissionResult | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [dragActive, setDragActive] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [followUpQuestion, setFollowUpQuestion] = useState("");
   const [isAskingFollowUp, setIsAskingFollowUp] = useState(false);
   const [textProblem, setTextProblem] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [submittedProblem, setSubmittedProblem] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      chatContainerRef.current?.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: "smooth"
+      });
+    }, 100);
+  };
 
   const textMutation = useMutation({
     mutationFn: async (problem: string) => {
@@ -63,7 +64,7 @@ export default function Home() {
     },
     onSuccess: (data) => {
       setResult(data);
-      setTextProblem("");
+      scrollToBottom();
     },
     onError: (error: Error) => {
       toast({
@@ -90,6 +91,7 @@ export default function Home() {
       setResult(data);
       setIsUploading(false);
       setUploadProgress(100);
+      scrollToBottom();
     },
     onError: (error: Error) => {
       setIsUploading(false);
@@ -159,6 +161,7 @@ export default function Home() {
     setIsUploading(true);
     setResult(null);
     setUploadProgress(10);
+    setSubmittedProblem("");
 
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
@@ -188,17 +191,11 @@ export default function Home() {
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
   }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setDragActive(false);
     
     const file = e.dataTransfer.files?.[0];
     if (file) processFile(file);
@@ -215,6 +212,7 @@ export default function Home() {
       const data = await response.json();
       setResult(prev => prev ? { ...prev, messages: data.messages } : prev);
       setFollowUpQuestion("");
+      scrollToBottom();
     } catch {
       toast({
         title: "Error",
@@ -232,349 +230,259 @@ export default function Home() {
     setFollowUpQuestion("");
     setTextProblem("");
     setUploadProgress(0);
+    setSubmittedProblem("");
   };
 
   const handleTextSubmit = () => {
     if (textProblem.trim()) {
+      setSubmittedProblem(textProblem.trim());
+      setPreviewUrl(null);
       textMutation.mutate(textProblem.trim());
+      setTextProblem("");
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (result) {
+        handleFollowUp();
+      } else {
+        handleTextSubmit();
+      }
     }
   };
 
   const isLoading = submitMutation.isPending || textMutation.isPending || isUploading;
+  const hasConversation = result || isLoading || submittedProblem || previewUrl;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
-      <div className="max-w-4xl mx-auto px-6 py-12">
-        {!result && !isLoading && (
-          <div className="space-y-12">
-            <div className="text-center space-y-6">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-lg">
-                <Sparkles className="w-10 h-10" />
+    <div 
+      className="flex flex-col h-screen bg-background"
+      onDragOver={handleDrag}
+      onDrop={handleDrop}
+    >
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileSelect}
+        className="hidden"
+        accept="image/*"
+        data-testid="input-file"
+      />
+
+      <div 
+        ref={chatContainerRef}
+        className="flex-1 overflow-y-auto"
+      >
+        {!hasConversation && (
+          <div className="flex flex-col items-center justify-center h-full px-6">
+            <div className="text-center space-y-4 max-w-2xl">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground mb-4">
+                <Sparkles className="w-8 h-8" />
               </div>
-              <div className="space-y-3">
-                <h1 className="text-4xl sm:text-5xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
-                  Solve Any Problem Instantly
-                </h1>
-                <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-                  Upload a photo or type your homework question. Get step-by-step solutions with visual graphs for math problems.
-                </p>
-              </div>
-            </div>
-
-            <Card className="border-2 shadow-xl">
-              <CardContent className="p-8 space-y-6">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileSelect}
-                  className="hidden"
-                  accept="image/*"
-                  data-testid="input-file"
-                />
-                <input
-                  type="file"
-                  ref={cameraInputRef}
-                  onChange={handleFileSelect}
-                  className="hidden"
-                  accept="image/*"
-                  capture="environment"
-                  data-testid="input-camera"
-                />
-
-                <div
-                  className={`relative border-2 border-dashed rounded-2xl p-8 transition-all cursor-pointer ${
-                    dragActive 
-                      ? "border-primary bg-primary/5 scale-[1.02]" 
-                      : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30"
-                  }`}
-                  onDragEnter={handleDrag}
-                  onDragLeave={handleDrag}
-                  onDragOver={handleDrag}
-                  onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                  data-testid="dropzone"
-                >
-                  <div className="flex flex-col items-center gap-4 text-center">
-                    <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center">
-                      <ImageIcon className="w-8 h-8 text-muted-foreground" />
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-lg font-semibold">
-                        Drop your homework image here
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        or click to browse
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Button
-                    size="lg"
-                    className="flex-1 h-12"
-                    onClick={(e) => { e.stopPropagation(); cameraInputRef.current?.click(); }}
-                    data-testid="button-camera"
-                  >
-                    <Camera className="w-5 h-5 mr-2" />
-                    Take Photo
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="flex-1 h-12"
-                    onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
-                    data-testid="button-upload"
-                  >
-                    <Upload className="w-5 h-5 mr-2" />
-                    Upload Image
-                  </Button>
-                </div>
-
-                <div className="relative flex items-center gap-4">
-                  <div className="flex-1 h-px bg-border" />
-                  <span className="text-sm text-muted-foreground font-medium">or type your problem</span>
-                  <div className="flex-1 h-px bg-border" />
-                </div>
-
-                <div className="space-y-3">
-                  <Textarea
-                    placeholder="Type or paste your math, science, or homework question here..."
-                    value={textProblem}
-                    onChange={(e) => setTextProblem(e.target.value)}
-                    className="min-h-[120px] text-base resize-none"
-                    data-testid="input-text-problem"
-                  />
-                  <Button
-                    onClick={handleTextSubmit}
-                    disabled={!textProblem.trim()}
-                    className="w-full h-12 text-base"
-                    size="lg"
-                    data-testid="button-solve-text"
-                  >
-                    <Zap className="w-5 h-5 mr-2" />
-                    Get Solution
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="flex items-center gap-3 p-4 rounded-xl bg-card border">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Zap className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <p className="font-medium text-sm">Instant Answers</p>
-                  <p className="text-xs text-muted-foreground">Solutions in seconds</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-4 rounded-xl bg-card border">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <BookOpen className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <p className="font-medium text-sm">Step-by-Step</p>
-                  <p className="text-xs text-muted-foreground">Clear explanations</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-4 rounded-xl bg-card border">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Brain className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <p className="font-medium text-sm">Visual Graphs</p>
-                  <p className="text-xs text-muted-foreground">Math visualization</p>
-                </div>
-              </div>
+              <h1 className="text-3xl sm:text-4xl font-bold">
+                What can I help you solve?
+              </h1>
+              <p className="text-muted-foreground text-lg">
+                Type your homework question or upload an image
+              </p>
             </div>
           </div>
         )}
 
-        {isLoading && (
-          <Card className="border-2 shadow-xl">
-            <CardContent className="p-12 space-y-8">
-              {previewUrl && (
-                <div className="flex justify-center">
-                  <img 
-                    src={previewUrl} 
-                    alt="Uploaded homework" 
-                    className="max-h-48 rounded-xl object-contain shadow-md"
-                    data-testid="img-preview"
-                  />
+        {hasConversation && (
+          <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+            {(submittedProblem || previewUrl) && (
+              <div className="flex justify-end">
+                <div className="max-w-[85%] bg-primary text-primary-foreground rounded-2xl rounded-br-md px-4 py-3">
+                  {previewUrl && (
+                    <img 
+                      src={previewUrl} 
+                      alt="Uploaded problem" 
+                      className="max-h-48 rounded-lg mb-2"
+                      data-testid="img-preview"
+                    />
+                  )}
+                  {submittedProblem && (
+                    <p className="text-sm whitespace-pre-wrap">{submittedProblem}</p>
+                  )}
                 </div>
-              )}
-              <div className="text-center space-y-6">
-                <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground">
-                  <Loader2 className="w-10 h-10 animate-spin" />
+              </div>
+            )}
+
+            {isLoading && (
+              <div className="flex gap-3">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="w-4 h-4 text-primary-foreground" />
                 </div>
-                <div className="space-y-2">
-                  <h2 className="text-2xl font-bold">
-                    AI is solving your problem...
-                  </h2>
-                  <p className="text-muted-foreground">
-                    Analyzing and generating step-by-step solution
-                  </p>
-                </div>
-                {uploadProgress > 0 && (
-                  <div className="max-w-xs mx-auto">
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div className="flex-1 bg-muted rounded-2xl rounded-tl-md p-4">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-sm">Solving your problem...</span>
+                  </div>
+                  {uploadProgress > 0 && uploadProgress < 100 && (
+                    <div className="mt-3 h-1.5 bg-background rounded-full overflow-hidden max-w-xs">
                       <div 
                         className="h-full bg-primary transition-all duration-500 rounded-full"
                         style={{ width: `${uploadProgress}%` }}
                       />
                     </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {result && !isLoading && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
-                  <CheckCircle2 className="w-5 h-5 text-green-600" />
+                  )}
                 </div>
-                <h2 className="text-xl font-bold">Solution Ready</h2>
-              </div>
-              <Button
-                variant="outline"
-                onClick={handleReset}
-                data-testid="button-new-problem"
-              >
-                <RotateCcw className="w-4 h-4 mr-2" />
-                New Problem
-              </Button>
-            </div>
-
-            {previewUrl && (
-              <div className="flex justify-center p-4 bg-muted/50 rounded-xl">
-                <img 
-                  src={previewUrl} 
-                  alt="Your problem" 
-                  className="max-h-32 rounded-lg object-contain"
-                />
               </div>
             )}
 
-            <Card className="border-2 shadow-xl overflow-visible">
-              <CardContent className="p-8 space-y-8">
-                <div>
-                  <h3 className="text-lg font-semibold text-emerald-600 dark:text-emerald-400 mb-4">
-                    Final Answer
-                  </h3>
-                  <div className="p-6 bg-muted/30 rounded-xl" data-testid="text-solution">
-                    <div className="text-xl font-medium leading-relaxed">
-                      {renderMathText(result.aiSolution || "")}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 mt-4">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" data-testid="button-thumbs-up">
-                      <ThumbsUp className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" data-testid="button-thumbs-down">
-                      <ThumbsDown className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" data-testid="button-copy">
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" data-testid="button-regenerate">
-                      <RefreshCw className="w-4 h-4" />
-                    </Button>
-                  </div>
+            {result && !isLoading && (
+              <div className="flex gap-3">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="w-4 h-4 text-primary-foreground" />
                 </div>
-
-                {result.graphSpec && result.graphSpec.expressions.length > 0 && (
+                <div className="flex-1 space-y-6 overflow-visible">
                   <div>
-                    <GraphPanel graphSpec={result.graphSpec} />
-                  </div>
-                )}
-
-                {result.aiSteps && result.aiSteps.length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-4">
-                      Explanation
+                    <h3 className="text-base font-semibold text-emerald-600 dark:text-emerald-400 mb-3">
+                      Final Answer
                     </h3>
-                    <div className="space-y-6">
-                      {result.aiSteps.map((step, index) => (
-                        <div key={index} data-testid={`text-step-${index}`}>
-                          <SolutionStep step={step} index={index} />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {result.aiExplanation && (
-                  <div className="pt-4 border-t">
-                    <h4 className="text-sm font-medium text-muted-foreground mb-3">Key Concepts</h4>
-                    <div className="text-sm leading-relaxed" data-testid="text-explanation">
-                      {renderMathText(result.aiExplanation)}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="border">
-              <CardContent className="p-6">
-                <h3 className="text-sm font-medium text-muted-foreground mb-4">
-                  Have a follow-up question?
-                </h3>
-                {result.messages && result.messages.length > 0 && (
-                  <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
-                    {result.messages.map((msg, index) => (
-                      <div 
-                        key={index}
-                        className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                      >
-                        <div className={`max-w-[80%] p-3 rounded-xl ${
-                          msg.role === "user" 
-                            ? "bg-primary text-primary-foreground" 
-                            : "bg-muted"
-                        }`}>
-                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                        </div>
+                    <div className="p-4 bg-muted/50 rounded-xl" data-testid="text-solution">
+                      <div className="text-lg font-medium">
+                        {renderMathText(result.aiSolution || "")}
                       </div>
-                    ))}
+                    </div>
+                    <div className="flex items-center gap-1 mt-3">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" data-testid="button-thumbs-up">
+                        <ThumbsUp className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" data-testid="button-thumbs-down">
+                        <ThumbsDown className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" data-testid="button-copy">
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" data-testid="button-regenerate">
+                        <RefreshCw className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
-                )}
-                <div className="flex gap-2">
-                  <Textarea
-                    placeholder="Ask about this solution..."
-                    value={followUpQuestion}
-                    onChange={(e) => setFollowUpQuestion(e.target.value)}
-                    className="min-h-[48px] max-h-32 resize-none"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleFollowUp();
-                      }
-                    }}
-                    data-testid="input-followup"
-                  />
-                  <Button 
-                    onClick={handleFollowUp}
-                    disabled={!followUpQuestion.trim() || isAskingFollowUp}
-                    size="icon"
-                    className="h-12 w-12 flex-shrink-0"
-                    data-testid="button-followup"
-                  >
-                    {isAskingFollowUp ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <Send className="w-5 h-5" />
-                    )}
-                  </Button>
+
+                  {result.graphSpec && result.graphSpec.expressions.length > 0 && (
+                    <GraphPanel graphSpec={result.graphSpec} />
+                  )}
+
+                  {result.aiSteps && result.aiSteps.length > 0 && (
+                    <div>
+                      <h3 className="text-base font-semibold text-blue-600 dark:text-blue-400 mb-4">
+                        Explanation
+                      </h3>
+                      <div className="space-y-5">
+                        {result.aiSteps.map((step, index) => (
+                          <div key={index} data-testid={`text-step-${index}`}>
+                            <SolutionStep step={step} index={index} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {result.aiExplanation && (
+                    <div className="pt-4 border-t border-border/50">
+                      <h4 className="text-sm font-medium text-muted-foreground mb-2">Key Concepts</h4>
+                      <div className="text-sm leading-relaxed" data-testid="text-explanation">
+                        {renderMathText(result.aiExplanation)}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            )}
+
+            {result?.messages && result.messages.length > 0 && (
+              <div className="space-y-4">
+                {result.messages.map((msg, index) => (
+                  <div 
+                    key={index}
+                    className={`flex ${msg.role === "user" ? "justify-end" : "gap-3"}`}
+                  >
+                    {msg.role === "assistant" && (
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center flex-shrink-0">
+                        <Sparkles className="w-4 h-4 text-primary-foreground" />
+                      </div>
+                    )}
+                    <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${
+                      msg.role === "user" 
+                        ? "bg-primary text-primary-foreground rounded-br-md" 
+                        : "bg-muted rounded-tl-md"
+                    }`}>
+                      <div className="text-sm whitespace-pre-wrap">
+                        {renderMathText(msg.content)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
+      </div>
+
+      <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="max-w-3xl mx-auto px-4 py-4">
+          {result && (
+            <div className="flex justify-center mb-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleReset}
+                className="gap-2"
+                data-testid="button-new-problem"
+              >
+                <Plus className="w-4 h-4" />
+                New Problem
+              </Button>
+            </div>
+          )}
+          
+          <div className="relative flex items-end gap-2 bg-muted/50 rounded-2xl border p-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 flex-shrink-0"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isLoading}
+              data-testid="button-attach"
+            >
+              <Paperclip className="w-5 h-5" />
+            </Button>
+            
+            <Textarea
+              placeholder={result ? "Ask a follow-up question..." : "Type text, or add images by uploading, pasting, or dragging here"}
+              value={result ? followUpQuestion : textProblem}
+              onChange={(e) => result ? setFollowUpQuestion(e.target.value) : setTextProblem(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="flex-1 min-h-[44px] max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 text-base"
+              rows={1}
+              disabled={isLoading}
+              data-testid="input-chat"
+            />
+            
+            <Button
+              size="icon"
+              className="h-10 w-10 flex-shrink-0 rounded-xl"
+              onClick={result ? handleFollowUp : handleTextSubmit}
+              disabled={isLoading || (result ? !followUpQuestion.trim() : !textProblem.trim())}
+              data-testid="button-send"
+            >
+              {isLoading || isAskingFollowUp ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Send className="w-5 h-5" />
+              )}
+            </Button>
+          </div>
+          
+          <p className="text-xs text-center text-muted-foreground mt-3">
+            AI Homework Solver can make mistakes. Verify important answers.
+          </p>
+        </div>
       </div>
     </div>
   );
