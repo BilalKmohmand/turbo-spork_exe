@@ -60,27 +60,28 @@ async function solveFromImage(base64Image: string, mimeType: string): Promise<So
 
 Respond with ONLY a JSON object:
 {
-  "solution": "Final answer (use LaTeX: $x = 5$ for inline, $$x^2 + 1$$ for block)",
-  "steps": ["Step description with $math$ inline", "Another step with $$block math$$"],
-  "explanation": "Key concepts with $formulas$ if needed",
+  "solution": "Final answer with LaTeX",
+  "steps": ["Each step MUST explain WHY - see format below"],
+  "explanation": "Key concepts",
   "problemType": "math" or "science" or "other",
   "graphSpec": null or {"expressions": ["y=2x+1"], "title": "Graph", "xMin": -10, "xMax": 10, "yMin": -10, "yMax": 10}
 }
 
-MATH FORMATTING RULES:
-- Use $...$ for inline math: "The answer is $x = 5$"
-- Use $$...$$ for important equations on their own line: "$$x^2 + 2x + 1 = 0$$"
-- Use LaTeX syntax: fractions \\frac{a}{b}, exponents x^2, subscripts x_1, roots \\sqrt{x}
-- Always format mathematical expressions in LaTeX
+CRITICAL - EACH STEP MUST HAVE REASONING:
+Every step must explain WHY we do the operation, not just show the math.
 
-EXPLANATION RULES:
-- Each step MUST explain WHY we do this operation, not just what we do
-- Format: "Step title" followed by the math, then explain the reasoning
-- Example: "Divide total by number of groups $$\\frac{30}{6} = 5$$ Since there are 30 items split equally into 6 groups, dividing gives us 5 items per group."
+BAD STEP (no reasoning): "Calculate $$30 \\div 6 = 5$$. The answer is 5."
 
-GRAPH RULES:
-- graphSpec: Include for equations/functions/inequalities. Use Desmos format (e.g., "y=2x+1", "x>3")
-- For inequalities like x > 3, use expressions: ["x=3"] with appropriate bounds
+GOOD STEP (has reasoning): "Divide total sticky notes by number of rows $$\\frac{30}{6} = 5$$ We use division because the problem says the sticky notes are split equally into rows. To find how many are in each row, we divide the total (30) by the number of rows (6). This gives us 5 sticky notes per row."
+
+Each step format:
+1. Title of what we're doing
+2. The math: $$equation$$  
+3. REASONING: Explain in 1-2 sentences WHY this operation makes sense and what it tells us
+
+MATH: Use $...$ inline, $$...$$ for blocks, LaTeX syntax (\\frac{a}{b}, x^2, \\sqrt{x})
+
+GRAPH: Include graphSpec for graphable equations. Use Desmos format.
 
 Output ONLY valid JSON`
         },
@@ -142,27 +143,28 @@ async function solveWithAI(content: string): Promise<SolveResult> {
 
 Respond with ONLY a JSON object:
 {
-  "solution": "Final answer (use LaTeX: $x = 5$ for inline, $$x^2 + 1$$ for block)",
-  "steps": ["Step description with $math$ inline", "Another step with $$block math$$"],
-  "explanation": "Key concepts with $formulas$ if needed",
+  "solution": "Final answer with LaTeX",
+  "steps": ["Each step MUST explain WHY - see format below"],
+  "explanation": "Key concepts",
   "problemType": "math" or "science" or "other",
   "graphSpec": null or {"expressions": ["y=2x+1"], "title": "Graph", "xMin": -10, "xMax": 10, "yMin": -10, "yMax": 10}
 }
 
-MATH FORMATTING RULES:
-- Use $...$ for inline math: "The answer is $x = 5$"
-- Use $$...$$ for important equations on their own line: "$$x^2 + 2x + 1 = 0$$"
-- Use LaTeX syntax: fractions \\frac{a}{b}, exponents x^2, subscripts x_1, roots \\sqrt{x}
-- Always format mathematical expressions in LaTeX
+CRITICAL - EACH STEP MUST HAVE REASONING:
+Every step must explain WHY we do the operation, not just show the math.
 
-EXPLANATION RULES:
-- Each step MUST explain WHY we do this operation, not just what we do
-- Format: "Step title" followed by the math, then explain the reasoning
-- Example: "Divide total by number of groups $$\\frac{30}{6} = 5$$ Since there are 30 items split equally into 6 groups, dividing gives us 5 items per group."
+BAD STEP (no reasoning): "Calculate $$30 \\div 6 = 5$$. The answer is 5."
 
-GRAPH RULES:
-- graphSpec: Include for equations/functions/inequalities. Use Desmos format (e.g., "y=2x+1", "x>3")
-- For inequalities like x > 3, use expressions: ["x=3"] with appropriate bounds
+GOOD STEP (has reasoning): "Divide total sticky notes by number of rows $$\\frac{30}{6} = 5$$ We use division because the problem says the sticky notes are split equally into rows. To find how many are in each row, we divide the total (30) by the number of rows (6). This gives us 5 sticky notes per row."
+
+Each step format:
+1. Title of what we're doing
+2. The math: $$equation$$  
+3. REASONING: Explain in 1-2 sentences WHY this operation makes sense and what it tells us
+
+MATH: Use $...$ inline, $$...$$ for blocks, LaTeX syntax (\\frac{a}{b}, x^2, \\sqrt{x})
+
+GRAPH: Include graphSpec for graphable equations. Use Desmos format.
 
 Output ONLY valid JSON`,
       messages: [
