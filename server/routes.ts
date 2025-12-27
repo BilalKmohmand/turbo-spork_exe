@@ -40,9 +40,10 @@ async function extractTextFromImage(base64Image: string, mimeType: string): Prom
     });
 
     return response.choices[0]?.message?.content || "Could not extract text from image.";
-  } catch (error) {
-    console.error("Image extraction error:", error);
-    throw new Error("Failed to process image");
+  } catch (error: any) {
+    console.error("Image extraction error:", error?.message || error);
+    console.error("Full error:", JSON.stringify(error, null, 2));
+    throw new Error("Failed to process image: " + (error?.message || "Unknown error"));
   }
 }
 
