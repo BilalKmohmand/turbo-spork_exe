@@ -40,9 +40,39 @@ export default function Home() {
   const [textProblem, setTextProblem] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
   const [submittedProblem, setSubmittedProblem] = useState<string>("");
+  const [lastProblem, setLastProblem] = useState<{ type: "text" | "image"; content: string; mimeType?: string }>({ type: "text", content: "" });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  const handleCopy = () => {
+    if (result?.aiSolution) {
+      navigator.clipboard.writeText(result.aiSolution);
+      toast({
+        title: "Copied",
+        description: "Solution copied to clipboard",
+      });
+    }
+  };
+
+  const handleFeedback = (positive: boolean) => {
+    toast({
+      title: positive ? "Thanks for the feedback!" : "Sorry about that",
+      description: positive ? "Glad this helped!" : "We'll try to improve",
+    });
+  };
+
+  const handleRegenerate = () => {
+    if (lastProblem.type === "text" && lastProblem.content) {
+      setResult(null);
+      textMutation.mutate(lastProblem.content);
+    } else if (lastProblem.type === "image" && lastProblem.content && lastProblem.mimeType) {
+      setResult(null);
+      setIsUploading(true);
+      setUploadProgress(50);
+      submitMutation.mutate({ base64: lastProblem.content, mimeType: lastProblem.mimeType });
+    }
+  };
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -170,6 +200,7 @@ export default function Home() {
     try {
       const { base64, mimeType } = await compressImage(file);
       setUploadProgress(50);
+      setLastProblem({ type: "image", content: base64, mimeType });
       submitMutation.mutate({ base64, mimeType });
     } catch {
       setIsUploading(false);
@@ -235,9 +266,11 @@ export default function Home() {
 
   const handleTextSubmit = () => {
     if (textProblem.trim()) {
-      setSubmittedProblem(textProblem.trim());
+      const problem = textProblem.trim();
+      setSubmittedProblem(problem);
       setPreviewUrl(null);
-      textMutation.mutate(textProblem.trim());
+      setLastProblem({ type: "text", content: problem });
+      textMutation.mutate(problem);
       setTextProblem("");
     }
   };
@@ -382,16 +415,16 @@ export default function Home() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1 mt-3">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" data-testid="button-thumbs-up">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleFeedback(true)} data-testid="button-thumbs-up">
                         <ThumbsUp className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" data-testid="button-thumbs-down">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleFeedback(false)} data-testid="button-thumbs-down">
                         <ThumbsDown className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" data-testid="button-copy">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopy} data-testid="button-copy">
                         <Copy className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" data-testid="button-regenerate">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleRegenerate} disabled={isLoading} data-testid="button-regenerate">
                         <RefreshCw className="w-4 h-4" />
                       </Button>
                     </div>
