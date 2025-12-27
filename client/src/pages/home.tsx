@@ -15,7 +15,8 @@ import {
   ThumbsUp,
   ThumbsDown,
   Copy,
-  RefreshCw
+  RefreshCw,
+  Camera
 } from "lucide-react";
 import type { Message, GraphSpec } from "@shared/schema";
 
@@ -42,6 +43,7 @@ export default function Home() {
   const [submittedProblem, setSubmittedProblem] = useState<string>("");
   const [lastProblem, setLastProblem] = useState<{ type: "text" | "image"; content: string; mimeType?: string }>({ type: "text", content: "" });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -303,6 +305,15 @@ export default function Home() {
         accept="image/*"
         data-testid="input-file"
       />
+      <input
+        type="file"
+        ref={cameraInputRef}
+        onChange={handleFileSelect}
+        className="hidden"
+        accept="image/*"
+        capture="environment"
+        data-testid="input-camera"
+      />
 
       <div 
         ref={chatContainerRef}
@@ -340,6 +351,16 @@ export default function Home() {
                     >
                       <Paperclip className="w-4 h-4" />
                       Image / PDF
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => cameraInputRef.current?.click()}
+                      data-testid="button-camera"
+                    >
+                      <Camera className="w-4 h-4" />
+                      Take Photo
                     </Button>
                   </div>
                   <Button
