@@ -9,12 +9,10 @@ const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
-async function evaluateWithAI(content: string): Promise<{
-  score: number;
-  accuracy: number;
-  completeness: number;
-  creativity: number;
-  feedback: string;
+async function solveWithAI(content: string): Promise<{
+  solution: string;
+  steps: string[];
+  explanation: string;
 }> {
   try {
     const response = await openai.chat.completions.create({
@@ -22,50 +20,43 @@ async function evaluateWithAI(content: string): Promise<{
       messages: [
         {
           role: "system",
-          content: `You are an AI teaching assistant that evaluates student assignments. 
-          Analyze the submitted work and provide:
-          1. An overall score (0-100)
-          2. Accuracy score (0-100) - how correct the content is
-          3. Completeness score (0-100) - how thorough the submission is
-          4. Creativity score (0-100) - originality and creative thinking
-          5. Detailed constructive feedback
+          content: `You are an expert tutor that solves homework problems step by step.
+          When given a problem (math, science, essay question, code, etc.), provide:
+          1. The final answer/solution
+          2. Step-by-step breakdown of how to solve it
+          3. A brief explanation of the key concepts involved
+          
+          Make your explanations clear and educational. Help the student understand HOW to solve similar problems.
           
           Respond in JSON format:
           {
-            "score": number,
-            "accuracy": number,
-            "completeness": number,
-            "creativity": number,
-            "feedback": "string with detailed feedback"
+            "solution": "The final answer or solution",
+            "steps": ["Step 1: ...", "Step 2: ...", "Step 3: ..."],
+            "explanation": "Brief explanation of key concepts and methods used"
           }`,
         },
         {
           role: "user",
-          content: `Please evaluate this student submission:\n\n${content}`,
+          content: `Please solve this problem step by step:\n\n${content}`,
         },
       ],
       response_format: { type: "json_object" },
-      max_completion_tokens: 1024,
+      max_completion_tokens: 2048,
     });
 
     const result = JSON.parse(response.choices[0]?.message?.content || "{}");
     
     return {
-      score: Math.min(100, Math.max(0, result.score || 75)),
-      accuracy: Math.min(100, Math.max(0, result.accuracy || 70)),
-      completeness: Math.min(100, Math.max(0, result.completeness || 75)),
-      creativity: Math.min(100, Math.max(0, result.creativity || 70)),
-      feedback: result.feedback || "The submission has been evaluated. Please review the scores for detailed assessment.",
+      solution: result.solution || "Solution processed.",
+      steps: result.steps || ["The problem has been analyzed."],
+      explanation: result.explanation || "Review the solution steps above for understanding.",
     };
   } catch (error) {
-    console.error("AI evaluation error:", error);
-    const baseScore = 70 + Math.floor(Math.random() * 20);
+    console.error("AI solution error:", error);
     return {
-      score: baseScore,
-      accuracy: baseScore - 5 + Math.floor(Math.random() * 10),
-      completeness: baseScore + Math.floor(Math.random() * 10),
-      creativity: baseScore - 10 + Math.floor(Math.random() * 15),
-      feedback: "Your submission has been received and evaluated. The work shows good understanding of the subject matter. Consider expanding on key points for a more comprehensive response.",
+      solution: "Unable to process at this time.",
+      steps: ["Please try again or rephrase your question."],
+      explanation: "There was an issue processing your request.",
     };
   }
 }
@@ -108,17 +99,15 @@ export async function registerRoutes(
 
       (async () => {
         try {
-          const aiResult = await evaluateWithAI(submission.content);
+          const aiResult = await solveWithAI(submission.content);
           await storage.updateSubmission(submission.id, {
             status: "ai_graded",
-            aiScore: aiResult.score,
-            aiAccuracy: aiResult.accuracy,
-            aiCompleteness: aiResult.completeness,
-            aiCreativity: aiResult.creativity,
-            aiFeedback: aiResult.feedback,
+            aiSolution: aiResult.solution,
+            aiSteps: aiResult.steps,
+            aiExplanation: aiResult.explanation,
           });
         } catch (error) {
-          console.error("Background AI evaluation failed:", error);
+          console.error("Background AI solution failed:", error);
         }
       })();
     } catch (error) {
@@ -206,6 +195,57 @@ export async function registerRoutes(
       res.json(stats);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch stats" });
+    }
+  });
+
+  app.post("/api/submissions/:id/followup", async (req, res) => {
+    try {
+      const { question } = req.body;
+      if (!question || typeof question !== "string") {
+        return res.status(400).json({ error: "Question is required" });
+      }
+
+      const submission = await storage.getSubmission(req.params.id);
+      if (!submission) {
+        return res.status(404).json({ error: "Submission not found" });
+      }
+
+      const messages = submission.messages || [];
+      messages.push({ role: "user", content: question });
+
+      const systemContext = `You are a helpful tutor. The student previously submitted this problem:
+      
+${submission.content}
+
+And you provided this solution:
+${submission.aiSolution}
+
+Steps: ${submission.aiSteps?.join("\n")}
+
+Explanation: ${submission.aiExplanation}
+
+Now the student has a follow-up question. Answer it clearly and helpfully to deepen their understanding.`;
+
+      const chatMessages: Array<{role: "system" | "user" | "assistant", content: string}> = [
+        { role: "system", content: systemContext },
+        ...messages.map(m => ({ role: m.role as "user" | "assistant", content: m.content })),
+      ];
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4.1-mini",
+        messages: chatMessages,
+        max_completion_tokens: 1024,
+      });
+
+      const assistantMessage = response.choices[0]?.message?.content || "I couldn't process that question. Please try again.";
+      messages.push({ role: "assistant", content: assistantMessage });
+
+      await storage.updateSubmission(req.params.id, { messages });
+
+      res.json({ answer: assistantMessage, messages });
+    } catch (error) {
+      console.error("Follow-up error:", error);
+      res.status(500).json({ error: "Failed to process follow-up question" });
     }
   });
 

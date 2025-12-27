@@ -103,38 +103,23 @@ export class MemStorage implements IStorage {
 
   async getStudentStats(): Promise<DashboardStats> {
     const allSubmissions = Array.from(this.submissions.values());
-    const gradedSubmissions = allSubmissions.filter(s => s.status !== "pending");
-    
-    const scores = gradedSubmissions
-      .filter(s => s.aiScore !== undefined)
-      .map(s => s.aiScore!);
-    
-    const averageScore = scores.length > 0 
-      ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
-      : 0;
 
     return {
       totalAssignments: this.assignments.size,
       pendingSubmissions: allSubmissions.filter(s => s.status === "pending").length,
-      completedSubmissions: allSubmissions.filter(s => s.status === "teacher_reviewed").length,
-      averageScore,
+      completedSubmissions: allSubmissions.filter(s => s.status === "ai_graded").length,
+      averageScore: 0,
     };
   }
 
   async getTeacherStats(): Promise<DashboardStats> {
     const allSubmissions = Array.from(this.submissions.values());
-    const gradedSubmissions = allSubmissions.filter(s => s.aiScore !== undefined);
-    
-    const scores = gradedSubmissions.map(s => s.aiScore!);
-    const averageScore = scores.length > 0 
-      ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
-      : 0;
 
     return {
       totalAssignments: allSubmissions.length,
-      pendingSubmissions: allSubmissions.filter(s => s.status === "ai_graded").length,
-      completedSubmissions: allSubmissions.filter(s => s.status === "teacher_reviewed").length,
-      averageScore,
+      pendingSubmissions: allSubmissions.filter(s => s.status === "pending").length,
+      completedSubmissions: allSubmissions.filter(s => s.status === "ai_graded").length,
+      averageScore: 0,
     };
   }
 }

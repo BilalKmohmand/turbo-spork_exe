@@ -28,6 +28,11 @@ export interface Assignment {
   maxScore: number;
 }
 
+export interface Message {
+  role: "user" | "assistant";
+  content: string;
+}
+
 export interface Submission {
   id: string;
   assignmentId: string;
@@ -35,11 +40,10 @@ export interface Submission {
   content: string;
   submittedAt: string;
   status: "pending" | "ai_graded" | "teacher_reviewed";
-  aiScore?: number;
-  aiAccuracy?: number;
-  aiCompleteness?: number;
-  aiCreativity?: number;
-  aiFeedback?: string;
+  aiSolution?: string;
+  aiSteps?: string[];
+  aiExplanation?: string;
+  messages?: Message[];
   teacherScore?: number;
   teacherFeedback?: string;
   reviewedAt?: string;
