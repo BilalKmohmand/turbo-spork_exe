@@ -15,6 +15,25 @@ const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
+function ensureString(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (value === null || value === undefined) return "";
+  if (typeof value === "object") return JSON.stringify(value, null, 2);
+  return String(value);
+}
+
+function ensureStringArray(value: unknown): string[] {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value.map(item => ensureString(item));
+  }
+  if (typeof value === "object") {
+    // Convert object to array of strings
+    return Object.entries(value).map(([key, val]) => `${key}: ${ensureString(val)}`);
+  }
+  return [ensureString(value)];
+}
+
 async function solveFromImage(base64Image: string, mimeType: string): Promise<{
   solution: string;
   steps: string[];
@@ -26,23 +45,26 @@ async function solveFromImage(base64Image: string, mimeType: string): Promise<{
       messages: [
         {
           role: "system",
-          content: `You are an expert tutor. Look at the homework problem in the image and solve it step by step.
+          content: `You are an expert tutor. Look at the homework problem in the image and solve it completely.
 
-Respond with ONLY a JSON object in this exact format:
-{"solution": "the final answer", "steps": ["Step 1: ...", "Step 2: ...", "Step 3: ..."], "explanation": "key concepts used"}
+If there are MULTIPLE questions, solve ALL of them and combine into ONE response.
 
-Rules:
-- Solve the problem completely
-- Include 3-6 clear educational steps
-- Make explanations helpful for learning
-- Output ONLY valid JSON, no other text`
+Respond with ONLY a JSON object:
+{"solution": "Final answer(s) as a single string", "steps": ["Step 1: ...", "Step 2: ..."], "explanation": "Key concepts as a single string"}
+
+CRITICAL RULES:
+- solution MUST be a simple string, not an object
+- steps MUST be an array of strings
+- explanation MUST be a simple string
+- If multiple questions, format solution as "Q1: answer1, Q2: answer2" etc.
+- Output ONLY valid JSON`
         },
         {
           role: "user",
           content: [
             {
               type: "text",
-              text: "Look at this homework problem and solve it. Respond with JSON only.",
+              text: "Solve this homework problem. Return JSON with solution as a string, steps as string array, explanation as a string.",
             },
             {
               type: "image_url",
@@ -67,9 +89,9 @@ Rules:
     try {
       const result = JSON.parse(text);
       return {
-        solution: result.solution || "See steps below.",
-        steps: Array.isArray(result.steps) ? result.steps : ["Solution provided above."],
-        explanation: result.explanation || "Review the steps for understanding.",
+        solution: ensureString(result.solution) || "See steps below.",
+        steps: ensureStringArray(result.steps),
+        explanation: ensureString(result.explanation) || "Review the steps for understanding.",
       };
     } catch {
       return {
