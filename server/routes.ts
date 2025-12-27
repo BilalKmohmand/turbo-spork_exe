@@ -15,17 +15,34 @@ const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
-async function extractTextFromImage(base64Image: string, mimeType: string): Promise<string> {
+async function solveFromImage(base64Image: string, mimeType: string): Promise<{
+  solution: string;
+  steps: string[];
+  explanation: string;
+}> {
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
+          role: "system",
+          content: `You are an expert tutor. Look at the homework problem in the image and solve it step by step.
+
+Respond with ONLY a JSON object in this exact format:
+{"solution": "the final answer", "steps": ["Step 1: ...", "Step 2: ...", "Step 3: ..."], "explanation": "key concepts used"}
+
+Rules:
+- Solve the problem completely
+- Include 3-6 clear educational steps
+- Make explanations helpful for learning
+- Output ONLY valid JSON, no other text`
+        },
+        {
           role: "user",
           content: [
             {
               type: "text",
-              text: "Please extract and transcribe ALL text, equations, numbers, and problems visible in this image. Write out math problems in a clear text format. Be thorough - include everything you can see.",
+              text: "Look at this homework problem and solve it. Respond with JSON only.",
             },
             {
               type: "image_url",
@@ -36,17 +53,34 @@ async function extractTextFromImage(base64Image: string, mimeType: string): Prom
           ],
         },
       ],
-      max_tokens: 2048,
+      max_tokens: 4096,
     });
 
-    const extractedText = response.choices[0]?.message?.content;
-    if (!extractedText || extractedText.trim().length === 0) {
-      throw new Error("No text could be extracted from the image");
+    let text = response.choices[0]?.message?.content || "";
+    
+    // Extract JSON from response
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      text = jsonMatch[0];
     }
-    return extractedText;
+    
+    try {
+      const result = JSON.parse(text);
+      return {
+        solution: result.solution || "See steps below.",
+        steps: Array.isArray(result.steps) ? result.steps : ["Solution provided above."],
+        explanation: result.explanation || "Review the steps for understanding.",
+      };
+    } catch {
+      return {
+        solution: text.slice(0, 1000) || "Solution generated.",
+        steps: ["Review the answer above."],
+        explanation: "The problem has been solved.",
+      };
+    }
   } catch (error: any) {
-    console.error("Image extraction error:", error?.message || error);
-    throw new Error("Failed to read image: " + (error?.message || "Please try a clearer photo"));
+    console.error("Image solving error:", error?.message || error);
+    throw new Error("Failed to solve: " + (error?.message || "Please try a clearer photo"));
   }
 }
 
@@ -177,32 +211,28 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Invalid file type. Please upload an image." });
       }
 
-      const extractedText = await extractTextFromImage(image, mimeType);
+      // Solve directly from image - no extraction step
+      const aiResult = await solveFromImage(image, mimeType);
       
       const submission = await storage.createSubmission({
         assignmentId: "general",
         studentName: "Student",
-        content: extractedText,
+        content: "Image problem",
       });
       
-      res.status(201).json({ ...submission, extractedText });
+      // Update with solution immediately
+      await storage.updateSubmission(submission.id, {
+        status: "ai_graded",
+        aiSolution: aiResult.solution,
+        aiSteps: aiResult.steps,
+        aiExplanation: aiResult.explanation,
+      });
 
-      (async () => {
-        try {
-          const aiResult = await solveWithAI(extractedText);
-          await storage.updateSubmission(submission.id, {
-            status: "ai_graded",
-            aiSolution: aiResult.solution,
-            aiSteps: aiResult.steps,
-            aiExplanation: aiResult.explanation,
-          });
-        } catch (error) {
-          console.error("Background AI solution failed:", error);
-        }
-      })();
-    } catch (error) {
-      console.error("Image submission error:", error);
-      res.status(500).json({ error: "Failed to process image" });
+      const updated = await storage.getSubmission(submission.id);
+      res.status(201).json(updated);
+    } catch (error: any) {
+      console.error("Image submission error:", error?.message || error);
+      res.status(500).json({ error: error?.message || "Failed to process image" });
     }
   });
 

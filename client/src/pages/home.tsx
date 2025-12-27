@@ -48,19 +48,22 @@ export default function Home() {
         image: base64,
         mimeType,
       });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to solve");
+      }
       return response.json();
     },
     onSuccess: async (data) => {
       setResult(data);
-      setIsPolling(true);
       setIsUploading(false);
-      pollForResult(data.id);
+      setIsPolling(false);
     },
-    onError: () => {
+    onError: (error: Error) => {
       setIsUploading(false);
       toast({
         title: "Error",
-        description: "Failed to process image. Please try again.",
+        description: error.message || "Failed to process image. Please try again.",
         variant: "destructive",
       });
     },
@@ -337,21 +340,13 @@ export default function Home() {
             </div>
 
             {previewUrl && (
-              <Card className="border">
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-4">
-                    <img 
-                      src={previewUrl} 
-                      alt="Problem" 
-                      className="w-24 h-24 rounded-lg object-cover flex-shrink-0"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-muted-foreground mb-1">Extracted Problem:</p>
-                      <p className="text-sm line-clamp-3">{result.content}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="flex justify-center">
+                <img 
+                  src={previewUrl} 
+                  alt="Your problem" 
+                  className="max-h-32 rounded-lg object-contain"
+                />
+              </div>
             )}
 
             <Card className="border-2">
