@@ -18,7 +18,7 @@ const openai = new OpenAI({
 async function extractTextFromImage(base64Image: string, mimeType: string): Promise<string> {
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-5",
       messages: [
         {
           role: "user",
@@ -36,7 +36,7 @@ async function extractTextFromImage(base64Image: string, mimeType: string): Prom
           ],
         },
       ],
-      max_tokens: 1024,
+      max_completion_tokens: 1024,
     });
 
     return response.choices[0]?.message?.content || "Could not extract text from image.";
