@@ -2,11 +2,11 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertSubmissionSchema, evaluationSchema } from "@shared/schema";
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 
-const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+const anthropic = new Anthropic({
+  apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
+  baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
 });
 
 async function solveWithAI(content: string): Promise<{
@@ -15,36 +15,34 @@ async function solveWithAI(content: string): Promise<{
   explanation: string;
 }> {
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-5",
+      max_tokens: 2048,
+      system: `You are an expert tutor that solves homework problems step by step.
+When given a problem (math, science, essay question, code, etc.), provide:
+1. The final answer/solution
+2. Step-by-step breakdown of how to solve it
+3. A brief explanation of the key concepts involved
+
+Make your explanations clear and educational. Help the student understand HOW to solve similar problems.
+
+Respond in JSON format only:
+{
+  "solution": "The final answer or solution",
+  "steps": ["Step 1: ...", "Step 2: ...", "Step 3: ..."],
+  "explanation": "Brief explanation of key concepts and methods used"
+}`,
       messages: [
-        {
-          role: "system",
-          content: `You are an expert tutor that solves homework problems step by step.
-          When given a problem (math, science, essay question, code, etc.), provide:
-          1. The final answer/solution
-          2. Step-by-step breakdown of how to solve it
-          3. A brief explanation of the key concepts involved
-          
-          Make your explanations clear and educational. Help the student understand HOW to solve similar problems.
-          
-          Respond in JSON format:
-          {
-            "solution": "The final answer or solution",
-            "steps": ["Step 1: ...", "Step 2: ...", "Step 3: ..."],
-            "explanation": "Brief explanation of key concepts and methods used"
-          }`,
-        },
         {
           role: "user",
           content: `Please solve this problem step by step:\n\n${content}`,
         },
       ],
-      response_format: { type: "json_object" },
-      max_completion_tokens: 2048,
     });
 
-    const result = JSON.parse(response.choices[0]?.message?.content || "{}");
+    const textContent = response.content.find(block => block.type === "text");
+    const text = textContent?.type === "text" ? textContent.text : "{}";
+    const result = JSON.parse(text);
     
     return {
       solution: result.solution || "Solution processed.",
@@ -226,18 +224,20 @@ Explanation: ${submission.aiExplanation}
 
 Now the student has a follow-up question. Answer it clearly and helpfully to deepen their understanding.`;
 
-      const chatMessages: Array<{role: "system" | "user" | "assistant", content: string}> = [
-        { role: "system", content: systemContext },
-        ...messages.map(m => ({ role: m.role as "user" | "assistant", content: m.content })),
-      ];
+      const chatMessages: Array<{role: "user" | "assistant", content: string}> = messages.map(m => ({ 
+        role: m.role as "user" | "assistant", 
+        content: m.content 
+      }));
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-4.1-mini",
+      const response = await anthropic.messages.create({
+        model: "claude-sonnet-4-5",
+        max_tokens: 1024,
+        system: systemContext,
         messages: chatMessages,
-        max_completion_tokens: 1024,
       });
 
-      const assistantMessage = response.choices[0]?.message?.content || "I couldn't process that question. Please try again.";
+      const textContent = response.content.find(block => block.type === "text");
+      const assistantMessage = textContent?.type === "text" ? textContent.text : "I couldn't process that question. Please try again.";
       messages.push({ role: "assistant", content: assistantMessage });
 
       await storage.updateSubmission(req.params.id, { messages });
