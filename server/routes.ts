@@ -18,14 +18,14 @@ const openai = new OpenAI({
 async function extractTextFromImage(base64Image: string, mimeType: string): Promise<string> {
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-5",
+      model: "gpt-4o",
       messages: [
         {
           role: "user",
           content: [
             {
               type: "text",
-              text: "Please extract and transcribe all text, equations, and problems from this image. If there are math problems, write them in a clear format. Be thorough and accurate.",
+              text: "Please extract and transcribe ALL text, equations, numbers, and problems visible in this image. Write out math problems in a clear text format. Be thorough - include everything you can see.",
             },
             {
               type: "image_url",
@@ -36,14 +36,17 @@ async function extractTextFromImage(base64Image: string, mimeType: string): Prom
           ],
         },
       ],
-      max_completion_tokens: 1024,
+      max_tokens: 2048,
     });
 
-    return response.choices[0]?.message?.content || "Could not extract text from image.";
+    const extractedText = response.choices[0]?.message?.content;
+    if (!extractedText || extractedText.trim().length === 0) {
+      throw new Error("No text could be extracted from the image");
+    }
+    return extractedText;
   } catch (error: any) {
     console.error("Image extraction error:", error?.message || error);
-    console.error("Full error:", JSON.stringify(error, null, 2));
-    throw new Error("Failed to process image: " + (error?.message || "Unknown error"));
+    throw new Error("Failed to read image: " + (error?.message || "Please try a clearer photo"));
   }
 }
 
@@ -55,44 +58,55 @@ async function solveWithAI(content: string): Promise<{
   try {
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-5",
-      max_tokens: 2048,
-      system: `You are an expert tutor that solves homework problems step by step.
-When given a problem (math, science, essay question, code, etc.), provide:
-1. The final answer/solution
-2. Step-by-step breakdown of how to solve it
-3. A brief explanation of the key concepts involved
+      max_tokens: 4096,
+      system: `You are an expert tutor that solves homework problems. You MUST respond with valid JSON only - no other text.
 
-Make your explanations clear and educational. Help the student understand HOW to solve similar problems.
+Solve the given problem and respond with this exact JSON structure:
+{"solution": "final answer here", "steps": ["Step 1: description", "Step 2: description"], "explanation": "key concepts"}
 
-Respond in JSON format only:
-{
-  "solution": "The final answer or solution",
-  "steps": ["Step 1: ...", "Step 2: ...", "Step 3: ..."],
-  "explanation": "Brief explanation of key concepts and methods used"
-}`,
+Rules:
+- Output ONLY the JSON object, nothing else
+- No markdown, no explanations outside JSON
+- Include 3-6 clear steps
+- Make the solution educational`,
       messages: [
         {
           role: "user",
-          content: `Please solve this problem step by step:\n\n${content}`,
+          content: `Solve this problem and respond with JSON only:\n\n${content}`,
         },
       ],
     });
 
     const textContent = response.content.find(block => block.type === "text");
-    const text = textContent?.type === "text" ? textContent.text : "{}";
-    const result = JSON.parse(text);
+    let text = textContent?.type === "text" ? textContent.text : "";
     
+    // Try to extract JSON from the response
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      text = jsonMatch[0];
+    }
+    
+    try {
+      const result = JSON.parse(text);
+      return {
+        solution: result.solution || "See steps below.",
+        steps: Array.isArray(result.steps) ? result.steps : ["Solution provided above."],
+        explanation: result.explanation || "Review the steps for understanding.",
+      };
+    } catch {
+      // If JSON parsing fails, use the raw text as the solution
+      return {
+        solution: text.slice(0, 500) || "Solution generated.",
+        steps: ["The AI provided a response but it wasn't in the expected format."],
+        explanation: "Please review the solution above.",
+      };
+    }
+  } catch (error: any) {
+    console.error("AI solution error:", error?.message || error);
     return {
-      solution: result.solution || "Solution processed.",
-      steps: result.steps || ["The problem has been analyzed."],
-      explanation: result.explanation || "Review the solution steps above for understanding.",
-    };
-  } catch (error) {
-    console.error("AI solution error:", error);
-    return {
-      solution: "Unable to process at this time.",
-      steps: ["Please try again or rephrase your question."],
-      explanation: "There was an issue processing your request.",
+      solution: "Unable to solve at this time.",
+      steps: ["Please try uploading a clearer image or a different problem."],
+      explanation: "There was an issue with the AI. Please try again.",
     };
   }
 }
