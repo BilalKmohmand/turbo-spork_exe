@@ -1,5 +1,6 @@
 import "katex/dist/katex.min.css";
 import { InlineMath, BlockMath } from "react-katex";
+import type { StepObject } from "@shared/schema";
 
 interface MathDisplayProps {
   children: string;
@@ -49,15 +50,27 @@ export function renderMathText(text: string): JSX.Element[] {
   return parts.length > 0 ? parts : [<span key={0}>{text}</span>];
 }
 
-export function SolutionStep({ step, index }: { step: string; index: number }) {
+export function SolutionStep({ step, index }: { step: StepObject; index: number }) {
   return (
-    <div className="flex gap-4">
-      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 border-2 border-primary flex items-center justify-center text-primary font-bold text-sm">
-        {index + 1}
+    <div className="space-y-2">
+      <div className="flex items-start gap-3">
+        <div className="flex-shrink-0 w-6 h-6 rounded-full bg-muted-foreground/20 flex items-center justify-center text-muted-foreground font-medium text-sm">
+          {index + 1}
+        </div>
+        <h4 className="font-semibold text-foreground pt-0.5">{step.title}</h4>
       </div>
-      <div className="flex-1 pt-1">
-        <div className="text-base leading-relaxed">{renderMathText(step)}</div>
-      </div>
+      
+      {step.math && (
+        <div className="ml-9 py-3 text-center overflow-x-auto">
+          <BlockMath math={step.math} />
+        </div>
+      )}
+      
+      {step.reasoning && (
+        <p className="ml-9 text-muted-foreground leading-relaxed">
+          {step.reasoning}
+        </p>
+      )}
     </div>
   );
 }

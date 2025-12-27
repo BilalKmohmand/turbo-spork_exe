@@ -42,6 +42,12 @@ export interface GraphSpec {
   yMax?: number;
 }
 
+export interface StepObject {
+  title: string;
+  math: string;
+  reasoning: string;
+}
+
 export interface Submission {
   id: string;
   assignmentId: string;
@@ -50,7 +56,7 @@ export interface Submission {
   submittedAt: string;
   status: "pending" | "ai_graded" | "teacher_reviewed";
   aiSolution?: string;
-  aiSteps?: string[];
+  aiSteps?: StepObject[];
   aiExplanation?: string;
   problemType?: "math" | "science" | "other";
   graphSpec?: GraphSpec;

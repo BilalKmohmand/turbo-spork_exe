@@ -34,9 +34,15 @@ function ensureStringArray(value: unknown): string[] {
   return [ensureString(value)];
 }
 
+interface StepObject {
+  title: string;
+  math: string;
+  reasoning: string;
+}
+
 interface SolveResult {
   solution: string;
-  steps: string[];
+  steps: StepObject[];
   explanation: string;
   problemType: "math" | "science" | "other";
   graphSpec?: {
@@ -47,6 +53,26 @@ interface SolveResult {
     yMin?: number;
     yMax?: number;
   };
+}
+
+function parseSteps(steps: any): StepObject[] {
+  if (!Array.isArray(steps)) return [];
+  
+  return steps.map((step: any) => {
+    if (typeof step === 'object' && step !== null) {
+      return {
+        title: String(step.title || ''),
+        math: String(step.math || ''),
+        reasoning: String(step.reasoning || '')
+      };
+    }
+    // Fallback for string steps
+    return {
+      title: '',
+      math: '',
+      reasoning: String(step)
+    };
+  });
 }
 
 async function solveFromImage(base64Image: string, mimeType: string): Promise<SolveResult> {
@@ -60,28 +86,23 @@ async function solveFromImage(base64Image: string, mimeType: string): Promise<So
 
 Respond with ONLY a JSON object:
 {
-  "solution": "Final answer with LaTeX",
-  "steps": ["Each step MUST explain WHY - see format below"],
+  "solution": "Final answer (plain text or simple LaTeX like $x = 5$)",
+  "steps": [
+    {"title": "What we're doing", "math": "\\\\frac{30}{6} = 5", "reasoning": "We divide because..."}
+  ],
   "explanation": "Key concepts",
   "problemType": "math" or "science" or "other",
   "graphSpec": null or {"expressions": ["y=2x+1"], "title": "Graph", "xMin": -10, "xMax": 10, "yMin": -10, "yMax": 10}
 }
 
-CRITICAL - EACH STEP MUST HAVE REASONING:
-Every step must explain WHY we do the operation, not just show the math.
+STEP FORMAT - Each step is an object with 3 fields:
+- "title": Short description of the operation (e.g., "Divide total by number of rows")
+- "math": LaTeX equation WITHOUT $$ delimiters (e.g., "\\\\frac{30}{6} = 5")
+- "reasoning": 1-2 sentences explaining WHY this step makes sense
 
-BAD STEP (no reasoning): "Calculate $$30 \\div 6 = 5$$. The answer is 5."
-
-GOOD STEP (has reasoning): "Divide total sticky notes by number of rows $$\\frac{30}{6} = 5$$ We use division because the problem says the sticky notes are split equally into rows. To find how many are in each row, we divide the total (30) by the number of rows (6). This gives us 5 sticky notes per row."
-
-Each step format:
-1. Title of what we're doing
-2. The math: $$equation$$  
-3. REASONING: Explain in 1-2 sentences WHY this operation makes sense and what it tells us
-
-MATH: Use $...$ inline, $$...$$ for blocks, LaTeX syntax (\\frac{a}{b}, x^2, \\sqrt{x})
-
-GRAPH: Include graphSpec for graphable equations. Use Desmos format.
+MATH FIELD RULES:
+- Do NOT include $$ or $ in the math field - just raw LaTeX
+- Use \\\\frac{a}{b} for fractions, x^2 for exponents, \\\\sqrt{x} for roots
 
 Output ONLY valid JSON`
         },
@@ -115,7 +136,7 @@ Output ONLY valid JSON`
       const result = JSON.parse(text);
       return {
         solution: ensureString(result.solution) || "See steps below.",
-        steps: ensureStringArray(result.steps),
+        steps: parseSteps(result.steps),
         explanation: ensureString(result.explanation) || "Review the steps for understanding.",
         problemType: result.problemType || "other",
         graphSpec: result.graphSpec || undefined,
@@ -123,7 +144,7 @@ Output ONLY valid JSON`
     } catch {
       return {
         solution: text.slice(0, 1000) || "Solution generated.",
-        steps: ["Review the answer above."],
+        steps: [{ title: "Solution", math: "", reasoning: "Review the answer above." }],
         explanation: "The problem has been solved.",
         problemType: "other",
       };
@@ -143,28 +164,23 @@ async function solveWithAI(content: string): Promise<SolveResult> {
 
 Respond with ONLY a JSON object:
 {
-  "solution": "Final answer with LaTeX",
-  "steps": ["Each step MUST explain WHY - see format below"],
+  "solution": "Final answer (plain text or simple LaTeX like $x = 5$)",
+  "steps": [
+    {"title": "What we're doing", "math": "\\frac{30}{6} = 5", "reasoning": "We divide because..."}
+  ],
   "explanation": "Key concepts",
   "problemType": "math" or "science" or "other",
   "graphSpec": null or {"expressions": ["y=2x+1"], "title": "Graph", "xMin": -10, "xMax": 10, "yMin": -10, "yMax": 10}
 }
 
-CRITICAL - EACH STEP MUST HAVE REASONING:
-Every step must explain WHY we do the operation, not just show the math.
+STEP FORMAT - Each step is an object with 3 fields:
+- "title": Short description of the operation (e.g., "Divide total by number of rows")
+- "math": LaTeX equation WITHOUT $$ delimiters (e.g., "\\frac{30}{6} = 5")
+- "reasoning": 1-2 sentences explaining WHY this step makes sense
 
-BAD STEP (no reasoning): "Calculate $$30 \\div 6 = 5$$. The answer is 5."
-
-GOOD STEP (has reasoning): "Divide total sticky notes by number of rows $$\\frac{30}{6} = 5$$ We use division because the problem says the sticky notes are split equally into rows. To find how many are in each row, we divide the total (30) by the number of rows (6). This gives us 5 sticky notes per row."
-
-Each step format:
-1. Title of what we're doing
-2. The math: $$equation$$  
-3. REASONING: Explain in 1-2 sentences WHY this operation makes sense and what it tells us
-
-MATH: Use $...$ inline, $$...$$ for blocks, LaTeX syntax (\\frac{a}{b}, x^2, \\sqrt{x})
-
-GRAPH: Include graphSpec for graphable equations. Use Desmos format.
+MATH FIELD RULES:
+- Do NOT include $$ or $ in the math field - just raw LaTeX
+- Use \\frac{a}{b} for fractions, x^2 for exponents, \\sqrt{x} for roots
 
 Output ONLY valid JSON`,
       messages: [
@@ -187,7 +203,7 @@ Output ONLY valid JSON`,
       const result = JSON.parse(text);
       return {
         solution: ensureString(result.solution) || "See steps below.",
-        steps: ensureStringArray(result.steps),
+        steps: parseSteps(result.steps),
         explanation: ensureString(result.explanation) || "Review the steps for understanding.",
         problemType: result.problemType || "other",
         graphSpec: result.graphSpec || undefined,
@@ -195,7 +211,7 @@ Output ONLY valid JSON`,
     } catch {
       return {
         solution: text.slice(0, 1000) || "Solution generated.",
-        steps: ["Review the answer above."],
+        steps: [{ title: "Solution", math: "", reasoning: "Review the answer above." }],
         explanation: "The problem has been solved.",
         problemType: "other",
       };

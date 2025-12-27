@@ -18,14 +18,14 @@ import {
   RefreshCw,
   Camera
 } from "lucide-react";
-import type { Message, GraphSpec } from "@shared/schema";
+import type { Message, GraphSpec, StepObject } from "@shared/schema";
 
 interface SubmissionResult {
   id: string;
   content: string;
   status: string;
   aiSolution?: string;
-  aiSteps?: string[];
+  aiSteps?: StepObject[];
   aiExplanation?: string;
   problemType?: "math" | "science" | "other";
   graphSpec?: GraphSpec;
@@ -320,13 +320,13 @@ export default function Home() {
         className="flex-1 overflow-y-auto"
       >
         {!hasConversation && (
-          <div className="flex flex-col items-center justify-center h-full px-4">
-            <div className="w-full max-w-2xl space-y-6">
-              <div className="text-center space-y-3 mb-8">
-                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground">
-                  <Sparkles className="w-7 h-7" />
+          <div className="flex flex-col items-center justify-center h-full px-3 sm:px-4">
+            <div className="w-full max-w-2xl space-y-4 sm:space-y-6">
+              <div className="text-center space-y-2 sm:space-y-3 mb-4 sm:mb-8">
+                <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground">
+                  <Sparkles className="w-6 h-6 sm:w-7 sm:h-7" />
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-bold">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold px-2">
                   What can I help you solve?
                 </h1>
               </div>
@@ -340,37 +340,40 @@ export default function Home() {
                   className="min-h-[100px] resize-none border-0 bg-transparent focus-visible:ring-0 text-base"
                   data-testid="input-main"
                 />
-                <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-border/50">
-                  <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 mt-2 pt-2 border-t border-border/50">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <Button
                       variant="outline"
                       size="sm"
-                      className="gap-2"
+                      className="gap-2 flex-1 sm:flex-none"
                       onClick={() => fileInputRef.current?.click()}
                       data-testid="button-image-upload"
                     >
                       <Paperclip className="w-4 h-4" />
-                      Image / PDF
+                      <span className="hidden xs:inline">Image / PDF</span>
+                      <span className="xs:hidden">Upload</span>
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="gap-2"
+                      className="gap-2 flex-1 sm:flex-none"
                       onClick={() => cameraInputRef.current?.click()}
                       data-testid="button-camera"
                     >
                       <Camera className="w-4 h-4" />
-                      Take Photo
+                      <span className="hidden xs:inline">Take Photo</span>
+                      <span className="xs:hidden">Camera</span>
                     </Button>
                   </div>
                   <Button
                     size="sm"
-                    className="gap-2 rounded-xl px-4"
+                    className="gap-2 rounded-xl px-4 w-full sm:w-auto"
                     onClick={handleTextSubmit}
                     disabled={!textProblem.trim()}
                     data-testid="button-solve"
                   >
                     <Send className="w-4 h-4" />
+                    <span>Solve</span>
                   </Button>
                 </div>
               </div>
