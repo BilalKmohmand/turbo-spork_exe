@@ -276,17 +276,50 @@ export default function Home() {
         className="flex-1 overflow-y-auto"
       >
         {!hasConversation && (
-          <div className="flex flex-col items-center justify-center h-full px-6">
-            <div className="text-center space-y-4 max-w-2xl">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground mb-4">
-                <Sparkles className="w-8 h-8" />
+          <div className="flex flex-col items-center justify-center h-full px-4">
+            <div className="w-full max-w-2xl space-y-6">
+              <div className="text-center space-y-3 mb-8">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground">
+                  <Sparkles className="w-7 h-7" />
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-bold">
+                  What can I help you solve?
+                </h1>
               </div>
-              <h1 className="text-3xl sm:text-4xl font-bold">
-                What can I help you solve?
-              </h1>
-              <p className="text-muted-foreground text-lg">
-                Type your homework question or upload an image
-              </p>
+              
+              <div className="bg-muted/50 rounded-2xl border p-3">
+                <Textarea
+                  placeholder="Type text, or add images by uploading, pasting, or dragging here"
+                  value={textProblem}
+                  onChange={(e) => setTextProblem(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="min-h-[100px] resize-none border-0 bg-transparent focus-visible:ring-0 text-base"
+                  data-testid="input-main"
+                />
+                <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-border/50">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => fileInputRef.current?.click()}
+                      data-testid="button-image-upload"
+                    >
+                      <Paperclip className="w-4 h-4" />
+                      Image / PDF
+                    </Button>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="gap-2 rounded-xl px-4"
+                    onClick={handleTextSubmit}
+                    disabled={!textProblem.trim()}
+                    data-testid="button-solve"
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -424,66 +457,73 @@ export default function Home() {
         )}
       </div>
 
-      <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="max-w-3xl mx-auto px-4 py-4">
-          {result && (
-            <div className="flex justify-center mb-3">
+      {hasConversation && (
+        <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="max-w-3xl mx-auto px-4 py-4">
+            {result && (
+              <div className="flex justify-center mb-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleReset}
+                  className="gap-2"
+                  data-testid="button-new-problem"
+                >
+                  <Plus className="w-4 h-4" />
+                  New Problem
+                </Button>
+              </div>
+            )}
+            
+            <div className="relative flex items-end gap-2 bg-muted/50 rounded-2xl border p-2">
               <Button
-                variant="outline"
-                size="sm"
-                onClick={handleReset}
-                className="gap-2"
-                data-testid="button-new-problem"
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 flex-shrink-0"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isLoading}
+                data-testid="button-attach"
               >
-                <Plus className="w-4 h-4" />
-                New Problem
+                <Paperclip className="w-5 h-5" />
+              </Button>
+              
+              <Textarea
+                placeholder="Ask a follow-up question..."
+                value={followUpQuestion}
+                onChange={(e) => setFollowUpQuestion(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleFollowUp();
+                  }
+                }}
+                className="flex-1 min-h-[44px] max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 text-base"
+                rows={1}
+                disabled={isLoading}
+                data-testid="input-chat"
+              />
+              
+              <Button
+                size="icon"
+                className="h-10 w-10 flex-shrink-0 rounded-xl"
+                onClick={handleFollowUp}
+                disabled={isLoading || !followUpQuestion.trim()}
+                data-testid="button-send"
+              >
+                {isLoading || isAskingFollowUp ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Send className="w-5 h-5" />
+                )}
               </Button>
             </div>
-          )}
-          
-          <div className="relative flex items-end gap-2 bg-muted/50 rounded-2xl border p-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-10 w-10 flex-shrink-0"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isLoading}
-              data-testid="button-attach"
-            >
-              <Paperclip className="w-5 h-5" />
-            </Button>
             
-            <Textarea
-              placeholder={result ? "Ask a follow-up question..." : "Type text, or add images by uploading, pasting, or dragging here"}
-              value={result ? followUpQuestion : textProblem}
-              onChange={(e) => result ? setFollowUpQuestion(e.target.value) : setTextProblem(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="flex-1 min-h-[44px] max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 text-base"
-              rows={1}
-              disabled={isLoading}
-              data-testid="input-chat"
-            />
-            
-            <Button
-              size="icon"
-              className="h-10 w-10 flex-shrink-0 rounded-xl"
-              onClick={result ? handleFollowUp : handleTextSubmit}
-              disabled={isLoading || (result ? !followUpQuestion.trim() : !textProblem.trim())}
-              data-testid="button-send"
-            >
-              {isLoading || isAskingFollowUp ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Send className="w-5 h-5" />
-              )}
-            </Button>
+            <p className="text-xs text-center text-muted-foreground mt-3">
+              AI Homework Solver can make mistakes. Verify important answers.
+            </p>
           </div>
-          
-          <p className="text-xs text-center text-muted-foreground mt-3">
-            AI Homework Solver can make mistakes. Verify important answers.
-          </p>
         </div>
-      </div>
+      )}
     </div>
   );
 }
