@@ -1,146 +1,160 @@
-# Design Guidelines: AI-Powered Student-Teacher Platform
+# Design Guidelines: Solvely-Style AI Homework Solver
 
 ## Design Approach
 
-**System Selected:** Material Design-inspired with Notion-like information density
-**Rationale:** Educational platforms require clear hierarchy, efficient workflows, and data-heavy interfaces. Material Design provides structured patterns for dashboards, forms, and data display while maintaining approachability.
+**Reference-Based:** Inspired by Solvely, Photomath, and Notion's clarity
+**Rationale:** Educational solver apps need immediate clarity on core function (input problem → get solution) while maintaining professional credibility. Minimalist approach keeps focus on the AI interaction, gradient accents add modern polish without distraction.
 
 ## Typography System
 
 **Font Stack:**
-- Primary: Inter (Google Fonts) - UI elements, body text
-- Secondary: JetBrains Mono - Code/assignment snippets
+- Primary: Inter (Google Fonts) - All UI and content
+- Math/Code: KaTeX/JetBrains Mono for equations and code snippets
 
 **Hierarchy:**
-- Page Titles: text-4xl font-bold
-- Section Headers: text-2xl font-semibold
-- Card Titles: text-lg font-medium
-- Body Text: text-base font-normal
-- Metadata/Labels: text-sm font-medium
-- Captions: text-xs
+- Hero Headline: text-5xl lg:text-6xl font-bold
+- Page Headers: text-3xl font-bold
+- Section Titles: text-xl font-semibold
+- Solution Steps: text-lg font-medium
+- Body/Input: text-base
+- Labels/Metadata: text-sm font-medium
 
-## Layout & Spacing System
+## Layout & Spacing
 
-**Tailwind Units:** Consistently use 4, 6, 8, 12, 16, 20 for spacing (p-4, gap-6, my-8, etc.)
-
-**Grid System:**
-- Container: max-w-7xl mx-auto px-6
-- Two-column layouts: grid grid-cols-1 lg:grid-cols-3 (sidebar + main content split)
-- Card grids: grid-cols-1 md:grid-cols-2 lg:grid-cols-3
+**Tailwind Units:** 4, 6, 8, 12, 16, 20, 24
+**Container:** max-w-4xl mx-auto px-6 (narrow focus on content)
+**Section Padding:** py-16 lg:py-24
 
 ## Core Application Structure
 
-### Dashboard Layout (Both Roles)
-- **Persistent Sidebar:** Fixed left navigation (w-64), icons + labels, role-specific menu items
-- **Top Bar:** User profile, notifications, search, breadcrumbs
-- **Main Content Area:** Scrollable, dynamic based on view (ml-64 to account for sidebar)
+### Landing Page
 
-### Student Dashboard Components
+**Hero Section (70vh):**
+- Centered layout with gradient background overlay
+- Headline: "Solve Any Problem in Seconds" + supporting tagline
+- Prominent search-style input box (min-h-24, rounded-2xl, shadow-2xl)
+- Placeholder: "Type or paste your math, science, or homework question..."
+- Primary CTA button with backdrop-blur background: "Get Solution →"
+- Trust indicators below: "Trusted by 2M+ students | 95% accuracy rate"
 
-**Hero Section (Dashboard Home):**
-- Welcome banner with student name and quick stats (assignments pending, completed, grades)
-- No full-screen hero - functional dashboard layout
-- Quick action cards: "Upload Assignment", "View Feedback", "Check Grades"
+**Features Grid:**
+- 3-column layout (grid-cols-1 md:grid-cols-3 gap-8)
+- Cards with gradient top borders, icons, title, description
+- Features: "Step-by-Step Solutions", "Multiple Subject Support", "Instant Answers"
 
-**Assignment Upload Component:**
-- Large dropzone (min-h-64): "Drag & drop or click to upload" with file type icons
-- File list with progress bars after selection
-- Assignment details form: Title, Subject, Due Date, Description
-- Prominent "Submit to AI" button
+**How It Works:**
+- 3-step visual walkthrough with large numbered badges
+- Step cards with illustrations: 1) Enter Problem 2) AI Analyzes 3) Get Detailed Solution
 
-**Assignment List View:**
-- Card-based layout with: Assignment title, subject tag, status badge, submission date, AI score
-- Filter tabs: All | Pending | Graded | Overdue
-- Search bar for quick access
+**Social Proof:**
+- 2-column testimonial cards with student photos, quotes, subjects solved
+- Trust badges: Subjects supported, accuracy metrics
 
-**AI Results Display:**
-- Split view: Original submission (left) + AI evaluation (right)
-- Syntax highlighting for code submissions
-- Score breakdown cards: Accuracy, Completeness, Creativity
-- Expandable feedback sections
+**Final CTA:**
+- Centered section with gradient background
+- Large input replica + "Start Solving Now" button
+- Secondary text: "No signup required for first 3 problems"
 
-### Teacher Dashboard Components
+### Solver Interface (Main App)
 
-**Evaluation Queue:**
-- Table view with sortable columns: Student Name, Assignment, Subject, Submitted Date, AI Score, Status
-- Batch selection checkboxes
-- Status filters: Needs Review | AI-Graded | Manually Graded
+**Header:**
+- Logo left, "New Problem" button, History dropdown, Profile right
+- Sticky positioning (sticky top-0), subtle shadow on scroll
 
-**Assignment Review Interface:**
-- Three-panel layout:
-  - Left (w-1/4): Student info sidebar with past performance
-  - Center (w-1/2): Assignment content with annotation tools
-  - Right (w-1/4): AI analysis + grading form
-- Inline commenting system with line-by-line feedback
-- Override AI grade option with justification field
+**Problem Input Area:**
+- Full-width card (rounded-2xl p-8 shadow-lg)
+- Large textarea (min-h-48) with auto-expand
+- Image upload zone (dashed border): "Upload problem photo"
+- Subject selector pills: Math, Physics, Chemistry, Biology, etc.
+- Submit button: Gradient background, large (px-8 py-4)
 
-**Class Analytics:**
-- Grid of metric cards: Average Score, Completion Rate, Common Mistakes
-- Bar chart: Assignment difficulty distribution
-- Student performance table with trend indicators
+**Solution Display:**
+- White card with generous padding (p-12)
+- Problem restatement at top (bg-gray-50 rounded-xl p-6)
+- Step-by-step breakdown with numbered sections
+- Each step: Bold title + detailed explanation + visual aids
+- Math rendering with proper formatting
+- Final answer highlighted in gradient-bordered box
+- Action buttons: "New Problem", "Save Solution", "Share"
 
-## UI Component Library
+**History Sidebar (Collapsible):**
+- Right-side panel (w-80) with recent problems
+- Mini cards showing problem preview + timestamp
+- Quick access to past solutions
 
-**Navigation:**
-- Sidebar: Stacked links with icons (from Heroicons), active state with left border indicator
-- Breadcrumbs: text-sm with slash separators
+## UI Components
 
-**Forms:**
-- Input fields: Bordered (border-2), rounded-lg, p-3, focus:ring-2 ring offset
-- Labels: text-sm font-medium mb-2
-- File upload: Dashed border (border-dashed), hover state transition
-- Textareas: min-h-32 for descriptions
+**Input Fields:**
+- Large, rounded borders (rounded-xl border-2)
+- Focus state: gradient ring effect
+- Generous padding (p-4)
 
-**Data Display:**
-- Cards: rounded-xl, shadow-sm, p-6, hover:shadow-md transition
-- Tables: Striped rows, sticky header, hover row highlight
-- Badges: rounded-full px-3 py-1 text-xs for status (Success/Warning/Info styles)
-- Progress bars: rounded-full h-2 with animated fill
+**Cards:**
+- White background, rounded-2xl, shadow-md
+- Hover: shadow-xl transition
 
 **Buttons:**
-- Primary: Large click targets (px-6 py-3), rounded-lg, font-medium
-- Secondary: Outlined variant
-- Icon buttons: Circular (rounded-full) for actions
-- Upload button: Dashed border matching dropzone aesthetic
+- Primary: Gradient background (purple-to-blue), rounded-xl, font-semibold
+- Secondary: Outlined with gradient border
+- All buttons: px-6 py-3 minimum
 
-**Overlays:**
-- Modal dialogs: max-w-2xl, centered, backdrop blur
-- Dropdowns: shadow-lg, rounded-lg, py-2
-- Tooltips: text-xs, rounded-md, absolute positioning
+**Badges:**
+- Subject tags: rounded-full px-4 py-1.5, gradient backgrounds
+- Status indicators: Small pills with icons
+
+**Solution Steps:**
+- Numbered circles (gradient background, white text)
+- Connected with vertical gradient lines
+- Each step in expandable card
+
+**Gradient Accents:**
+- Hero backgrounds: purple → blue
+- Button backgrounds: indigo → purple
+- Border accents: cyan → blue
+- Use sparingly for emphasis only
 
 ## Icons
 
-**Library:** Heroicons (via CDN)
-**Usage:**
-- Navigation: 20x20 icons beside labels
-- Action buttons: 16x16 inline icons
-- Status indicators: 12x12 colored dots
-- File types: 24x24 document icons in upload zones
+**Library:** Heroicons (outline style for cleaner look)
+**Sizes:** 24x24 for primary actions, 20x20 for navigation, 16x16 inline
 
 ## Images
 
-**Image Usage:**
-- **No large hero image** - This is a functional dashboard application
-- **Profile avatars:** Circular, 40x40 in headers, 96x96 in profile views
-- **Empty states:** Illustration placeholders for "No assignments yet" (centered, max-w-sm)
-- **Assignment thumbnails:** Preview of uploaded files (aspect-square, 120x120)
+**Hero Section:**
+- Large, high-quality image showing students studying with laptops/tablets
+- Image should convey: focused learning, modern technology, diversity
+- Treatment: Gradient overlay (purple/blue with 60% opacity) for text legibility
+- Position: Full-width background, centered student in focus
+- Alt: "Students using AI homework solver on laptops"
 
-**Placeholder Descriptions:**
-- Student empty state: Friendly illustration of student with books, centered with "Upload your first assignment to get started"
-- Teacher empty state: Desk with papers illustration, "No submissions to review"
+**Feature Section:**
+- Small illustrations (not photos): Icons representing math symbols, lightbulbs, checkmarks
+- Max 200x200, centered above feature descriptions
+
+**How It Works:**
+- 3 simple line-art illustrations showing: 1) Typing/uploading 2) AI processing 3) Solution appearing
+- Consistent style, 2-color scheme matching gradients
+
+**Testimonials:**
+- Circular profile photos (96x96), authentic student portraits
+- Diverse representation
+
+**No decorative images** - all imagery serves functional purpose
 
 ## Animations
 
-**Minimal, purposeful only:**
-- Loading spinners for AI processing
-- Success checkmark animation on submission
-- Smooth transitions on card hovers (duration-200)
-- Page transitions: Fade-in content on route change
+**Strategic Use Only:**
+- Solution reveal: Fade-in each step sequentially (stagger delay)
+- Input focus: Subtle scale + gradient ring glow
+- Button loading: Spinning gradient border during AI processing
+- Success state: Checkmark animation when solution ready
+- Page transitions: Smooth fade (300ms)
 
 ## Accessibility
 
-- All form inputs with visible labels and aria-labels
-- Keyboard navigation support throughout
-- Focus indicators on all interactive elements (ring-2)
-- Alt text for all images and icons
-- WCAG AA contrast ratios maintained
+- High contrast maintained (WCAG AA)
+- All interactive elements keyboard navigable
+- Focus rings on all inputs/buttons (gradient-styled ring-2)
+- Alt text for all images
+- Proper heading hierarchy
+- Screen reader labels for icon buttons
