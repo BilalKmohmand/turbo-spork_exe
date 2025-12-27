@@ -56,23 +56,28 @@ async function solveFromImage(base64Image: string, mimeType: string): Promise<So
       messages: [
         {
           role: "system",
-          content: `You are an expert tutor. Solve the homework problem in the image completely.
+          content: `You are an expert math tutor. Solve the homework problem in the image completely.
 
 Respond with ONLY a JSON object:
 {
-  "solution": "Final answer as a string",
-  "steps": ["Step 1: ...", "Step 2: ..."],
-  "explanation": "Key concepts",
+  "solution": "Final answer (use LaTeX: $x = 5$ for inline, $$x^2 + 1$$ for block)",
+  "steps": ["Step description with $math$ inline", "Another step with $$block math$$"],
+  "explanation": "Key concepts with $formulas$ if needed",
   "problemType": "math" or "science" or "other",
-  "graphSpec": null or {"expressions": ["y=2x+1", "y=x^2"], "title": "Graph", "xMin": -10, "xMax": 10, "yMin": -10, "yMax": 10}
+  "graphSpec": null or {"expressions": ["y=2x+1"], "title": "Graph", "xMin": -10, "xMax": 10, "yMin": -10, "yMax": 10}
 }
 
-RULES:
-- All text fields MUST be simple strings
-- problemType: use "math" for algebra, calculus, geometry; "science" for physics, chemistry; "other" for everything else
-- graphSpec: ONLY include if the problem involves graphable functions, equations, or inequalities. Use Desmos-compatible expressions (e.g., "y=2x+1", "y=x^2-4", "y=sin(x)")
-- If multiple questions, combine answers into one solution string
-- Output ONLY valid JSON`
+MATH FORMATTING RULES:
+- Use $...$ for inline math: "The answer is $x = 5$"
+- Use $$...$$ for important equations on their own line: "$$x^2 + 2x + 1 = 0$$"
+- Use LaTeX syntax: fractions \\frac{a}{b}, exponents x^2, subscripts x_1, roots \\sqrt{x}
+- Always format mathematical expressions in LaTeX
+
+GRAPH RULES:
+- graphSpec: Include for equations/functions/inequalities. Use Desmos format (e.g., "y=2x+1", "x>3")
+- For inequalities like x > 3, use expressions: ["x=3"] with appropriate bounds
+
+Output ONLY valid JSON`
         },
         {
           role: "user",
@@ -128,23 +133,28 @@ async function solveWithAI(content: string): Promise<SolveResult> {
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-5",
       max_tokens: 4096,
-      system: `You are an expert tutor. Solve the homework problem completely.
+      system: `You are an expert math tutor. Solve the homework problem completely.
 
 Respond with ONLY a JSON object:
 {
-  "solution": "Final answer as a string",
-  "steps": ["Step 1: ...", "Step 2: ..."],
-  "explanation": "Key concepts",
+  "solution": "Final answer (use LaTeX: $x = 5$ for inline, $$x^2 + 1$$ for block)",
+  "steps": ["Step description with $math$ inline", "Another step with $$block math$$"],
+  "explanation": "Key concepts with $formulas$ if needed",
   "problemType": "math" or "science" or "other",
-  "graphSpec": null or {"expressions": ["y=2x+1", "y=x^2"], "title": "Graph", "xMin": -10, "xMax": 10, "yMin": -10, "yMax": 10}
+  "graphSpec": null or {"expressions": ["y=2x+1"], "title": "Graph", "xMin": -10, "xMax": 10, "yMin": -10, "yMax": 10}
 }
 
-RULES:
-- All text fields MUST be simple strings
-- problemType: use "math" for algebra, calculus, geometry; "science" for physics, chemistry; "other" for everything else
-- graphSpec: ONLY include if the problem involves graphable functions, equations, or inequalities. Use Desmos-compatible expressions (e.g., "y=2x+1", "y=x^2-4", "y=sin(x)")
-- If multiple questions, combine answers into one solution string
-- Output ONLY valid JSON`,
+MATH FORMATTING RULES:
+- Use $...$ for inline math: "The answer is $x = 5$"
+- Use $$...$$ for important equations on their own line: "$$x^2 + 2x + 1 = 0$$"
+- Use LaTeX syntax: fractions \\frac{a}{b}, exponents x^2, subscripts x_1, roots \\sqrt{x}
+- Always format mathematical expressions in LaTeX
+
+GRAPH RULES:
+- graphSpec: Include for equations/functions/inequalities. Use Desmos format (e.g., "y=2x+1", "x>3")
+- For inequalities like x > 3, use expressions: ["x=3"] with appropriate bounds
+
+Output ONLY valid JSON`,
       messages: [
         {
           role: "user",
