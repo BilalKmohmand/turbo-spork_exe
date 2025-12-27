@@ -33,6 +33,15 @@ export interface Message {
   content: string;
 }
 
+export interface GraphSpec {
+  expressions: string[];
+  title?: string;
+  xMin?: number;
+  xMax?: number;
+  yMin?: number;
+  yMax?: number;
+}
+
 export interface Submission {
   id: string;
   assignmentId: string;
@@ -43,6 +52,8 @@ export interface Submission {
   aiSolution?: string;
   aiSteps?: string[];
   aiExplanation?: string;
+  problemType?: "math" | "science" | "other";
+  graphSpec?: GraphSpec;
   messages?: Message[];
   teacherScore?: number;
   teacherFeedback?: string;

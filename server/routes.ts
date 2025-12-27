@@ -34,29 +34,44 @@ function ensureStringArray(value: unknown): string[] {
   return [ensureString(value)];
 }
 
-async function solveFromImage(base64Image: string, mimeType: string): Promise<{
+interface SolveResult {
   solution: string;
   steps: string[];
   explanation: string;
-}> {
+  problemType: "math" | "science" | "other";
+  graphSpec?: {
+    expressions: string[];
+    title?: string;
+    xMin?: number;
+    xMax?: number;
+    yMin?: number;
+    yMax?: number;
+  };
+}
+
+async function solveFromImage(base64Image: string, mimeType: string): Promise<SolveResult> {
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
           role: "system",
-          content: `You are an expert tutor. Look at the homework problem in the image and solve it completely.
-
-If there are MULTIPLE questions, solve ALL of them and combine into ONE response.
+          content: `You are an expert tutor. Solve the homework problem in the image completely.
 
 Respond with ONLY a JSON object:
-{"solution": "Final answer(s) as a single string", "steps": ["Step 1: ...", "Step 2: ..."], "explanation": "Key concepts as a single string"}
+{
+  "solution": "Final answer as a string",
+  "steps": ["Step 1: ...", "Step 2: ..."],
+  "explanation": "Key concepts",
+  "problemType": "math" or "science" or "other",
+  "graphSpec": null or {"expressions": ["y=2x+1", "y=x^2"], "title": "Graph", "xMin": -10, "xMax": 10, "yMin": -10, "yMax": 10}
+}
 
-CRITICAL RULES:
-- solution MUST be a simple string, not an object
-- steps MUST be an array of strings
-- explanation MUST be a simple string
-- If multiple questions, format solution as "Q1: answer1, Q2: answer2" etc.
+RULES:
+- All text fields MUST be simple strings
+- problemType: use "math" for algebra, calculus, geometry; "science" for physics, chemistry; "other" for everything else
+- graphSpec: ONLY include if the problem involves graphable functions, equations, or inequalities. Use Desmos-compatible expressions (e.g., "y=2x+1", "y=x^2-4", "y=sin(x)")
+- If multiple questions, combine answers into one solution string
 - Output ONLY valid JSON`
         },
         {
@@ -64,7 +79,7 @@ CRITICAL RULES:
           content: [
             {
               type: "text",
-              text: "Solve this homework problem. Return JSON with solution as a string, steps as string array, explanation as a string.",
+              text: "Solve this problem completely. Include graphSpec if it involves graphable equations.",
             },
             {
               type: "image_url",
@@ -80,7 +95,6 @@ CRITICAL RULES:
 
     let text = response.choices[0]?.message?.content || "";
     
-    // Extract JSON from response
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       text = jsonMatch[0];
@@ -92,12 +106,15 @@ CRITICAL RULES:
         solution: ensureString(result.solution) || "See steps below.",
         steps: ensureStringArray(result.steps),
         explanation: ensureString(result.explanation) || "Review the steps for understanding.",
+        problemType: result.problemType || "other",
+        graphSpec: result.graphSpec || undefined,
       };
     } catch {
       return {
         solution: text.slice(0, 1000) || "Solution generated.",
         steps: ["Review the answer above."],
         explanation: "The problem has been solved.",
+        problemType: "other",
       };
     }
   } catch (error: any) {
@@ -106,32 +123,32 @@ CRITICAL RULES:
   }
 }
 
-async function solveWithAI(content: string): Promise<{
-  solution: string;
-  steps: string[];
-  explanation: string;
-}> {
+async function solveWithAI(content: string): Promise<SolveResult> {
   try {
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-5",
       max_tokens: 4096,
-      system: `You are an expert tutor that solves homework problems completely.
-
-If there are MULTIPLE questions, solve ALL of them and combine into ONE response.
+      system: `You are an expert tutor. Solve the homework problem completely.
 
 Respond with ONLY a JSON object:
-{"solution": "Final answer(s) as a single string", "steps": ["Step 1: ...", "Step 2: ..."], "explanation": "Key concepts as a single string"}
+{
+  "solution": "Final answer as a string",
+  "steps": ["Step 1: ...", "Step 2: ..."],
+  "explanation": "Key concepts",
+  "problemType": "math" or "science" or "other",
+  "graphSpec": null or {"expressions": ["y=2x+1", "y=x^2"], "title": "Graph", "xMin": -10, "xMax": 10, "yMin": -10, "yMax": 10}
+}
 
-CRITICAL RULES:
-- solution MUST be a simple string, not an object
-- steps MUST be an array of strings
-- explanation MUST be a simple string
-- If multiple questions, format solution as "Q1: answer1, Q2: answer2" etc.
+RULES:
+- All text fields MUST be simple strings
+- problemType: use "math" for algebra, calculus, geometry; "science" for physics, chemistry; "other" for everything else
+- graphSpec: ONLY include if the problem involves graphable functions, equations, or inequalities. Use Desmos-compatible expressions (e.g., "y=2x+1", "y=x^2-4", "y=sin(x)")
+- If multiple questions, combine answers into one solution string
 - Output ONLY valid JSON`,
       messages: [
         {
           role: "user",
-          content: `Solve this problem. Return JSON with solution as a string, steps as string array, explanation as a string:\n\n${content}`,
+          content: `Solve this problem completely. Include graphSpec if it involves graphable equations:\n\n${content}`,
         },
       ],
     });
@@ -150,12 +167,15 @@ CRITICAL RULES:
         solution: ensureString(result.solution) || "See steps below.",
         steps: ensureStringArray(result.steps),
         explanation: ensureString(result.explanation) || "Review the steps for understanding.",
+        problemType: result.problemType || "other",
+        graphSpec: result.graphSpec || undefined,
       };
     } catch {
       return {
         solution: text.slice(0, 1000) || "Solution generated.",
         steps: ["Review the answer above."],
         explanation: "The problem has been solved.",
+        problemType: "other",
       };
     }
   } catch (error: any) {
@@ -245,6 +265,8 @@ export async function registerRoutes(
         aiSolution: aiResult.solution,
         aiSteps: aiResult.steps,
         aiExplanation: aiResult.explanation,
+        problemType: aiResult.problemType,
+        graphSpec: aiResult.graphSpec,
       });
 
       const updated = await storage.getSubmission(submission.id);
@@ -276,6 +298,8 @@ export async function registerRoutes(
         aiSolution: aiResult.solution,
         aiSteps: aiResult.steps,
         aiExplanation: aiResult.explanation,
+        problemType: aiResult.problemType,
+        graphSpec: aiResult.graphSpec,
       });
 
       const updated = await storage.getSubmission(submission.id);
