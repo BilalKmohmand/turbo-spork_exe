@@ -8,9 +8,13 @@ import {
   type DashboardStats,
   type StepObject,
   type Message,
-  type GraphSpec
+  type GraphSpec,
+  users,
+  submissions,
+  evaluations,
 } from "@shared/schema";
-import { randomUUID } from "crypto";
+import { db } from "./db";
+import { eq, desc, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -35,45 +39,29 @@ export interface IStorage {
   getTeacherStats(): Promise<DashboardStats>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-  private submissions: Map<string, Submission>;
-  private evaluations: Map<string, Evaluation>;
-
-  constructor() {
-    this.users = new Map();
-    this.submissions = new Map();
-    this.evaluations = new Map();
-  }
-
+export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.email === email,
-    );
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { 
-      id,
+    const [user] = await db.insert(users).values({
       email: insertUser.email,
       displayName: insertUser.displayName,
       password: insertUser.password,
       role: insertUser.role || "student",
-      createdAt: new Date(),
-    };
-    this.users.set(id, user);
+    }).returning();
     return user;
   }
 
   async createSubmission(data: Partial<InsertSubmission> & { content: string; studentName: string; title: string }): Promise<Submission> {
-    const id = randomUUID();
-    const submission: Submission = {
-      id,
+    const [submission] = await db.insert(submissions).values({
       studentId: data.studentId || null,
       studentName: data.studentName,
       title: data.title,
@@ -81,92 +69,105 @@ export class MemStorage implements IStorage {
       content: data.content,
       fileUrl: data.fileUrl || null,
       status: data.status || "pending",
-      aiSolution: null,
-      aiSteps: null,
-      aiExplanation: null,
       problemType: data.problemType || "other",
-      graphSpec: null,
-      messages: null,
-      submittedAt: new Date(),
-    };
-    this.submissions.set(id, submission);
+    }).returning();
     return submission;
   }
 
   async getSubmission(id: string): Promise<Submission | undefined> {
-    return this.submissions.get(id);
+    const [submission] = await db.select().from(submissions).where(eq(submissions.id, id));
+    return submission;
   }
 
   async getSubmissionsByStudent(studentId: string): Promise<Submission[]> {
-    return Array.from(this.submissions.values())
-      .filter(s => s.studentId === studentId)
-      .sort((a, b) => new Date(b.submittedAt!).getTime() - new Date(a.submittedAt!).getTime());
+    return await db.select()
+      .from(submissions)
+      .where(eq(submissions.studentId, studentId))
+      .orderBy(desc(submissions.submittedAt));
   }
 
   async getAllSubmissions(): Promise<Submission[]> {
-    return Array.from(this.submissions.values()).sort(
-      (a, b) => new Date(b.submittedAt!).getTime() - new Date(a.submittedAt!).getTime()
-    );
+    return await db.select()
+      .from(submissions)
+      .orderBy(desc(submissions.submittedAt));
   }
 
   async getPendingSubmissions(): Promise<Submission[]> {
-    return Array.from(this.submissions.values())
-      .filter(s => s.status === "ai_graded")
-      .sort((a, b) => new Date(b.submittedAt!).getTime() - new Date(a.submittedAt!).getTime());
+    return await db.select()
+      .from(submissions)
+      .where(eq(submissions.status, "ai_graded"))
+      .orderBy(desc(submissions.submittedAt));
   }
 
   async updateSubmission(id: string, data: Partial<Submission>): Promise<Submission | undefined> {
-    const existing = this.submissions.get(id);
-    if (!existing) return undefined;
+    const updateData: Record<string, any> = {};
     
-    const updated = { ...existing, ...data };
-    this.submissions.set(id, updated);
+    if (data.status !== undefined) updateData.status = data.status;
+    if (data.aiSolution !== undefined) updateData.aiSolution = data.aiSolution;
+    if (data.aiSteps !== undefined) updateData.aiSteps = data.aiSteps;
+    if (data.aiExplanation !== undefined) updateData.aiExplanation = data.aiExplanation;
+    if (data.problemType !== undefined) updateData.problemType = data.problemType;
+    if (data.graphSpec !== undefined) updateData.graphSpec = data.graphSpec;
+    if (data.messages !== undefined) updateData.messages = data.messages;
+    
+    if (Object.keys(updateData).length === 0) {
+      return this.getSubmission(id);
+    }
+    
+    const [updated] = await db.update(submissions)
+      .set(updateData)
+      .where(eq(submissions.id, id))
+      .returning();
     return updated;
   }
 
   async createEvaluation(data: InsertEvaluation): Promise<Evaluation> {
-    const id = randomUUID();
-    const evaluation: Evaluation = {
-      id,
+    const [evaluation] = await db.insert(evaluations).values({
       submissionId: data.submissionId || null,
       teacherId: data.teacherId || null,
       score: data.score || null,
       feedback: data.feedback || null,
-      reviewedAt: new Date(),
-    };
-    this.evaluations.set(id, evaluation);
+    }).returning();
     
     // Update submission status
     if (data.submissionId) {
-      const submission = this.submissions.get(data.submissionId);
-      if (submission) {
-        submission.status = "teacher_reviewed";
-        this.submissions.set(data.submissionId, submission);
-      }
+      await db.update(submissions)
+        .set({ status: "teacher_reviewed" })
+        .where(eq(submissions.id, data.submissionId));
     }
     
     return evaluation;
   }
 
   async getEvaluationBySubmission(submissionId: string): Promise<Evaluation | undefined> {
-    return Array.from(this.evaluations.values()).find(
-      (eval_) => eval_.submissionId === submissionId
-    );
+    const [evaluation] = await db.select()
+      .from(evaluations)
+      .where(eq(evaluations.submissionId, submissionId));
+    return evaluation;
   }
 
   async getStudentStats(studentId?: string): Promise<DashboardStats> {
-    let allSubmissions = Array.from(this.submissions.values());
+    let allSubmissions: Submission[];
+    
     if (studentId) {
-      allSubmissions = allSubmissions.filter(s => s.studentId === studentId);
+      allSubmissions = await db.select()
+        .from(submissions)
+        .where(eq(submissions.studentId, studentId));
+    } else {
+      allSubmissions = await db.select().from(submissions);
     }
 
     const reviewed = allSubmissions.filter(s => s.status === "teacher_reviewed");
-    const scores = reviewed
-      .map(s => {
-        const eval_ = Array.from(this.evaluations.values()).find(e => e.submissionId === s.id);
-        return eval_?.score;
-      })
-      .filter((s): s is number => s !== null && s !== undefined);
+    const reviewedIds = reviewed.map(s => s.id);
+    
+    let scores: number[] = [];
+    if (reviewedIds.length > 0) {
+      const evals = await db.select().from(evaluations);
+      scores = evals
+        .filter(e => e.submissionId && reviewedIds.includes(e.submissionId))
+        .map(e => e.score)
+        .filter((s): s is number => s !== null && s !== undefined);
+    }
 
     return {
       totalSubmissions: allSubmissions.length,
@@ -178,9 +179,11 @@ export class MemStorage implements IStorage {
   }
 
   async getTeacherStats(): Promise<DashboardStats> {
-    const allSubmissions = Array.from(this.submissions.values());
+    const allSubmissions = await db.select().from(submissions);
     const reviewed = allSubmissions.filter(s => s.status === "teacher_reviewed");
-    const scores = Array.from(this.evaluations.values())
+    
+    const allEvals = await db.select().from(evaluations);
+    const scores = allEvals
       .map(e => e.score)
       .filter((s): s is number => s !== null && s !== undefined);
 
@@ -194,4 +197,4 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
