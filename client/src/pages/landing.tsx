@@ -11,17 +11,13 @@ import {
   Lightbulb,
   GraduationCap,
   Star,
-  Users,
   Target,
   ArrowRight,
   Brain,
-  Shield,
   Sparkles
 } from "lucide-react";
 import { Link } from "wouter";
-
-import heroImage from "@assets/stock_images/student_with_laptop__70884f08.jpg";
-import heroVideo from "@assets/generated_videos/cinematic_student_library_scene.mp4";
+import { BackgroundVideo } from "@/components/background-video";
 
 const features = [
   {
@@ -100,7 +96,7 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0b] text-white">
-      <header className="fixed top-0 left-0 right-0 z-50">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-black/80 to-transparent">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
           <div className="flex items-center justify-between gap-4 h-20">
             <motion.div 
@@ -157,17 +153,7 @@ export default function Landing() {
           className="absolute inset-0"
           style={{ scale: heroScale }}
         >
-          <video 
-            src={heroVideo}
-            poster={heroImage}
-            autoPlay
-            muted
-            loop
-            playsInline
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0b] via-[#0a0a0b]/80 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0b] via-transparent to-[#0a0a0b]/40" />
+          <BackgroundVideo video="library" overlay="dark" />
         </motion.div>
 
         <motion.div 
@@ -249,7 +235,7 @@ export default function Landing() {
           </div>
 
           <motion.div 
-            className="border-t border-white/10 py-8"
+            className="border-t border-white/10 py-8 bg-black/30 backdrop-blur-sm"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.8 }}
@@ -270,8 +256,9 @@ export default function Landing() {
         </motion.div>
       </section>
 
-      <section className="py-24 bg-[#0a0a0b]">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
+      <section className="py-24 relative overflow-hidden">
+        <BackgroundVideo video="math" overlay="darkest" />
+        <div className="relative z-10 max-w-[1400px] mx-auto px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-8">
             {stats.map((stat, index) => (
               <motion.div 
@@ -292,8 +279,9 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="py-32 bg-[#0f0f10]">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
+      <section className="py-32 relative overflow-hidden">
+        <BackgroundVideo video="typing" overlay="darkest" />
+        <div className="relative z-10 max-w-[1400px] mx-auto px-6 lg:px-8">
           <motion.div 
             className="text-center mb-20"
             initial={{ opacity: 0, y: 30 }}
@@ -319,7 +307,7 @@ export default function Landing() {
                 transition={{ delay: index * 0.1 }}
               >
                 <Card 
-                  className="bg-white/[0.02] border-white/10 hover:bg-white/[0.04] transition-colors h-full"
+                  className="bg-black/40 backdrop-blur-md border-white/10 hover:bg-black/50 transition-colors h-full"
                   data-testid={`card-feature-${index}`}
                 >
                   <CardContent className="p-8">
@@ -338,8 +326,9 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="py-32 bg-[#0a0a0b]">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
+      <section className="py-32 relative overflow-hidden">
+        <BackgroundVideo video="neural" overlay="darker" />
+        <div className="relative z-10 max-w-[1400px] mx-auto px-6 lg:px-8">
           <motion.div 
             className="text-center mb-16"
             initial={{ opacity: 0, y: 30 }}
@@ -365,7 +354,7 @@ export default function Landing() {
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.15 }}
               >
-                <div className="relative w-20 h-20 rounded-2xl bg-[#3b82f6]/10 flex items-center justify-center mx-auto mb-8">
+                <div className="relative w-20 h-20 rounded-2xl bg-[#3b82f6]/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-8">
                   <item.icon className="w-8 h-8 text-[#3b82f6]" />
                   <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-[#3b82f6] text-white flex items-center justify-center font-bold text-sm">
                     {item.step}
@@ -379,8 +368,9 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="py-32 bg-[#0f0f10]">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
+      <section className="py-32 relative overflow-hidden">
+        <BackgroundVideo video="classroom" overlay="darkest" />
+        <div className="relative z-10 max-w-[1400px] mx-auto px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <motion.div
               initial={{ opacity: 0, x: -30 }}
@@ -421,7 +411,7 @@ export default function Landing() {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
             >
-              <Card className="bg-white/[0.02] border-white/10 p-10">
+              <Card className="bg-black/40 backdrop-blur-md border-white/10 p-10">
                 <div className="text-center mb-8">
                   <div className="text-7xl font-bold text-[#3b82f6] mb-2">95%</div>
                   <div className="text-white/50 text-lg">Overall Accuracy</div>
@@ -445,8 +435,9 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="py-32 bg-[#0a0a0b]">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
+      <section className="py-32 relative overflow-hidden">
+        <BackgroundVideo video="library" overlay="darkest" />
+        <div className="relative z-10 max-w-[1400px] mx-auto px-6 lg:px-8">
           <motion.div 
             className="text-center mb-16"
             initial={{ opacity: 0, y: 30 }}
@@ -467,7 +458,7 @@ export default function Landing() {
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
               >
-                <Card className="bg-white/[0.02] border-white/10 h-full" data-testid={`card-testimonial-${index}`}>
+                <Card className="bg-black/40 backdrop-blur-md border-white/10 h-full" data-testid={`card-testimonial-${index}`}>
                   <CardContent className="p-8">
                     <div className="flex items-center gap-0.5 mb-6">
                       {[...Array(5)].map((_, i) => (
@@ -494,11 +485,10 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="py-32 bg-[#0f0f10] relative overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-gradient-to-r from-[#3b82f6]/10 to-transparent" />
-        </div>
-        <div className="relative max-w-[1400px] mx-auto px-6 lg:px-8 text-center">
+      <section className="py-32 relative overflow-hidden">
+        <BackgroundVideo video="math" overlay="darker" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#3b82f6]/20 to-transparent z-[1]" />
+        <div className="relative z-10 max-w-[1400px] mx-auto px-6 lg:px-8 text-center">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -528,8 +518,9 @@ export default function Landing() {
         </div>
       </section>
 
-      <footer className="py-16 bg-[#0a0a0b] border-t border-white/10">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
+      <footer className="py-16 relative overflow-hidden border-t border-white/10">
+        <BackgroundVideo video="typing" overlay="darkest" />
+        <div className="relative z-10 max-w-[1400px] mx-auto px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
             <div>
               <div className="flex items-center gap-2.5 mb-4">
@@ -545,9 +536,9 @@ export default function Landing() {
             <div>
               <h4 className="font-semibold mb-4 text-white">Products</h4>
               <div className="space-y-3 text-sm text-white/40">
-                <Link href="/solver" className="block hover:text-white transition-colors">Homework Help</Link>
-                <Link href="/quiz" className="block hover:text-white transition-colors">Quiz Maker</Link>
-                <Link href="/essay" className="block hover:text-white transition-colors">Essay Writer</Link>
+                <Link href="/solver" className="block hover:text-white transition-colors" data-testid="link-footer-homework">Homework Help</Link>
+                <Link href="/quiz" className="block hover:text-white transition-colors" data-testid="link-footer-quiz">Quiz Maker</Link>
+                <Link href="/essay" className="block hover:text-white transition-colors" data-testid="link-footer-essay">Essay Writer</Link>
               </div>
             </div>
             <div>
@@ -562,13 +553,13 @@ export default function Landing() {
               <h4 className="font-semibold mb-4 text-white">Company</h4>
               <div className="space-y-3 text-sm text-white/40">
                 <a href="#" className="block hover:text-white transition-colors">About</a>
-                <a href="#" className="block hover:text-white transition-colors">Privacy Policy</a>
-                <a href="#" className="block hover:text-white transition-colors">Terms of Service</a>
+                <a href="#" className="block hover:text-white transition-colors">Privacy</a>
+                <a href="#" className="block hover:text-white transition-colors">Terms</a>
               </div>
             </div>
           </div>
-          <div className="border-t border-white/10 pt-8 text-center text-sm text-white/30">
-            2025 BrainBoost. All rights reserved.
+          <div className="pt-8 border-t border-white/10 text-center text-sm text-white/30">
+            2024 BrainBoost. All rights reserved.
           </div>
         </div>
       </footer>
