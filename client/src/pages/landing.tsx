@@ -21,6 +21,7 @@ import {
 import { Link } from "wouter";
 
 import heroImage from "@assets/stock_images/student_with_laptop__70884f08.jpg";
+import heroVideo from "@assets/generated_videos/cinematic_student_library_scene.mp4";
 
 const features = [
   {
@@ -156,9 +157,13 @@ export default function Landing() {
           className="absolute inset-0"
           style={{ scale: heroScale }}
         >
-          <img 
-            src={heroImage} 
-            alt="Student learning" 
+          <video 
+            src={heroVideo}
+            poster={heroImage}
+            autoPlay
+            muted
+            loop
+            playsInline
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0b] via-[#0a0a0b]/80 to-transparent" />
