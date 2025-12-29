@@ -1,82 +1,93 @@
-import { type User, type InsertUser, type Assignment, type Submission, type DashboardStats } from "@shared/schema";
+import { 
+  type User, 
+  type InsertUser, 
+  type Submission, 
+  type InsertSubmission,
+  type Evaluation,
+  type InsertEvaluation,
+  type DashboardStats,
+  type StepObject,
+  type Message,
+  type GraphSpec
+} from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
+  // User operations
   getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   
-  getAssignments(): Promise<Assignment[]>;
-  getAssignment(id: string): Promise<Assignment | undefined>;
-  
-  createSubmission(data: { assignmentId: string; studentName: string; content: string }): Promise<Submission>;
+  // Submission operations
+  createSubmission(data: Partial<InsertSubmission> & { content: string; studentName: string; title: string }): Promise<Submission>;
   getSubmission(id: string): Promise<Submission | undefined>;
+  getSubmissionsByStudent(studentId: string): Promise<Submission[]>;
   getAllSubmissions(): Promise<Submission[]>;
+  getPendingSubmissions(): Promise<Submission[]>;
   updateSubmission(id: string, data: Partial<Submission>): Promise<Submission | undefined>;
   
-  getStudentStats(): Promise<DashboardStats>;
+  // Evaluation operations
+  createEvaluation(data: InsertEvaluation): Promise<Evaluation>;
+  getEvaluationBySubmission(submissionId: string): Promise<Evaluation | undefined>;
+  
+  // Stats
+  getStudentStats(studentId?: string): Promise<DashboardStats>;
   getTeacherStats(): Promise<DashboardStats>;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
-  private assignments: Map<string, Assignment>;
   private submissions: Map<string, Submission>;
+  private evaluations: Map<string, Evaluation>;
 
   constructor() {
     this.users = new Map();
-    this.assignments = new Map();
     this.submissions = new Map();
-    
-    this.initializeSampleData();
-  }
-
-  private initializeSampleData() {
-    const generalAssignment: Assignment = {
-      id: "general",
-      title: "General Submission",
-      subject: "General",
-      description: "Submit any work for AI evaluation",
-      dueDate: "2099-12-31",
-      maxScore: 100,
-    };
-    this.assignments.set(generalAssignment.id, generalAssignment);
+    this.evaluations = new Map();
   }
 
   async getUser(id: string): Promise<User | undefined> {
     return this.users.get(id);
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
+  async getUserByEmail(email: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(
-      (user) => user.username === username,
+      (user) => user.email === email,
     );
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
-    const user: User = { ...insertUser, id };
+    const user: User = { 
+      id,
+      email: insertUser.email,
+      displayName: insertUser.displayName,
+      password: insertUser.password,
+      role: insertUser.role || "student",
+      createdAt: new Date(),
+    };
     this.users.set(id, user);
     return user;
   }
 
-  async getAssignments(): Promise<Assignment[]> {
-    return Array.from(this.assignments.values());
-  }
-
-  async getAssignment(id: string): Promise<Assignment | undefined> {
-    return this.assignments.get(id);
-  }
-
-  async createSubmission(data: { assignmentId: string; studentName: string; content: string }): Promise<Submission> {
+  async createSubmission(data: Partial<InsertSubmission> & { content: string; studentName: string; title: string }): Promise<Submission> {
     const id = randomUUID();
     const submission: Submission = {
       id,
-      assignmentId: data.assignmentId,
+      studentId: data.studentId || null,
       studentName: data.studentName,
+      title: data.title,
+      subject: data.subject || "General",
       content: data.content,
-      submittedAt: new Date().toISOString(),
-      status: "pending",
+      fileUrl: data.fileUrl || null,
+      status: data.status || "pending",
+      aiSolution: null,
+      aiSteps: null,
+      aiExplanation: null,
+      problemType: data.problemType || "other",
+      graphSpec: null,
+      messages: null,
+      submittedAt: new Date(),
     };
     this.submissions.set(id, submission);
     return submission;
@@ -86,10 +97,22 @@ export class MemStorage implements IStorage {
     return this.submissions.get(id);
   }
 
+  async getSubmissionsByStudent(studentId: string): Promise<Submission[]> {
+    return Array.from(this.submissions.values())
+      .filter(s => s.studentId === studentId)
+      .sort((a, b) => new Date(b.submittedAt!).getTime() - new Date(a.submittedAt!).getTime());
+  }
+
   async getAllSubmissions(): Promise<Submission[]> {
     return Array.from(this.submissions.values()).sort(
-      (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+      (a, b) => new Date(b.submittedAt!).getTime() - new Date(a.submittedAt!).getTime()
     );
+  }
+
+  async getPendingSubmissions(): Promise<Submission[]> {
+    return Array.from(this.submissions.values())
+      .filter(s => s.status === "ai_graded")
+      .sort((a, b) => new Date(b.submittedAt!).getTime() - new Date(a.submittedAt!).getTime());
   }
 
   async updateSubmission(id: string, data: Partial<Submission>): Promise<Submission | undefined> {
@@ -101,25 +124,72 @@ export class MemStorage implements IStorage {
     return updated;
   }
 
-  async getStudentStats(): Promise<DashboardStats> {
-    const allSubmissions = Array.from(this.submissions.values());
+  async createEvaluation(data: InsertEvaluation): Promise<Evaluation> {
+    const id = randomUUID();
+    const evaluation: Evaluation = {
+      id,
+      submissionId: data.submissionId || null,
+      teacherId: data.teacherId || null,
+      score: data.score || null,
+      feedback: data.feedback || null,
+      reviewedAt: new Date(),
+    };
+    this.evaluations.set(id, evaluation);
+    
+    // Update submission status
+    if (data.submissionId) {
+      const submission = this.submissions.get(data.submissionId);
+      if (submission) {
+        submission.status = "teacher_reviewed";
+        this.submissions.set(data.submissionId, submission);
+      }
+    }
+    
+    return evaluation;
+  }
+
+  async getEvaluationBySubmission(submissionId: string): Promise<Evaluation | undefined> {
+    return Array.from(this.evaluations.values()).find(
+      (eval_) => eval_.submissionId === submissionId
+    );
+  }
+
+  async getStudentStats(studentId?: string): Promise<DashboardStats> {
+    let allSubmissions = Array.from(this.submissions.values());
+    if (studentId) {
+      allSubmissions = allSubmissions.filter(s => s.studentId === studentId);
+    }
+
+    const reviewed = allSubmissions.filter(s => s.status === "teacher_reviewed");
+    const scores = reviewed
+      .map(s => {
+        const eval_ = Array.from(this.evaluations.values()).find(e => e.submissionId === s.id);
+        return eval_?.score;
+      })
+      .filter((s): s is number => s !== null && s !== undefined);
 
     return {
-      totalAssignments: this.assignments.size,
-      pendingSubmissions: allSubmissions.filter(s => s.status === "pending").length,
-      completedSubmissions: allSubmissions.filter(s => s.status === "ai_graded").length,
-      averageScore: 0,
+      totalSubmissions: allSubmissions.length,
+      pendingReview: allSubmissions.filter(s => s.status === "ai_graded").length,
+      aiGraded: allSubmissions.filter(s => s.status === "ai_graded").length,
+      teacherReviewed: reviewed.length,
+      averageScore: scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0,
     };
   }
 
   async getTeacherStats(): Promise<DashboardStats> {
     const allSubmissions = Array.from(this.submissions.values());
+    const reviewed = allSubmissions.filter(s => s.status === "teacher_reviewed");
+    const scores = Array.from(this.evaluations.values())
+      .map(e => e.score)
+      .filter((s): s is number => s !== null && s !== undefined);
 
     return {
-      totalAssignments: allSubmissions.length,
-      pendingSubmissions: allSubmissions.filter(s => s.status === "pending").length,
-      completedSubmissions: allSubmissions.filter(s => s.status === "ai_graded").length,
-      averageScore: 0,
+      totalSubmissions: allSubmissions.length,
+      pendingReview: allSubmissions.filter(s => s.status === "ai_graded").length,
+      aiGraded: allSubmissions.filter(s => s.status === "ai_graded").length,
+      teacherReviewed: reviewed.length,
+      averageScore: scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0,
     };
   }
 }

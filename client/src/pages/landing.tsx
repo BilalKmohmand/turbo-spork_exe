@@ -97,7 +97,7 @@ export default function Landing() {
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
-              <span className="font-bold text-xl">Solvely</span>
+              <span className="font-bold text-xl">BrainBoost</span>
             </div>
             <nav className="hidden md:flex items-center gap-6">
               <Link href="/solver" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="link-homework">Homework Help</Link>
@@ -249,7 +249,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
-              <Badge className="bg-white/20 text-white mb-4">Why Choose Solvely</Badge>
+              <Badge className="bg-white/20 text-white mb-4">Why Choose BrainBoost</Badge>
               <h2 className="text-3xl sm:text-4xl font-bold mb-6">
                 Higher Accuracy Than ChatGPT
               </h2>
@@ -352,7 +352,7 @@ export default function Landing() {
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center">
                   <Sparkles className="w-5 h-5 text-white" />
                 </div>
-                <span className="font-bold">Solvely</span>
+                <span className="font-bold">BrainBoost</span>
               </div>
               <p className="text-sm text-muted-foreground">
                 AI-powered homework help for students of all levels.
@@ -384,7 +384,7 @@ export default function Landing() {
             </div>
           </div>
           <div className="border-t pt-8 text-center text-sm text-muted-foreground">
-            2025 Solvely. All rights reserved.
+            2025 BrainBoost. All rights reserved.
           </div>
         </div>
       </footer>

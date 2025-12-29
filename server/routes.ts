@@ -1,9 +1,10 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertSubmissionSchema, evaluationSchema } from "@shared/schema";
+import { submitWorkSchema, evaluateSchema, registerSchema, loginSchema } from "@shared/schema";
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
+import bcrypt from "bcryptjs";
 
 const anthropic = new Anthropic({
   apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
@@ -226,6 +227,85 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  // Auth routes
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const parsed = registerSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors[0]?.message || "Invalid data" });
+      }
+
+      const existing = await storage.getUserByEmail(parsed.data.email);
+      if (existing) {
+        return res.status(400).json({ error: "Email already registered" });
+      }
+
+      const hashedPassword = await bcrypt.hash(parsed.data.password, 10);
+      const user = await storage.createUser({
+        ...parsed.data,
+        password: hashedPassword,
+      });
+      const { password: _, ...safeUser } = user;
+      res.status(201).json({ user: safeUser });
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      res.status(500).json({ error: "Failed to create account" });
+    }
+  });
+
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const parsed = loginSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors[0]?.message || "Invalid data" });
+      }
+
+      const user = await storage.getUserByEmail(parsed.data.email);
+      if (!user) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+
+      const validPassword = await bcrypt.compare(parsed.data.password, user.password);
+      if (!validPassword) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+
+      const { password: _, ...safeUser } = user;
+      res.json({ user: safeUser });
+    } catch (error: any) {
+      console.error("Login error:", error);
+      res.status(500).json({ error: "Failed to log in" });
+    }
+  });
+
+  // Teacher routes
+  app.get("/api/teacher/stats", async (req, res) => {
+    try {
+      const stats = await storage.getTeacherStats();
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch stats" });
+    }
+  });
+
+  app.get("/api/teacher/pending", async (req, res) => {
+    try {
+      const submissions = await storage.getPendingSubmissions();
+      res.json(submissions);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch pending submissions" });
+    }
+  });
+
+  app.get("/api/teacher/submissions", async (req, res) => {
+    try {
+      const submissions = await storage.getAllSubmissions();
+      res.json(submissions);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch submissions" });
+    }
+  });
+
   app.get("/api/assignments", async (req, res) => {
     try {
       const assignments = await storage.getAssignments();
@@ -249,7 +329,7 @@ export async function registerRoutes(
 
   app.post("/api/submissions", async (req, res) => {
     try {
-      const parsed = insertSubmissionSchema.safeParse(req.body);
+      const parsed = submitWorkSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ error: parsed.error.message });
       }
@@ -362,7 +442,7 @@ export async function registerRoutes(
 
   app.post("/api/submissions/:id/evaluate", async (req, res) => {
     try {
-      const parsed = evaluationSchema.omit({ submissionId: true }).safeParse(req.body);
+      const parsed = evaluateSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ error: parsed.error.message });
       }
@@ -372,13 +452,14 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Submission not found" });
       }
 
-      const updated = await storage.updateSubmission(req.params.id, {
-        status: "teacher_reviewed",
-        teacherScore: parsed.data.teacherScore,
-        teacherFeedback: parsed.data.teacherFeedback,
-        reviewedAt: new Date().toISOString(),
+      await storage.createEvaluation({
+        submissionId: req.params.id,
+        teacherId: req.body.teacherId,
+        score: parsed.data.score,
+        feedback: parsed.data.feedback,
       });
 
+      const updated = await storage.getSubmission(req.params.id);
       res.json(updated);
     } catch (error) {
       res.status(500).json({ error: "Failed to submit evaluation" });

@@ -10,6 +10,9 @@ import Solver from "@/pages/solver";
 import Quiz from "@/pages/quiz";
 import Essay from "@/pages/essay";
 import Pricing from "@/pages/pricing";
+import Auth from "@/pages/auth";
+import StudentDashboard from "@/pages/student-dashboard";
+import TeacherDashboard from "@/pages/teacher-dashboard";
 import { Button } from "@/components/ui/button";
 import { 
   Sparkles, 
@@ -41,7 +44,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
-            <span className="font-bold text-lg hidden sm:inline">Solvely</span>
+            <span className="font-bold text-lg hidden sm:inline">BrainBoost</span>
           </Link>
           
           <nav className="hidden md:flex items-center gap-1">
@@ -122,6 +125,10 @@ function Router() {
       <Route path="/quiz" component={Quiz} />
       <Route path="/essay" component={Essay} />
       <Route path="/pricing" component={Pricing} />
+      <Route path="/auth" component={Auth} />
+      <Route path="/login" component={Auth} />
+      <Route path="/student" component={StudentDashboard} />
+      <Route path="/teacher" component={TeacherDashboard} />
       <Route>
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
@@ -138,13 +145,14 @@ function Router() {
 
 function App() {
   const [location] = useLocation();
-  const isLandingPage = location === "/";
+  const standalonePages = ["/", "/auth", "/login", "/student", "/teacher"];
+  const isStandalonePage = standalonePages.includes(location);
 
   return (
-    <ThemeProvider defaultTheme="light" storageKey="solvely-theme">
+    <ThemeProvider defaultTheme="light" storageKey="brainboost-theme">
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          {isLandingPage ? (
+          {isStandalonePage ? (
             <Router />
           ) : (
             <AppLayout>

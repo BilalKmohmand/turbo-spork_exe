@@ -9,7 +9,7 @@ const plans = [
     name: "Free",
     price: "$0",
     period: "forever",
-    description: "Perfect for trying out Solvely",
+    description: "Perfect for trying out BrainBoost",
     features: [
       "5 problems per day",
       "Step-by-step solutions",
@@ -128,7 +128,7 @@ export default function Pricing() {
             <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-600 to-indigo-600 mb-2">
               2M+
             </div>
-            <p className="text-muted-foreground">Students trust Solvely</p>
+            <p className="text-muted-foreground">Students trust BrainBoost</p>
           </div>
           <div>
             <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-600 to-indigo-600 mb-2">
