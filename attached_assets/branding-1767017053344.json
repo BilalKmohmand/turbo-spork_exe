@@ -1,0 +1,104 @@
+{
+  "colorScheme": "dark",
+  "fonts": [
+    {
+      "family": "Arial",
+      "count": 84
+    },
+    {
+      "family": "sans-serif",
+      "count": 84
+    },
+    {
+      "family": "Nb International Pro",
+      "count": 72
+    },
+    {
+      "family": "Sohne",
+      "count": 12
+    }
+  ],
+  "colors": {
+    "primary": "#EE241B",
+    "accent": "#EE241B",
+    "background": "#0F0F10",
+    "textPrimary": "#0F0F10",
+    "link": "#EE241B"
+  },
+  "typography": {
+    "fontFamilies": {
+      "primary": "Nb International Pro",
+      "heading": "Nb International Pro"
+    },
+    "fontStacks": {
+      "body": [
+        "Nb International Pro",
+        "Arial",
+        "sans-serif"
+      ],
+      "heading": [
+        "Nb International Pro",
+        "Arial",
+        "sans-serif"
+      ],
+      "paragraph": [
+        "Sohne",
+        "Arial",
+        "sans-serif"
+      ]
+    },
+    "fontSizes": {
+      "h1": "108px",
+      "h2": "63px",
+      "body": "22.5px"
+    }
+  },
+  "spacing": {
+    "baseUnit": 6,
+    "borderRadius": "0px"
+  },
+  "components": {
+    "input": {
+      "background": "transparent",
+      "textColor": "#FFFFFF",
+      "borderColor": null,
+      "borderRadius": "0px",
+      "borderRadiusCorners": {
+        "topLeft": "0px",
+        "topRight": "0px",
+        "bottomRight": "0px",
+        "bottomLeft": "0px"
+      },
+      "shadow": "none"
+    }
+  },
+  "images": {
+    "logo": "File saved at: attached_assets/logo.svg",
+    "favicon": "File saved at: attached_assets/favicon.png",
+    "ogImage": "File saved at: attached_assets/ogImage.jpg"
+  },
+  "__framework_hints": [],
+  "__llm_logo_reasoning": {
+    "selectedIndex": 8,
+    "reasoning": "Strong indicators: header logo linking to homepage, header location, visible, top-left position, src contains logo, class contains logo, reasonable size. Score: 110 (clear winner by 55 points)",
+    "confidence": 0.9
+  },
+  "__llm_button_reasoning": {
+    "primary": {
+      "index": -1,
+      "text": "N/A",
+      "reasoning": "LLM failed"
+    },
+    "secondary": {
+      "index": -1,
+      "text": "N/A",
+      "reasoning": "LLM failed"
+    },
+    "confidence": 0
+  },
+  "confidence": {
+    "buttons": 0,
+    "colors": 0,
+    "overall": 0
+  }
+}
