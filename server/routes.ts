@@ -6,6 +6,42 @@ import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import bcrypt from "bcryptjs";
 
+// Extend express-session types
+declare module "express-session" {
+  interface SessionData {
+    userId: string;
+    userRole: string;
+  }
+}
+
+// Auth middleware
+function requireAuth(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+  next();
+}
+
+function requireTeacher(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+  if (req.session.userRole !== "teacher") {
+    return res.status(403).json({ error: "Teacher access required" });
+  }
+  next();
+}
+
+function requireStudent(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+  if (req.session.userRole !== "student") {
+    return res.status(403).json({ error: "Student access required" });
+  }
+  next();
+}
+
 const anthropic = new Anthropic({
   apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
   baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
@@ -245,6 +281,11 @@ export async function registerRoutes(
         ...parsed.data,
         password: hashedPassword,
       });
+
+      // Set session
+      req.session.userId = user.id;
+      req.session.userRole = user.role;
+
       const { password: _, ...safeUser } = user;
       res.status(201).json({ user: safeUser });
     } catch (error: any) {
@@ -270,12 +311,38 @@ export async function registerRoutes(
         return res.status(401).json({ error: "Invalid email or password" });
       }
 
+      // Set session
+      req.session.userId = user.id;
+      req.session.userRole = user.role;
+
       const { password: _, ...safeUser } = user;
       res.json({ user: safeUser });
     } catch (error: any) {
       console.error("Login error:", error);
       res.status(500).json({ error: "Failed to log in" });
     }
+  });
+
+  app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ error: "Failed to log out" });
+      }
+      res.clearCookie("connect.sid");
+      res.json({ success: true });
+    });
+  });
+
+  app.get("/api/auth/me", async (req, res) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+    const user = await storage.getUser(req.session.userId);
+    if (!user) {
+      return res.status(401).json({ error: "User not found" });
+    }
+    const { password: _, ...safeUser } = user;
+    res.json({ user: safeUser });
   });
 
   // Teacher routes
@@ -306,27 +373,6 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/assignments", async (req, res) => {
-    try {
-      const assignments = await storage.getAssignments();
-      res.json(assignments);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch assignments" });
-    }
-  });
-
-  app.get("/api/assignments/:id", async (req, res) => {
-    try {
-      const assignment = await storage.getAssignment(req.params.id);
-      if (!assignment) {
-        return res.status(404).json({ error: "Assignment not found" });
-      }
-      res.json(assignment);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch assignment" });
-    }
-  });
-
   app.post("/api/submissions", async (req, res) => {
     try {
       const parsed = submitWorkSchema.safeParse(req.body);
@@ -334,7 +380,10 @@ export async function registerRoutes(
         return res.status(400).json({ error: parsed.error.message });
       }
 
-      const submission = await storage.createSubmission(parsed.data);
+      const submission = await storage.createSubmission({
+        ...parsed.data,
+        studentName: parsed.data.studentName || "Student",
+      });
       
       res.status(201).json(submission);
 
@@ -372,7 +421,7 @@ export async function registerRoutes(
       const aiResult = await solveFromImage(image, mimeType);
       
       const submission = await storage.createSubmission({
-        assignmentId: "general",
+        title: "Image Problem",
         studentName: "Student",
         content: "Image problem",
       });
@@ -406,7 +455,7 @@ export async function registerRoutes(
       const aiResult = await solveWithAI(problem.trim());
       
       const submission = await storage.createSubmission({
-        assignmentId: "general",
+        title: "Text Problem",
         studentName: "Student",
         content: problem.trim(),
       });
@@ -630,7 +679,8 @@ Output ONLY valid JSON.`,
         return res.status(404).json({ error: "Submission not found" });
       }
 
-      const messages = submission.messages || [];
+      const messages: Array<{role: "user" | "assistant", content: string}> = 
+        (Array.isArray(submission.messages) ? submission.messages : []) as Array<{role: "user" | "assistant", content: string}>;
       messages.push({ role: "user", content: question });
 
       const systemContext = `You are a helpful tutor. The student previously submitted this problem:
@@ -640,14 +690,14 @@ ${submission.content}
 And you provided this solution:
 ${submission.aiSolution}
 
-Steps: ${submission.aiSteps?.join("\n")}
+Steps: ${Array.isArray(submission.aiSteps) ? submission.aiSteps.map((s: any) => s.reasoning || s).join("\n") : ""}
 
 Explanation: ${submission.aiExplanation}
 
 Now the student has a follow-up question. Answer it clearly and helpfully to deepen their understanding.`;
 
-      const chatMessages: Array<{role: "user" | "assistant", content: string}> = messages.map(m => ({ 
-        role: m.role as "user" | "assistant", 
+      const chatMessages = messages.map(m => ({ 
+        role: m.role, 
         content: m.content 
       }));
 

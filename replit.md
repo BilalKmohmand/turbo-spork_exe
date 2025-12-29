@@ -8,6 +8,20 @@ BrainBoost is a full-featured AI-powered education platform where students can u
 
 Preferred communication style: Simple, everyday language.
 
+## Production Notes
+
+### Current Status: Production-Ready
+- **Database**: PostgreSQL with Drizzle ORM (DatabaseStorage class)
+- **Sessions**: Server-side sessions with express-session + connect-pg-simple
+- **Authentication**: Bcrypt password hashing (10 rounds)
+- **Payments**: Stripe integration available but not configured (user dismissed setup)
+
+### To Add Stripe Payments Later
+1. Use the Replit integrations to set up Stripe connector
+2. Or manually add STRIPE_SECRET_KEY and STRIPE_PUBLISHABLE_KEY as secrets
+3. Create subscription products in Stripe dashboard
+4. Implement checkout flow in /pricing page
+
 ## System Architecture
 
 ### Frontend Architecture
@@ -24,17 +38,19 @@ Preferred communication style: Simple, everyday language.
 - **AI Integration**: 
   - OpenAI API for image problem solving (gpt-4o)
   - Anthropic Claude for text solutions and content generation
-- **Database**: PostgreSQL with Drizzle ORM
-- **Storage**: In-memory storage (development mode)
+- **Database**: PostgreSQL with Drizzle ORM (DatabaseStorage)
+- **Sessions**: PostgreSQL-backed sessions (connect-pg-simple)
+- **Security**: Bcrypt password hashing
 
 ### User Roles
 - **Student**: Upload homework, get AI solutions, view submission history
 - **Teacher**: Review student submissions, provide scores and feedback
 
 ### Data Models
-- **Users**: id, email, displayName, password, role (student/teacher), createdAt
+- **Users**: id, email, displayName, password (hashed), role (student/teacher), createdAt
 - **Submissions**: id, studentId, title, subject, content, status, aiSolution, aiSteps, aiExplanation
 - **Evaluations**: id, submissionId, teacherId, score, feedback, reviewedAt
+- **Sessions**: PostgreSQL table "user_sessions" (auto-created)
 
 ### Key Pages
 - `/` - Landing page with hero, features, stats, testimonials
@@ -47,11 +63,12 @@ Preferred communication style: Simple, everyday language.
 - `/pricing` - Subscription pricing page
 
 ### API Endpoints
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login user
+- `POST /api/auth/register` - Register new user (bcrypt hashed password)
+- `POST /api/auth/login` - Login user (bcrypt compare)
 - `POST /api/submissions` - Create new submission
 - `GET /api/submissions/:id` - Get submission details
 - `POST /api/submissions/:id/evaluate` - Teacher evaluation
+- `POST /api/submissions/:id/followup` - Ask follow-up questions
 - `GET /api/student/submissions` - Student's submissions
 - `GET /api/student/stats` - Student statistics
 - `GET /api/teacher/pending` - Pending submissions for review
@@ -65,6 +82,7 @@ Preferred communication style: Simple, everyday language.
 - Frontend builds to `dist/public` using Vite
 - Backend bundles with esbuild
 - Database schema managed with Drizzle ORM
+- Run `npm run db:push` to sync schema
 
 ## External Dependencies
 
@@ -74,6 +92,8 @@ Preferred communication style: Simple, everyday language.
 
 ### Key NPM Packages
 - drizzle-orm, drizzle-zod: Database ORM and validation
+- express-session, connect-pg-simple: Server-side sessions
+- bcryptjs: Password hashing
 - katex, react-katex: Math rendering
 - lucide-react: Icons
 - tailwindcss: Styling
