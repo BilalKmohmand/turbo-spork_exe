@@ -24,11 +24,17 @@ import {
   Home
 } from "lucide-react";
 import { Link } from "wouter";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const user = localStorage.getItem("user");
+    setIsLoggedIn(!!user);
+  }, []);
 
   const navItems = [
     { href: "/solver", label: "Homework Help", icon: Calculator },
@@ -47,21 +53,23 @@ function AppLayout({ children }: { children: React.ReactNode }) {
             <span className="font-bold text-lg hidden sm:inline">Gradeio</span>
           </Link>
           
-          <nav className="hidden md:flex items-center gap-1">
-            {navItems.map((item) => (
-              <Link key={item.href} href={item.href}>
-                <Button 
-                  variant={location === item.href ? "secondary" : "ghost"} 
-                  size="sm"
-                  className="gap-2"
-                  data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
-                >
-                  <item.icon className="w-4 h-4" />
-                  {item.label}
-                </Button>
-              </Link>
-            ))}
-          </nav>
+          {isLoggedIn && (
+            <nav className="hidden md:flex items-center gap-1">
+              {navItems.map((item) => (
+                <Link key={item.href} href={item.href}>
+                  <Button 
+                    variant={location === item.href ? "secondary" : "ghost"} 
+                    size="sm"
+                    className="gap-2"
+                    data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
+                  >
+                    <item.icon className="w-4 h-4" />
+                    {item.label}
+                  </Button>
+                </Link>
+              ))}
+            </nav>
+          )}
         </div>
         
         <div className="flex items-center gap-2">
@@ -71,6 +79,13 @@ function AppLayout({ children }: { children: React.ReactNode }) {
               Pricing
             </Button>
           </Link>
+          {!isLoggedIn && (
+            <Link href="/auth" className="hidden sm:block">
+              <Button size="sm" data-testid="nav-signin">
+                Sign In
+              </Button>
+            </Link>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -91,7 +106,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
               Home
             </Button>
           </Link>
-          {navItems.map((item) => (
+          {isLoggedIn && navItems.map((item) => (
             <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)}>
               <Button 
                 variant={location === item.href ? "secondary" : "ghost"} 
@@ -107,6 +122,13 @@ function AppLayout({ children }: { children: React.ReactNode }) {
               Pricing
             </Button>
           </Link>
+          {!isLoggedIn && (
+            <Link href="/auth" onClick={() => setMobileMenuOpen(false)}>
+              <Button className="w-full justify-start">
+                Sign In
+              </Button>
+            </Link>
+          )}
         </div>
       )}
 
@@ -149,7 +171,7 @@ function App() {
   const isStandalonePage = standalonePages.includes(location);
 
   return (
-    <ThemeProvider defaultTheme="light" storageKey="brainboost-theme">
+    <ThemeProvider defaultTheme="light" storageKey="gradeio-theme">
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           {isStandalonePage ? (
