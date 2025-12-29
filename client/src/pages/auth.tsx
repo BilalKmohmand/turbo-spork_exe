@@ -82,7 +82,7 @@ export default function Auth() {
     },
     onSuccess: (data) => {
       localStorage.setItem("user", JSON.stringify(data.user));
-      toast({ title: "Account created!", description: "Welcome to BrainBoost." });
+      toast({ title: "Account created!", description: "Welcome to Gradeio." });
       navigate(data.user.role === "teacher" ? "/teacher" : "/student");
     },
     onError: (error: Error) => {
@@ -102,12 +102,12 @@ export default function Auth() {
           <div className="w-10 h-10 rounded-xl bg-[#3b82f6] flex items-center justify-center">
             <Brain className="w-6 h-6 text-white" />
           </div>
-          <span className="font-bold text-2xl text-white">BrainBoost</span>
+          <span className="font-bold text-2xl text-white">Gradeio</span>
         </Link>
 
         <Card className="bg-black/40 backdrop-blur-md border-white/10">
           <CardHeader className="text-center pb-2">
-            <CardTitle className="text-xl text-white">Welcome to BrainBoost</CardTitle>
+            <CardTitle className="text-xl text-white">Welcome to Gradeio</CardTitle>
             <p className="text-sm text-white/60">
               AI-powered education for students and teachers
             </p>

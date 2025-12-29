@@ -108,7 +108,7 @@ export default function Landing() {
               <div className="w-10 h-10 rounded-lg bg-[#3b82f6] flex items-center justify-center">
                 <Brain className="w-6 h-6 text-white" />
               </div>
-              <span className="font-bold text-xl tracking-tight">BrainBoost</span>
+              <span className="font-bold text-xl tracking-tight">Gradeio</span>
             </motion.div>
             
             <nav className="hidden md:flex items-center gap-8">
@@ -168,13 +168,6 @@ export default function Landing() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
                 >
-                  <div className="flex items-center gap-2 mb-8">
-                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                    <span className="text-sm text-white/60">4.8 on App Store</span>
-                    <span className="text-white/30 mx-2">|</span>
-                    <span className="text-sm text-white/60">50K+ reviews</span>
-                  </div>
-                  
                   <h1 className="text-5xl sm:text-6xl lg:text-[6.5rem] font-bold tracking-tight leading-[0.95] mb-8">
                     Make learning
                     <span className="block text-[#3b82f6]">effortless.</span>
@@ -503,7 +496,7 @@ export default function Landing() {
                 <div className="w-9 h-9 rounded-lg bg-[#3b82f6] flex items-center justify-center">
                   <Brain className="w-5 h-5 text-white" />
                 </div>
-                <span className="font-bold text-lg text-white">BrainBoost</span>
+                <span className="font-bold text-lg text-white">Gradeio</span>
               </div>
               <p className="text-sm text-white/40">
                 AI-powered homework help for students of all levels.
@@ -535,7 +528,7 @@ export default function Landing() {
             </div>
           </div>
           <div className="pt-8 border-t border-white/10 text-center text-sm text-white/30">
-            2024 BrainBoost. All rights reserved.
+            2024 Gradeio. All rights reserved.
           </div>
         </div>
       </footer>

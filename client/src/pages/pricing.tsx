@@ -10,7 +10,7 @@ const plans = [
     name: "Free",
     price: "$0",
     period: "forever",
-    description: "Perfect for trying out BrainBoost",
+    description: "Perfect for trying out Gradeio",
     features: [
       "5 problems per day",
       "Step-by-step solutions",
@@ -70,7 +70,7 @@ export default function Pricing() {
             <div className="w-9 h-9 rounded-lg bg-[#3b82f6] flex items-center justify-center">
               <Brain className="w-5 h-5 text-white" />
             </div>
-            <span className="font-bold text-lg text-white">BrainBoost</span>
+            <span className="font-bold text-lg text-white">Gradeio</span>
           </Link>
           <div className="flex items-center gap-3">
             <Link href="/login">
@@ -154,7 +154,7 @@ export default function Pricing() {
             <div className="text-3xl font-bold text-[#3b82f6] mb-2">
               2M+
             </div>
-            <p className="text-white/60">Students trust BrainBoost</p>
+            <p className="text-white/60">Students trust Gradeio</p>
           </div>
           <div>
             <div className="text-3xl font-bold text-[#3b82f6] mb-2">

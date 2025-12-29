@@ -1,8 +1,8 @@
-# BrainBoost - AI Education Platform
+# Gradeio - AI Education Platform
 
 ## Overview
 
-BrainBoost is a full-featured AI-powered education platform where students can upload homework for AI solutions and teachers can review and grade student work. It's a complete SaaS application with authentication, role-based dashboards, and AI-powered tools.
+Gradeio is a full-featured AI-powered education platform where students can upload homework for AI solutions and teachers can review and grade student work. It's a complete SaaS application with authentication, role-based dashboards, and AI-powered tools.
 
 ## User Preferences
 
