@@ -1,8 +1,8 @@
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { motion, useScroll, useTransform, useInView } from "framer-motion";
+import { motion, useScroll, useTransform, useSpring, useMotionValue, useAnimationFrame } from "framer-motion";
 import { 
   Sparkles, 
   Camera, 
@@ -21,113 +21,131 @@ import {
   Play,
   Brain,
   Rocket,
-  Shield
+  Shield,
+  Cpu,
+  Atom
 } from "lucide-react";
 import { Link } from "wouter";
 
-import heroImage from "@assets/stock_images/university_students__3e49c435.jpg";
-import studentImage from "@assets/stock_images/student_using_smartp_4a6f339b.jpg";
-import classroomImage from "@assets/stock_images/university_students__701c69b4.jpg";
-import examImage from "@assets/stock_images/woman_writing_exam_t_582912d5.jpg";
-import abstractBg from "@assets/stock_images/glowing_abstract_tec_6bb91dc1.jpg";
+import hero3d from "@assets/generated_images/3d_floating_geometric_shapes.png";
+import sphere3d from "@assets/stock_images/3d_abstract_gradient_e5f5d876.jpg";
+import neonAbstract from "@assets/stock_images/glowing_neon_futuris_97441ebd.jpg";
+import crystalSphere from "@assets/stock_images/3d_render_crystal_gl_7ef5e3d0.jpg";
+import holoInterface from "@assets/stock_images/futuristic_holograph_2b115fe8.jpg";
 
 const features = [
   {
     icon: Camera,
     title: "Photo Math Solver",
-    description: "Snap a photo of any problem and get instant step-by-step solutions with detailed explanations.",
-    gradient: "from-violet-500 to-purple-600"
+    description: "Snap a photo of any problem and get instant step-by-step solutions.",
+    gradient: "from-violet-500 via-purple-500 to-fuchsia-500"
   },
   {
     icon: MessageSquare,
     title: "Ask Follow-Up Questions",
-    description: "Don't understand a step? Ask until you fully understand the concept.",
-    gradient: "from-blue-500 to-cyan-500"
+    description: "Don't understand? Ask until you fully grasp the concept.",
+    gradient: "from-blue-500 via-cyan-500 to-teal-500"
   },
   {
     icon: Lightbulb,
     title: "Step-by-Step Explanations",
-    description: "Every solution includes detailed reasoning explaining WHY each step is taken.",
-    gradient: "from-amber-500 to-orange-500"
+    description: "Every solution includes detailed reasoning for each step.",
+    gradient: "from-amber-500 via-orange-500 to-red-500"
   },
   {
     icon: BookOpen,
     title: "All Subjects",
-    description: "From math and science to history and literature, we cover K-12 to graduate level.",
-    gradient: "from-emerald-500 to-teal-500"
+    description: "Math, science, history, literature - K-12 to graduate level.",
+    gradient: "from-emerald-500 via-green-500 to-lime-500"
   },
   {
     icon: FileText,
     title: "Quiz Generator",
-    description: "Transform any text or notes into practice quizzes to test your understanding.",
-    gradient: "from-pink-500 to-rose-500"
+    description: "Transform notes into practice quizzes instantly.",
+    gradient: "from-pink-500 via-rose-500 to-red-500"
   },
   {
     icon: GraduationCap,
     title: "Essay Writer",
-    description: "Get help structuring and writing essays with AI-powered assistance.",
-    gradient: "from-indigo-500 to-violet-500"
+    description: "AI-powered essay structuring and writing assistance.",
+    gradient: "from-indigo-500 via-violet-500 to-purple-500"
   }
 ];
 
 const stats = [
-  { value: "2M+", label: "Students Helped", icon: Users },
+  { value: "2M+", label: "Students", icon: Users },
   { value: "4.5M+", label: "Problems Solved", icon: Target },
-  { value: "95%", label: "Accuracy Rate", icon: Shield },
-  { value: "4.8", label: "App Rating", icon: Star }
+  { value: "95%", label: "Accuracy", icon: Shield },
+  { value: "4.8", label: "Rating", icon: Star }
 ];
 
 const testimonials = [
   {
     name: "Sarah M.",
     school: "Stanford University",
-    text: "This app helped me understand calculus concepts I struggled with for months. The step-by-step explanations are incredible!",
-    subject: "Calculus",
-    image: studentImage
+    text: "This app helped me understand calculus concepts I struggled with for months!",
+    subject: "Calculus"
   },
   {
     name: "Michael R.",
     school: "MIT",
-    text: "Best homework helper I've ever used. It doesn't just give answers - it actually teaches you how to solve problems.",
-    subject: "Physics",
-    image: classroomImage
+    text: "Best homework helper ever. It actually teaches you how to solve problems.",
+    subject: "Physics"
   },
   {
     name: "Emily C.",
     school: "Harvard University",
-    text: "The quiz generator helped me ace my finals. I created practice tests from my notes and it was a game changer!",
-    subject: "Chemistry",
-    image: examImage
+    text: "The quiz generator helped me ace my finals. Game changer!",
+    subject: "Chemistry"
   }
 ];
 
-const logos = [
-  "Stanford", "MIT", "Harvard", "Yale", "Princeton", "Columbia", "Berkeley", "UCLA"
-];
-
-function AnimatedCard({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
+function MouseParallax({ children, strength = 20 }: { children: React.ReactNode; strength?: number }) {
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
   
+  const springConfig = { damping: 25, stiffness: 150 };
+  const x = useSpring(mouseX, springConfig);
+  const y = useSpring(mouseY, springConfig);
+
+  useEffect(() => {
+    const handleMouse = (e: MouseEvent) => {
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+      mouseX.set((e.clientX - centerX) / centerX * strength);
+      mouseY.set((e.clientY - centerY) / centerY * strength);
+    };
+    window.addEventListener("mousemove", handleMouse);
+    return () => window.removeEventListener("mousemove", handleMouse);
+  }, [mouseX, mouseY, strength]);
+
   return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 50, rotateX: -10 }}
-      animate={isInView ? { opacity: 1, y: 0, rotateX: 0 } : {}}
-      transition={{ duration: 0.6, delay, ease: "easeOut" }}
-      style={{ transformStyle: "preserve-3d", perspective: 1000 }}
-    >
+    <motion.div style={{ x, y }}>
       {children}
     </motion.div>
   );
 }
 
-function FloatingElement({ children, delay = 0, duration = 3 }: { children: React.ReactNode; delay?: number; duration?: number }) {
+function Floating3DObject({ 
+  children, 
+  delay = 0, 
+  duration = 6,
+  rotateAmount = 15,
+  floatAmount = 20
+}: { 
+  children: React.ReactNode; 
+  delay?: number; 
+  duration?: number;
+  rotateAmount?: number;
+  floatAmount?: number;
+}) {
   return (
     <motion.div
       animate={{ 
-        y: [0, -15, 0],
-        rotate: [0, 2, 0, -2, 0]
+        y: [-floatAmount/2, floatAmount/2, -floatAmount/2],
+        rotateY: [-rotateAmount, rotateAmount, -rotateAmount],
+        rotateX: [-rotateAmount/2, rotateAmount/2, -rotateAmount/2],
+        rotateZ: [-5, 5, -5]
       }}
       transition={{ 
         duration,
@@ -135,22 +153,110 @@ function FloatingElement({ children, delay = 0, duration = 3 }: { children: Reac
         delay,
         ease: "easeInOut"
       }}
+      style={{ transformStyle: "preserve-3d", perspective: 1000 }}
     >
       {children}
     </motion.div>
   );
 }
 
-function GlowOrb({ className, delay = 0 }: { className: string; delay?: number }) {
+function OrbitingElement({ 
+  children, 
+  radius = 150, 
+  duration = 20,
+  delay = 0 
+}: { 
+  children: React.ReactNode; 
+  radius?: number; 
+  duration?: number;
+  delay?: number;
+}) {
+  const angle = useMotionValue(0);
+  
+  useAnimationFrame((t) => {
+    angle.set(((t / 1000 + delay) / duration) * Math.PI * 2);
+  });
+
+  const x = useTransform(angle, (a) => Math.cos(a) * radius);
+  const y = useTransform(angle, (a) => Math.sin(a) * radius * 0.3);
+  const scale = useTransform(angle, (a) => 0.8 + Math.sin(a) * 0.2);
+  const zIndex = useTransform(angle, (a) => Math.sin(a) > 0 ? 10 : -10);
+
+  return (
+    <motion.div 
+      style={{ x, y, scale, zIndex, position: "absolute" }}
+      className="pointer-events-none"
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function GlassCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
     <motion.div
-      className={`absolute rounded-full blur-3xl ${className}`}
+      className={`relative backdrop-blur-xl bg-white/10 dark:bg-white/5 border border-white/20 rounded-2xl shadow-2xl ${className}`}
+      whileHover={{ 
+        scale: 1.02,
+        rotateX: 2,
+        rotateY: 2,
+        boxShadow: "0 25px 50px -12px rgba(139, 92, 246, 0.25)"
+      }}
+      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+      style={{ transformStyle: "preserve-3d" }}
+    >
+      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/20 via-transparent to-transparent pointer-events-none" />
+      {children}
+    </motion.div>
+  );
+}
+
+function AnimatedGrid() {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <div 
+        className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]"
+        style={{
+          backgroundImage: `
+            linear-gradient(to right, rgb(139, 92, 246) 1px, transparent 1px),
+            linear-gradient(to bottom, rgb(139, 92, 246) 1px, transparent 1px)
+          `,
+          backgroundSize: "60px 60px"
+        }}
+      />
+      <motion.div
+        className="absolute inset-0"
+        animate={{
+          background: [
+            "radial-gradient(circle at 20% 50%, rgba(139, 92, 246, 0.15) 0%, transparent 50%)",
+            "radial-gradient(circle at 80% 50%, rgba(139, 92, 246, 0.15) 0%, transparent 50%)",
+            "radial-gradient(circle at 20% 50%, rgba(139, 92, 246, 0.15) 0%, transparent 50%)"
+          ]
+        }}
+        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+      />
+    </div>
+  );
+}
+
+function GlowOrb({ className, delay = 0, color = "violet" }: { className: string; delay?: number; color?: string }) {
+  const colorMap: Record<string, string> = {
+    violet: "rgba(139, 92, 246, 0.4)",
+    blue: "rgba(59, 130, 246, 0.4)",
+    purple: "rgba(168, 85, 247, 0.4)",
+    pink: "rgba(236, 72, 153, 0.4)"
+  };
+  
+  return (
+    <motion.div
+      className={`absolute rounded-full blur-[100px] ${className}`}
+      style={{ backgroundColor: colorMap[color] || colorMap.violet }}
       animate={{
-        scale: [1, 1.2, 1],
-        opacity: [0.3, 0.5, 0.3],
+        scale: [1, 1.3, 1],
+        opacity: [0.4, 0.7, 0.4],
       }}
       transition={{
-        duration: 4,
+        duration: 5,
         repeat: Infinity,
         delay,
         ease: "easeInOut"
@@ -159,33 +265,63 @@ function GlowOrb({ className, delay = 0 }: { className: string; delay?: number }
   );
 }
 
+function ScrollReveal({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
+  const ref = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start end", "end start"]
+  });
+  
+  const opacity = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [0, 1, 1, 0]);
+  const y = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [100, 0, 0, -100]);
+
+  return (
+    <motion.div
+      ref={ref}
+      style={{ opacity, y }}
+      transition={{ delay }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
 export default function Landing() {
+  const containerRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef(null);
   const { scrollYProgress } = useScroll({
     target: heroRef,
     offset: ["start start", "end start"]
   });
   
-  const heroY = useTransform(scrollYProgress, [0, 1], [0, 200]);
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
-  const heroScale = useTransform(scrollYProgress, [0, 0.5], [1, 0.9]);
+  const heroY = useTransform(scrollYProgress, [0, 1], [0, 300]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.6], [1, 0]);
+  const heroScale = useTransform(scrollYProgress, [0, 0.6], [1, 0.85]);
 
   return (
-    <div className="min-h-screen bg-background overflow-hidden">
-      <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-xl">
+    <div ref={containerRef} className="min-h-screen bg-background overflow-hidden">
+      <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background/60 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between gap-4 h-16">
             <motion.div 
-              className="flex items-center gap-2"
+              className="flex items-center gap-3"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
             >
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/25">
-                <Brain className="w-6 h-6 text-white" />
-              </div>
+              <motion.div 
+                className="relative w-10 h-10"
+                whileHover={{ scale: 1.1, rotate: 10 }}
+              >
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-600 shadow-lg shadow-violet-500/40" />
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-600 blur-lg opacity-50" />
+                <div className="relative w-full h-full rounded-xl flex items-center justify-center">
+                  <Brain className="w-6 h-6 text-white" />
+                </div>
+              </motion.div>
               <span className="font-bold text-xl tracking-tight">BrainBoost</span>
             </motion.div>
+            
             <nav className="hidden md:flex items-center gap-8">
               {[
                 { href: "/solver", label: "Homework Help" },
@@ -197,7 +333,7 @@ export default function Landing() {
                   key={link.href}
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 * i }}
+                  transition={{ delay: 0.1 * i + 0.2 }}
                 >
                   <Link 
                     href={link.href} 
@@ -209,18 +345,22 @@ export default function Landing() {
                 </motion.div>
               ))}
             </nav>
+            
             <motion.div 
               className="flex items-center gap-3"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
             >
               <Link href="/login">
                 <Button variant="ghost" data-testid="button-login">Log In</Button>
               </Link>
               <Link href="/solver">
-                <Button className="bg-gradient-to-r from-violet-600 to-indigo-600 shadow-lg shadow-violet-500/25" data-testid="button-signup">
-                  Get Started Free
+                <Button 
+                  className="bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 shadow-lg shadow-violet-500/30"
+                  data-testid="button-signup"
+                >
+                  Get Started
                 </Button>
               </Link>
             </motion.div>
@@ -228,134 +368,136 @@ export default function Landing() {
         </div>
       </header>
 
-      <section ref={heroRef} className="relative min-h-[90vh] flex items-center overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-violet-50 via-background to-indigo-50 dark:from-violet-950/30 dark:via-background dark:to-indigo-950/30" />
-          <GlowOrb className="top-20 left-10 w-96 h-96 bg-violet-500/30" delay={0} />
-          <GlowOrb className="bottom-20 right-10 w-[500px] h-[500px] bg-indigo-500/30" delay={1} />
-          <GlowOrb className="top-1/2 left-1/2 w-72 h-72 bg-purple-500/20" delay={2} />
-        </div>
+      <section ref={heroRef} className="relative min-h-screen flex items-center pt-16 overflow-hidden">
+        <AnimatedGrid />
+        
+        <GlowOrb className="top-0 left-0 w-[600px] h-[600px]" delay={0} color="violet" />
+        <GlowOrb className="bottom-0 right-0 w-[800px] h-[800px]" delay={1.5} color="blue" />
+        <GlowOrb className="top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px]" delay={3} color="purple" />
+
+        <motion.div 
+          className="absolute top-1/4 right-1/4 hidden xl:block"
+          style={{ y: heroY }}
+        >
+          <OrbitingElement radius={200} duration={25}>
+            <motion.div className="w-16 h-16 rounded-2xl overflow-hidden shadow-2xl shadow-violet-500/30">
+              <img src={crystalSphere} alt="" className="w-full h-full object-cover" />
+            </motion.div>
+          </OrbitingElement>
+        </motion.div>
 
         <motion.div
           style={{ y: heroY, opacity: heroOpacity, scale: heroScale }}
-          className="absolute top-20 right-10 hidden xl:block"
+          className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20"
         >
-          <FloatingElement delay={0.5}>
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-2xl shadow-violet-500/50 flex items-center justify-center rotate-12">
-              <Sparkles className="w-10 h-10 text-white" />
-            </div>
-          </FloatingElement>
-        </motion.div>
-
-        <motion.div
-          style={{ y: heroY }}
-          className="absolute bottom-40 left-20 hidden xl:block"
-        >
-          <FloatingElement delay={1} duration={4}>
-            <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 shadow-2xl shadow-cyan-500/50 flex items-center justify-center -rotate-12">
-              <Zap className="w-8 h-8 text-white" />
-            </div>
-          </FloatingElement>
-        </motion.div>
-
-        <motion.div
-          style={{ y: heroY }}
-          className="absolute top-40 left-1/4 hidden xl:block"
-        >
-          <FloatingElement delay={1.5} duration={5}>
-            <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-pink-500 to-rose-600 shadow-2xl shadow-pink-500/50 flex items-center justify-center rotate-6">
-              <Target className="w-7 h-7 text-white" />
-            </div>
-          </FloatingElement>
-        </motion.div>
-        
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
             <motion.div
-              initial={{ opacity: 0, x: -50 }}
+              initial={{ opacity: 0, x: -60 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
+              transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
             >
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
+                transition={{ delay: 0.3 }}
               >
-                <Badge className="mb-6 px-4 py-2 bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-300 border-violet-200 dark:border-violet-800">
-                  <Rocket className="w-4 h-4 mr-2" />
-                  Trusted by 2M+ students worldwide
+                <Badge className="mb-6 px-4 py-2 bg-gradient-to-r from-violet-500/20 to-purple-500/20 text-violet-600 dark:text-violet-400 border-violet-500/30 backdrop-blur-sm">
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  AI-Powered Learning Platform
                 </Badge>
               </motion.div>
               
               <motion.h1 
-                className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight mb-6 leading-[1.1]"
-                initial={{ opacity: 0, y: 30 }}
+                className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight mb-6 leading-[1.05]"
+                initial={{ opacity: 0, y: 40 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3, duration: 0.8 }}
+                transition={{ delay: 0.4, duration: 1, ease: [0.16, 1, 0.3, 1] }}
               >
-                Solve, Study,
-                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600">
-                  Succeed
+                <span className="relative">
+                  Learn
+                  <motion.span
+                    className="absolute -inset-1 rounded-lg bg-gradient-to-r from-violet-600/20 to-purple-600/20 blur-lg"
+                    animate={{ opacity: [0.5, 0.8, 0.5] }}
+                    transition={{ duration: 3, repeat: Infinity }}
+                  />
+                </span>
+                {" "}Smarter,
+                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-violet-500 via-purple-500 to-indigo-500">
+                  Not Harder
                 </span>
               </motion.h1>
               
               <motion.p 
-                className="text-xl text-muted-foreground max-w-xl mb-8"
+                className="text-xl text-muted-foreground max-w-xl mb-10 leading-relaxed"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
+                transition={{ delay: 0.6 }}
               >
-                Tackle homework and ace any course from K-12 to Graduate School. 
-                Get instant step-by-step solutions with explanations you'll actually understand.
+                Tackle any homework problem from K-12 to Graduate School. 
+                Get instant AI-powered solutions with step-by-step explanations you'll actually understand.
               </motion.p>
               
               <motion.div 
                 className="flex flex-col sm:flex-row items-start gap-4"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7 }}
+                transition={{ delay: 0.8 }}
               >
                 <Link href="/solver">
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <Button 
+                      size="lg" 
+                      className="text-lg bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 shadow-xl shadow-violet-500/30 border-0" 
+                      data-testid="button-hero-cta"
+                    >
+                      Start Solving Free
+                      <ArrowRight className="w-5 h-5 ml-2" />
+                    </Button>
+                  </motion.div>
+                </Link>
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                   <Button 
                     size="lg" 
-                    className="text-lg bg-gradient-to-r from-violet-600 to-indigo-600 shadow-xl shadow-violet-500/30" 
-                    data-testid="button-hero-cta"
+                    variant="outline" 
+                    className="text-lg backdrop-blur-sm bg-background/50"
+                    data-testid="button-watch-demo"
                   >
-                    Start Solving Free
-                    <ArrowRight className="w-5 h-5 ml-2" />
+                    <Play className="w-5 h-5 mr-2" />
+                    Watch Demo
                   </Button>
-                </Link>
-                <Button 
-                  size="lg" 
-                  variant="outline" 
-                  className="text-lg"
-                  data-testid="button-watch-demo"
-                >
-                  <Play className="w-5 h-5 mr-2" />
-                  Watch Demo
-                </Button>
+                </motion.div>
               </motion.div>
 
               <motion.div 
-                className="flex items-center gap-8 mt-12"
+                className="flex items-center gap-8 mt-14"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 1 }}
+                transition={{ delay: 1.2 }}
               >
                 <div className="flex -space-x-3">
                   {[1, 2, 3, 4, 5].map((i) => (
-                    <div 
+                    <motion.div 
                       key={i} 
-                      className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-400 to-indigo-500 border-2 border-background flex items-center justify-center text-white text-sm font-medium"
+                      className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-400 to-indigo-500 border-2 border-background flex items-center justify-center text-white text-sm font-medium shadow-lg"
+                      initial={{ scale: 0, x: -20 }}
+                      animate={{ scale: 1, x: 0 }}
+                      transition={{ delay: 1.2 + i * 0.1, type: "spring" }}
                     >
                       {String.fromCharCode(64 + i)}
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
                 <div>
                   <div className="flex items-center gap-1">
                     {[1, 2, 3, 4, 5].map((i) => (
-                      <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                      <motion.div
+                        key={i}
+                        initial={{ scale: 0, rotate: -180 }}
+                        animate={{ scale: 1, rotate: 0 }}
+                        transition={{ delay: 1.5 + i * 0.05, type: "spring" }}
+                      >
+                        <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                      </motion.div>
                     ))}
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">4.8/5 from 50K+ reviews</p>
@@ -365,281 +507,270 @@ export default function Landing() {
 
             <motion.div
               className="relative hidden lg:block"
-              initial={{ opacity: 0, x: 50, rotateY: -10 }}
+              initial={{ opacity: 0, x: 60, rotateY: -15 }}
               animate={{ opacity: 1, x: 0, rotateY: 0 }}
-              transition={{ duration: 1, ease: "easeOut" }}
-              style={{ perspective: 1000, transformStyle: "preserve-3d" }}
+              transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+              style={{ perspective: 1200, transformStyle: "preserve-3d" }}
             >
-              <div className="relative">
-                <motion.div 
-                  className="absolute -inset-4 bg-gradient-to-r from-violet-600 to-indigo-600 rounded-3xl blur-2xl opacity-30"
-                  animate={{ opacity: [0.2, 0.4, 0.2] }}
-                  transition={{ duration: 3, repeat: Infinity }}
-                />
-                <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-white/10">
-                  <img 
-                    src={heroImage} 
-                    alt="Students studying together" 
-                    className="w-full h-auto object-cover"
+              <MouseParallax strength={15}>
+                <div className="relative">
+                  <motion.div 
+                    className="absolute -inset-8 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 rounded-3xl blur-3xl opacity-30"
+                    animate={{ opacity: [0.2, 0.4, 0.2], scale: [0.95, 1.05, 0.95] }}
+                    transition={{ duration: 4, repeat: Infinity }}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                  <div className="absolute bottom-6 left-6 right-6">
-                    <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-xl p-4 shadow-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
-                          <CheckCircle className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-foreground">Problem Solved!</p>
-                          <p className="text-sm text-muted-foreground">Calculus - Integration by Parts</p>
-                        </div>
-                      </div>
+                  
+                  <Floating3DObject delay={0} duration={8} rotateAmount={8} floatAmount={15}>
+                    <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-white/10">
+                      <img 
+                        src={hero3d} 
+                        alt="3D Abstract shapes" 
+                        className="w-full h-auto object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
                     </div>
-                  </div>
+                  </Floating3DObject>
+
+                  <motion.div 
+                    className="absolute -top-6 -right-6 z-20"
+                    initial={{ scale: 0, rotate: -20 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ delay: 1.5, type: "spring", stiffness: 200 }}
+                  >
+                    <Floating3DObject delay={0.5} duration={5} rotateAmount={10} floatAmount={10}>
+                      <GlassCard className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                            <Cpu className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-2xl font-bold">95%</p>
+                            <p className="text-sm text-muted-foreground">Accuracy</p>
+                          </div>
+                        </div>
+                      </GlassCard>
+                    </Floating3DObject>
+                  </motion.div>
+
+                  <motion.div 
+                    className="absolute -bottom-4 -left-8 z-20"
+                    initial={{ scale: 0, rotate: 20 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ delay: 1.7, type: "spring", stiffness: 200 }}
+                  >
+                    <Floating3DObject delay={1} duration={6} rotateAmount={12} floatAmount={12}>
+                      <GlassCard className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
+                            <Atom className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-2xl font-bold">4.5M+</p>
+                            <p className="text-sm text-muted-foreground">Solved</p>
+                          </div>
+                        </div>
+                      </GlassCard>
+                    </Floating3DObject>
+                  </motion.div>
                 </div>
-
-                <motion.div 
-                  className="absolute -top-8 -right-8 bg-white dark:bg-gray-900 rounded-xl shadow-2xl p-4 border"
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 1.2 }}
-                >
-                  <FloatingElement delay={0.3} duration={3}>
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-                        <Brain className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-2xl font-bold">95%</p>
-                        <p className="text-sm text-muted-foreground">Accuracy</p>
-                      </div>
-                    </div>
-                  </FloatingElement>
-                </motion.div>
-
-                <motion.div 
-                  className="absolute -bottom-4 -left-8 bg-white dark:bg-gray-900 rounded-xl shadow-2xl p-4 border"
-                  initial={{ y: -20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 1.4 }}
-                >
-                  <FloatingElement delay={0.8} duration={4}>
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
-                        <Zap className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-2xl font-bold">4.5M+</p>
-                        <p className="text-sm text-muted-foreground">Solved</p>
-                      </div>
-                    </div>
-                  </FloatingElement>
-                </motion.div>
-              </div>
+              </MouseParallax>
             </motion.div>
           </div>
-        </div>
+        </motion.div>
+
+        <motion.div 
+          className="absolute bottom-10 left-1/2 -translate-x-1/2"
+          animate={{ y: [0, 10, 0] }}
+          transition={{ duration: 2, repeat: Infinity }}
+        >
+          <div className="w-6 h-10 rounded-full border-2 border-muted-foreground/30 flex items-start justify-center p-2">
+            <motion.div 
+              className="w-1.5 h-1.5 rounded-full bg-muted-foreground"
+              animate={{ y: [0, 12, 0] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            />
+          </div>
+        </motion.div>
       </section>
 
-      <section className="py-12 border-y bg-muted/30 overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.p 
-            className="text-center text-muted-foreground mb-8"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-          >
-            Trusted by students at top universities worldwide
-          </motion.p>
-          <motion.div 
-            className="flex items-center justify-center gap-12 flex-wrap"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            {logos.map((logo, i) => (
-              <motion.span 
-                key={logo}
-                className="text-xl font-semibold text-muted-foreground/60"
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-              >
-                {logo}
-              </motion.span>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      <section className="py-20 lg:py-28 relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
-          <GlowOrb className="top-1/4 right-0 w-96 h-96 bg-violet-500/10" delay={0} />
-        </div>
+      <section className="py-24 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-muted/50 to-background" />
         
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {stats.map((stat, index) => (
-              <AnimatedCard key={index} delay={index * 0.1}>
-                <Card className="text-center border-0 bg-gradient-to-br from-white to-violet-50/50 dark:from-gray-900 dark:to-violet-950/30 shadow-xl">
-                  <CardContent className="p-8">
+              <ScrollReveal key={index} delay={index * 0.1}>
+                <motion.div
+                  whileHover={{ y: -8, rotateY: 5 }}
+                  transition={{ type: "spring", stiffness: 300 }}
+                  style={{ transformStyle: "preserve-3d" }}
+                >
+                  <GlassCard className="p-8 text-center bg-background/80">
                     <motion.div 
-                      className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-violet-500/30"
-                      whileHover={{ scale: 1.1, rotate: 5 }}
-                      transition={{ type: "spring", stiffness: 300 }}
+                      className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 via-purple-500 to-indigo-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-violet-500/30"
+                      whileHover={{ scale: 1.1, rotate: 10 }}
                     >
                       <stat.icon className="w-8 h-8 text-white" />
                     </motion.div>
                     <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-600 to-indigo-600 mb-2">
                       {stat.value}
                     </div>
-                    <div className="text-muted-foreground">{stat.label}</div>
-                  </CardContent>
-                </Card>
-              </AnimatedCard>
+                    <div className="text-muted-foreground font-medium">{stat.label}</div>
+                  </GlassCard>
+                </motion.div>
+              </ScrollReveal>
             ))}
           </div>
         </div>
       </section>
 
-      <section id="features" className="py-20 lg:py-28 bg-gradient-to-b from-background to-muted/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div 
-            className="text-center mb-16"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <Badge className="mb-4 bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-300">
-              <Sparkles className="w-4 h-4 mr-2" />
-              Features
-            </Badge>
-            <h2 className="text-4xl sm:text-5xl font-bold mb-4">
-              Everything You Need to
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 to-indigo-600"> Succeed</span>
-            </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              From instant problem solving to essay writing, we've got all the tools to help you learn better.
-            </p>
-          </motion.div>
+      <section id="features" className="py-28 relative overflow-hidden">
+        <GlowOrb className="top-1/4 right-0 w-[400px] h-[400px]" delay={0} color="purple" />
+        
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <ScrollReveal>
+            <div className="text-center mb-20">
+              <Badge className="mb-4 bg-gradient-to-r from-violet-500/20 to-purple-500/20 text-violet-600 dark:text-violet-400 border-violet-500/30">
+                <Zap className="w-4 h-4 mr-2" />
+                Powerful Features
+              </Badge>
+              <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6">
+                Everything You Need to
+                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-violet-500 via-purple-500 to-indigo-500">
+                  Succeed
+                </span>
+              </h2>
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                From instant problem solving to essay writing, unlock your full academic potential.
+              </p>
+            </div>
+          </ScrollReveal>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
-              <AnimatedCard key={index} delay={index * 0.1}>
+              <ScrollReveal key={index} delay={index * 0.1}>
                 <motion.div
-                  whileHover={{ y: -8, rotateX: 2 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                  style={{ transformStyle: "preserve-3d" }}
+                  whileHover={{ y: -12, rotateX: 5, rotateY: -5 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  style={{ transformStyle: "preserve-3d", perspective: 1000 }}
                 >
                   <Card 
-                    className="h-full border-0 bg-white dark:bg-gray-900 shadow-xl hover:shadow-2xl transition-all duration-300 overflow-visible"
+                    className="h-full border-0 bg-background/80 backdrop-blur-xl shadow-xl overflow-hidden group"
                     data-testid={`card-feature-${index}`}
                   >
-                    <CardContent className="p-8">
+                    <CardContent className="p-8 relative">
+                      <motion.div
+                        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                        style={{
+                          background: `radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.1), transparent 70%)`
+                        }}
+                      />
                       <motion.div 
-                        className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-6 shadow-lg`}
-                        whileHover={{ scale: 1.1, rotate: 10 }}
+                        className={`relative w-14 h-14 rounded-2xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-6 shadow-lg`}
+                        whileHover={{ scale: 1.15, rotate: 10 }}
                         transition={{ type: "spring", stiffness: 400 }}
                       >
                         <feature.icon className="w-7 h-7 text-white" />
                       </motion.div>
-                      <h3 className="text-xl font-semibold mb-3" data-testid={`text-feature-title-${index}`}>
+                      <h3 className="text-xl font-bold mb-3" data-testid={`text-feature-title-${index}`}>
                         {feature.title}
                       </h3>
                       <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
                     </CardContent>
                   </Card>
                 </motion.div>
-              </AnimatedCard>
+              </ScrollReveal>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="py-20 lg:py-28 relative overflow-hidden">
+      <section className="py-28 relative overflow-hidden">
         <div className="absolute inset-0">
           <img 
-            src={abstractBg} 
+            src={neonAbstract} 
             alt="" 
-            className="w-full h-full object-cover opacity-10 dark:opacity-20"
+            className="w-full h-full object-cover opacity-20 dark:opacity-30"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-background" />
+          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-background" />
         </div>
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div 
-            className="text-center mb-16"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <Badge className="mb-4 bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-300">
-              <Zap className="w-4 h-4 mr-2" />
-              How It Works
-            </Badge>
-            <h2 className="text-4xl sm:text-5xl font-bold mb-4">
-              Get Solutions in <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 to-indigo-600">3 Simple Steps</span>
-            </h2>
-          </motion.div>
+          <ScrollReveal>
+            <div className="text-center mb-16">
+              <Badge className="mb-4 bg-gradient-to-r from-violet-500/20 to-purple-500/20 text-violet-600 dark:text-violet-400 border-violet-500/30">
+                <Rocket className="w-4 h-4 mr-2" />
+                How It Works
+              </Badge>
+              <h2 className="text-4xl sm:text-5xl font-bold mb-4">
+                Solutions in <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-500 to-indigo-500">3 Steps</span>
+              </h2>
+            </div>
+          </ScrollReveal>
           
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-12">
             {[
-              { step: 1, icon: Camera, title: "Upload or Type", description: "Take a photo of your problem or type it directly into our solver.", color: "from-violet-500 to-purple-600" },
-              { step: 2, icon: Brain, title: "AI Analyzes", description: "Our advanced AI understands your problem and works through the solution.", color: "from-blue-500 to-cyan-500" },
-              { step: 3, icon: Target, title: "Get Step-by-Step", description: "Receive detailed explanations that help you understand, not just memorize.", color: "from-emerald-500 to-teal-500" }
+              { step: 1, icon: Camera, title: "Upload or Type", description: "Snap a photo or type your problem directly.", color: "from-violet-500 to-purple-600" },
+              { step: 2, icon: Brain, title: "AI Analyzes", description: "Our AI understands and solves your problem.", color: "from-blue-500 to-cyan-500" },
+              { step: 3, icon: Target, title: "Get Solutions", description: "Receive step-by-step explanations instantly.", color: "from-emerald-500 to-teal-500" }
             ].map((item, i) => (
-              <AnimatedCard key={item.step} delay={i * 0.2}>
+              <ScrollReveal key={item.step} delay={i * 0.2}>
                 <motion.div 
                   className="relative text-center"
-                  whileHover={{ scale: 1.02 }}
+                  whileHover={{ scale: 1.05 }}
                 >
                   {i < 2 && (
-                    <div className="absolute top-16 left-1/2 w-full h-1 bg-gradient-to-r from-violet-200 to-indigo-200 dark:from-violet-800 dark:to-indigo-800 hidden md:block" />
+                    <div className="absolute top-12 left-1/2 w-full h-0.5 bg-gradient-to-r from-violet-500/50 to-transparent hidden md:block" />
                   )}
                   <motion.div 
-                    className={`relative w-20 h-20 rounded-2xl bg-gradient-to-br ${item.color} flex items-center justify-center mx-auto mb-6 shadow-xl`}
+                    className={`relative w-24 h-24 rounded-3xl bg-gradient-to-br ${item.color} flex items-center justify-center mx-auto mb-8 shadow-2xl`}
                     whileHover={{ rotate: 10, scale: 1.1 }}
                     transition={{ type: "spring", stiffness: 300 }}
                   >
-                    <item.icon className="w-10 h-10 text-white" />
-                    <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-white dark:bg-gray-900 shadow-lg flex items-center justify-center font-bold text-sm">
+                    <item.icon className="w-12 h-12 text-white" />
+                    <div className="absolute -top-3 -right-3 w-10 h-10 rounded-full bg-background shadow-lg flex items-center justify-center font-bold text-lg border-2 border-violet-500">
                       {item.step}
                     </div>
                   </motion.div>
-                  <h3 className="text-xl font-semibold mb-3">{item.title}</h3>
-                  <p className="text-muted-foreground">{item.description}</p>
+                  <h3 className="text-2xl font-bold mb-3">{item.title}</h3>
+                  <p className="text-muted-foreground text-lg">{item.description}</p>
                 </motion.div>
-              </AnimatedCard>
+              </ScrollReveal>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="py-20 lg:py-28 bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-600 text-white relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
+      <section className="py-28 bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 text-white relative overflow-hidden">
+        <motion.div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `url(${sphere3d})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            opacity: 0.15
+          }}
+        />
+        <div className="absolute inset-0">
           <motion.div
-            className="absolute top-20 left-20 w-64 h-64 rounded-full bg-white/10 blur-3xl"
-            animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
-            transition={{ duration: 4, repeat: Infinity }}
-          />
-          <motion.div
-            className="absolute bottom-20 right-20 w-96 h-96 rounded-full bg-white/10 blur-3xl"
-            animate={{ scale: [1.2, 1, 1.2], opacity: [0.5, 0.3, 0.5] }}
-            transition={{ duration: 4, repeat: Infinity, delay: 2 }}
+            className="absolute top-0 left-0 w-full h-full"
+            animate={{ 
+              background: [
+                "radial-gradient(circle at 20% 30%, rgba(255,255,255,0.1) 0%, transparent 50%)",
+                "radial-gradient(circle at 80% 70%, rgba(255,255,255,0.1) 0%, transparent 50%)",
+                "radial-gradient(circle at 20% 30%, rgba(255,255,255,0.1) 0%, transparent 50%)"
+              ]
+            }}
+            transition={{ duration: 10, repeat: Infinity }}
           />
         </div>
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-            >
-              <Badge className="bg-white/20 text-white border-white/20 mb-6">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <ScrollReveal>
+              <Badge className="bg-white/20 text-white border-white/30 mb-6">
                 <Shield className="w-4 h-4 mr-2" />
-                Why Choose BrainBoost
+                Why Choose Us
               </Badge>
               <h2 className="text-4xl sm:text-5xl font-bold mb-8">
                 Higher Accuracy Than ChatGPT
@@ -655,48 +786,45 @@ export default function Landing() {
                   <motion.div 
                     key={index} 
                     className="flex items-center gap-4"
-                    initial={{ opacity: 0, x: -20 }}
+                    initial={{ opacity: 0, x: -30 }}
                     whileInView={{ opacity: 1, x: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: index * 0.1 }}
                   >
-                    <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                    <motion.div 
+                      className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0"
+                      whileHover={{ scale: 1.2, rotate: 10 }}
+                    >
                       <CheckCircle className="w-5 h-5 text-green-300" />
-                    </div>
+                    </motion.div>
                     <span className="text-lg">{item}</span>
                   </motion.div>
                 ))}
               </div>
-            </motion.div>
+            </ScrollReveal>
             
-            <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-            >
-              <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-8 border border-white/20 shadow-2xl">
-                <div className="text-center mb-8">
-                  <motion.div 
-                    className="text-7xl font-bold mb-2"
-                    initial={{ scale: 0 }}
-                    whileInView={{ scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ type: "spring", stiffness: 200, delay: 0.3 }}
-                  >
-                    95%
-                  </motion.div>
-                  <div className="text-white/80 text-lg">Overall accuracy on complex problems</div>
-                </div>
+            <ScrollReveal delay={0.3}>
+              <GlassCard className="p-10 bg-white/10">
+                <motion.div 
+                  className="text-center mb-10"
+                  initial={{ scale: 0.5 }}
+                  whileInView={{ scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ type: "spring", stiffness: 200 }}
+                >
+                  <div className="text-8xl font-bold mb-2">95%</div>
+                  <div className="text-white/80 text-xl">Overall Accuracy</div>
+                </motion.div>
                 <div className="grid grid-cols-2 gap-4">
                   {[
                     { value: "4.5M+", label: "Problems Solved" },
                     { value: "2M+", label: "Happy Students" },
-                    { value: "50+", label: "Subjects Covered" },
+                    { value: "50+", label: "Subjects" },
                     { value: "24/7", label: "Available" }
                   ].map((stat, i) => (
                     <motion.div 
                       key={i}
-                      className="bg-white/10 rounded-xl p-5 text-center"
+                      className="bg-white/10 backdrop-blur-sm rounded-xl p-5 text-center"
                       whileHover={{ scale: 1.05, backgroundColor: "rgba(255,255,255,0.15)" }}
                     >
                       <div className="text-3xl font-bold">{stat.value}</div>
@@ -704,99 +832,87 @@ export default function Landing() {
                     </motion.div>
                   ))}
                 </div>
-              </div>
-            </motion.div>
+              </GlassCard>
+            </ScrollReveal>
           </div>
         </div>
       </section>
 
-      <section className="py-20 lg:py-28 bg-muted/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div 
-            className="text-center mb-16"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <Badge className="mb-4 bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-300">
-              <Users className="w-4 h-4 mr-2" />
-              Testimonials
-            </Badge>
-            <h2 className="text-4xl sm:text-5xl font-bold mb-4">
-              Loved by <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 to-indigo-600">Students Everywhere</span>
-            </h2>
-          </motion.div>
+      <section className="py-28 bg-muted/30 relative overflow-hidden">
+        <GlowOrb className="bottom-0 left-1/4 w-[400px] h-[400px]" delay={0} color="pink" />
+        
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <ScrollReveal>
+            <div className="text-center mb-16">
+              <Badge className="mb-4 bg-gradient-to-r from-violet-500/20 to-purple-500/20 text-violet-600 dark:text-violet-400 border-violet-500/30">
+                <Users className="w-4 h-4 mr-2" />
+                Testimonials
+              </Badge>
+              <h2 className="text-4xl sm:text-5xl font-bold mb-4">
+                Loved by <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-500 to-indigo-500">Students</span>
+              </h2>
+            </div>
+          </ScrollReveal>
           
           <div className="grid md:grid-cols-3 gap-8">
             {testimonials.map((testimonial, index) => (
-              <AnimatedCard key={index} delay={index * 0.15}>
+              <ScrollReveal key={index} delay={index * 0.15}>
                 <motion.div
-                  whileHover={{ y: -8 }}
+                  whileHover={{ y: -10, rotateY: 5 }}
                   transition={{ type: "spring", stiffness: 300 }}
+                  style={{ transformStyle: "preserve-3d" }}
                 >
-                  <Card className="h-full border-0 bg-white dark:bg-gray-900 shadow-xl overflow-hidden" data-testid={`card-testimonial-${index}`}>
-                    <div className="h-32 overflow-hidden">
-                      <img 
-                        src={testimonial.image} 
-                        alt="" 
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <CardContent className="p-6">
-                      <div className="flex items-center gap-1 mb-4">
+                  <Card className="h-full border-0 bg-background/80 backdrop-blur-xl shadow-xl" data-testid={`card-testimonial-${index}`}>
+                    <CardContent className="p-8">
+                      <div className="flex items-center gap-1 mb-6">
                         {[...Array(5)].map((_, i) => (
                           <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
                         ))}
                       </div>
-                      <p className="text-muted-foreground mb-6 leading-relaxed" data-testid={`text-testimonial-${index}`}>
+                      <p className="text-muted-foreground mb-6 leading-relaxed text-lg" data-testid={`text-testimonial-${index}`}>
                         "{testimonial.text}"
                       </p>
                       <div className="flex items-center justify-between gap-2 flex-wrap">
                         <div>
-                          <div className="font-semibold" data-testid={`text-author-${index}`}>{testimonial.name}</div>
+                          <div className="font-bold text-lg" data-testid={`text-author-${index}`}>{testimonial.name}</div>
                           <div className="text-sm text-muted-foreground">{testimonial.school}</div>
                         </div>
-                        <Badge className="bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-300">
+                        <Badge className="bg-gradient-to-r from-violet-500/20 to-purple-500/20 text-violet-600 dark:text-violet-400 border-violet-500/30">
                           {testimonial.subject}
                         </Badge>
                       </div>
                     </CardContent>
                   </Card>
                 </motion.div>
-              </AnimatedCard>
+              </ScrollReveal>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="py-20 lg:py-28 relative overflow-hidden">
-        <div className="absolute inset-0">
-          <GlowOrb className="top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-violet-500/20" />
-        </div>
+      <section className="py-32 relative overflow-hidden">
+        <GlowOrb className="top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px]" color="violet" />
         
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6">
-              Ready to Ace Your
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-violet-600 to-indigo-600">
-                Homework?
+          <ScrollReveal>
+            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-8">
+              Ready to
+              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-violet-500 via-purple-500 to-indigo-500">
+                Ace Your Homework?
               </span>
             </h2>
-            <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
-              Join millions of students who are learning smarter, not harder.
+            <p className="text-xl text-muted-foreground mb-12 max-w-2xl mx-auto">
+              Join millions of students learning smarter, not harder.
             </p>
             <Link href="/solver">
               <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.98 }}
+                className="inline-block"
               >
                 <Button 
                   size="lg" 
-                  className="text-lg bg-gradient-to-r from-violet-600 to-indigo-600 shadow-2xl shadow-violet-500/30" 
+                  className="text-lg bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 shadow-2xl shadow-violet-500/40" 
                   data-testid="button-cta-bottom"
                 >
                   Get Started - It's Free
@@ -807,7 +923,7 @@ export default function Landing() {
             <p className="text-sm text-muted-foreground mt-6">
               No credit card required. Start solving problems instantly.
             </p>
-          </motion.div>
+          </ScrollReveal>
         </div>
       </section>
 
@@ -815,8 +931,8 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
             <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/25">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
                   <Brain className="w-6 h-6 text-white" />
                 </div>
                 <span className="font-bold text-lg">BrainBoost</span>
@@ -826,7 +942,7 @@ export default function Landing() {
               </p>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Products</h4>
+              <h4 className="font-bold mb-4">Products</h4>
               <div className="space-y-3 text-sm text-muted-foreground">
                 <Link href="/solver" className="block hover:text-foreground transition-colors">Homework Help</Link>
                 <Link href="/quiz" className="block hover:text-foreground transition-colors">Quiz Maker</Link>
@@ -834,7 +950,7 @@ export default function Landing() {
               </div>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Tools</h4>
+              <h4 className="font-bold mb-4">Tools</h4>
               <div className="space-y-3 text-sm text-muted-foreground">
                 <Link href="/solver" className="block hover:text-foreground transition-colors">Math Solver</Link>
                 <Link href="/solver" className="block hover:text-foreground transition-colors">Photo Solver</Link>
@@ -842,7 +958,7 @@ export default function Landing() {
               </div>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Company</h4>
+              <h4 className="font-bold mb-4">Company</h4>
               <div className="space-y-3 text-sm text-muted-foreground">
                 <a href="#" className="block hover:text-foreground transition-colors">About</a>
                 <a href="#" className="block hover:text-foreground transition-colors">Privacy Policy</a>
