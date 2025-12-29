@@ -162,7 +162,7 @@ export default function Landing() {
         >
           <div className="flex-1 flex items-center">
             <div className="max-w-[1400px] mx-auto px-6 lg:px-8 py-32 w-full">
-              <div className="grid lg:grid-cols-2 gap-16 items-center">
+              <div className="max-w-3xl">
                 <motion.div
                   initial={{ opacity: 0, y: 40 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -180,54 +180,30 @@ export default function Landing() {
                     <span className="block text-[#3b82f6]">effortless.</span>
                   </h1>
                   
-                  <p className="text-lg sm:text-xl text-white/60 max-w-lg mb-10 leading-relaxed">
+                  <p className="text-lg sm:text-xl text-white/60 max-w-xl mb-10 leading-relaxed">
                     The AI education platform with power and precision — turning homework into understanding and questions into knowledge.
                   </p>
                   
-                  <Link href="/solver">
-                    <Button 
-                      size="lg" 
-                      className="bg-[#3b82f6] hover:bg-[#2563eb] text-white"
-                      data-testid="button-hero-cta"
-                    >
-                      Start free trial
-                    </Button>
-                  </Link>
-                </motion.div>
-
-                <motion.div
-                  className="hidden lg:block"
-                  initial={{ opacity: 0, x: 40 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.8, delay: 0.3 }}
-                >
-                  <div className="relative">
-                    <Card className="bg-white/5 backdrop-blur-xl border-white/10 p-6">
-                      <div className="flex items-center gap-2 mb-4">
-                        <Sparkles className="w-4 h-4 text-[#3b82f6]" />
-                        <span className="text-xs text-white/50 uppercase tracking-wider">Live Demo</span>
-                      </div>
-                      <p className="text-white/80 mb-4">Solve: What is the derivative of f(x) = 3x² + 2x - 5?</p>
-                      <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-                        <p className="text-sm text-white/60 mb-2">Solution:</p>
-                        <p className="text-white font-mono">f'(x) = 6x + 2</p>
-                        <div className="mt-3 pt-3 border-t border-white/10">
-                          <p className="text-xs text-white/40">Step-by-step explanation available</p>
-                        </div>
-                      </div>
-                    </Card>
-
-                    <motion.div 
-                      className="absolute -top-4 -right-4"
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ delay: 0.6, type: "spring" }}
-                    >
-                      <div className="bg-emerald-500 text-white px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4" />
-                        95% Accuracy
-                      </div>
-                    </motion.div>
+                  <div className="flex flex-wrap items-center gap-4">
+                    <Link href="/solver">
+                      <Button 
+                        size="lg" 
+                        className="bg-[#3b82f6] hover:bg-[#2563eb] text-white"
+                        data-testid="button-hero-cta"
+                      >
+                        Start free trial
+                      </Button>
+                    </Link>
+                    <Link href="/login">
+                      <Button 
+                        size="lg" 
+                        variant="outline"
+                        className="border-white/20 text-white hover:bg-white/10"
+                        data-testid="button-hero-login"
+                      >
+                        Sign in
+                      </Button>
+                    </Link>
                   </div>
                 </motion.div>
               </div>

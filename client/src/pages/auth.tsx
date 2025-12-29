@@ -8,8 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Sparkles, GraduationCap, BookOpen } from "lucide-react";
+import { Brain, GraduationCap, BookOpen } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { BackgroundVideo } from "@/components/background-video";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -94,19 +95,20 @@ export default function Auth() {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-violet-50 via-background to-indigo-50 dark:from-violet-950/20 dark:via-background dark:to-indigo-950/20 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-[#0a0a0b] text-white flex items-center justify-center p-4 relative overflow-hidden">
+      <BackgroundVideo video="classroom" overlay="darkest" />
+      <div className="relative z-10 w-full max-w-md">
         <Link href="/" className="flex items-center justify-center gap-2 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center">
-            <Sparkles className="w-6 h-6 text-white" />
+          <div className="w-10 h-10 rounded-xl bg-[#3b82f6] flex items-center justify-center">
+            <Brain className="w-6 h-6 text-white" />
           </div>
-          <span className="font-bold text-2xl">BrainBoost</span>
+          <span className="font-bold text-2xl text-white">BrainBoost</span>
         </Link>
 
-        <Card>
+        <Card className="bg-black/40 backdrop-blur-md border-white/10">
           <CardHeader className="text-center pb-2">
-            <CardTitle className="text-xl">Welcome to BrainBoost</CardTitle>
-            <p className="text-sm text-muted-foreground">
+            <CardTitle className="text-xl text-white">Welcome to BrainBoost</CardTitle>
+            <p className="text-sm text-white/60">
               AI-powered education for students and teachers
             </p>
           </CardHeader>
@@ -147,7 +149,7 @@ export default function Auth() {
                   </div>
                   <Button 
                     type="submit" 
-                    className="w-full bg-gradient-to-r from-violet-600 to-indigo-600"
+                    className="w-full bg-[#3b82f6] hover:bg-[#2563eb]"
                     disabled={loginMutation.isPending}
                     data-testid="button-login-submit"
                   >
@@ -234,7 +236,7 @@ export default function Auth() {
                   </div>
                   <Button 
                     type="submit" 
-                    className="w-full bg-gradient-to-r from-violet-600 to-indigo-600"
+                    className="w-full bg-[#3b82f6] hover:bg-[#2563eb]"
                     disabled={registerMutation.isPending}
                     data-testid="button-register-submit"
                   >
