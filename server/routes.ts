@@ -431,6 +431,112 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/generate-quiz", async (req, res) => {
+    try {
+      const { text } = req.body;
+      
+      if (!text || typeof text !== "string" || text.trim().length < 50) {
+        return res.status(400).json({ error: "Please provide at least 50 characters of text" });
+      }
+
+      const response = await anthropic.messages.create({
+        model: "claude-sonnet-4-5",
+        max_tokens: 4096,
+        system: `You are a quiz generator. Create a practice quiz from the provided text.
+
+Respond with ONLY a JSON object:
+{
+  "topic": "Brief topic name",
+  "questions": [
+    {
+      "question": "The question text",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correctAnswer": 0,
+      "explanation": "Why this is the correct answer"
+    }
+  ]
+}
+
+Create 5-7 multiple choice questions that test understanding of the key concepts.
+Each question should have exactly 4 options.
+correctAnswer is the index (0-3) of the correct option.
+
+Output ONLY valid JSON.`,
+        messages: [
+          { role: "user", content: `Generate a quiz from this text:\n\n${text.trim()}` }
+        ],
+      });
+
+      const textContent = response.content.find(block => block.type === "text");
+      let responseText = textContent?.type === "text" ? textContent.text : "";
+      
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        responseText = jsonMatch[0];
+      }
+      
+      const result = JSON.parse(responseText);
+      res.json(result);
+    } catch (error: any) {
+      console.error("Quiz generation error:", error?.message || error);
+      res.status(500).json({ error: error?.message || "Failed to generate quiz" });
+    }
+  });
+
+  app.post("/api/generate-essay", async (req, res) => {
+    try {
+      const { topic, type, wordCount, notes } = req.body;
+      
+      if (!topic || typeof topic !== "string" || !topic.trim()) {
+        return res.status(400).json({ error: "Please provide an essay topic" });
+      }
+
+      const response = await anthropic.messages.create({
+        model: "claude-sonnet-4-5",
+        max_tokens: 8192,
+        system: `You are an expert essay writer. Help students write well-structured essays.
+
+Respond with ONLY a JSON object:
+{
+  "title": "Essay title",
+  "outline": ["Introduction point", "Body paragraph 1 topic", "Body paragraph 2 topic", "Conclusion point"],
+  "essay": "The full essay text with proper paragraphs",
+  "wordCount": 500
+}
+
+Essay type: ${type || "argumentative"}
+Target word count: approximately ${wordCount || 500} words
+
+Write a well-structured, coherent essay with:
+- Clear introduction with thesis statement
+- Well-developed body paragraphs
+- Strong conclusion
+- Proper transitions between paragraphs
+
+${notes ? `Additional notes/requirements: ${notes}` : ""}
+
+Output ONLY valid JSON.`,
+        messages: [
+          { role: "user", content: `Write an essay about: ${topic.trim()}` }
+        ],
+      });
+
+      const textContent = response.content.find(block => block.type === "text");
+      let responseText = textContent?.type === "text" ? textContent.text : "";
+      
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        responseText = jsonMatch[0];
+      }
+      
+      const result = JSON.parse(responseText);
+      res.json(result);
+    } catch (error: any) {
+      console.error("Essay generation error:", error?.message || error);
+      res.status(500).json({ error: error?.message || "Failed to generate essay" });
+    }
+  });
+
   app.post("/api/submissions/:id/followup", async (req, res) => {
     try {
       const { question } = req.body;
