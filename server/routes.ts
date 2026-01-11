@@ -1,10 +1,14 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { submitWorkSchema, evaluateSchema, registerSchema, loginSchema } from "@shared/schema";
+import { submitWorkSchema, evaluateSchema, registerSchema, loginSchema, uploadKnowledgeSchema, knowledgeChunks } from "@shared/schema";
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import bcrypt from "bcryptjs";
+import { generateEmbedding, generateEmbeddings } from "./rag/embeddings";
+import { chunkMathContent, detectTopic, detectDifficulty } from "./rag/chunker";
+import { retrieveRelevantChunks, formatContextForAI, getKnowledgeStats } from "./rag/retrieval";
+import { db } from "./db";
 
 // Extend express-session types
 declare module "express-session" {
@@ -752,6 +756,277 @@ Now the student has a follow-up question. Answer it clearly and helpfully to dee
     } catch (error) {
       console.error("Follow-up error:", error);
       res.status(500).json({ error: "Failed to process follow-up question" });
+    }
+  });
+
+  // ===== RAG KNOWLEDGE BASE ENDPOINTS =====
+  
+  // Upload knowledge content (requires teacher role)
+  app.post("/api/knowledge/upload", requireTeacher, async (req, res) => {
+    try {
+      const validation = uploadKnowledgeSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ error: validation.error.errors });
+      }
+
+      const data = validation.data;
+      
+      // Generate embedding for the content
+      const embedding = await generateEmbedding(data.content);
+      
+      // Insert into database
+      const result = await db.insert(knowledgeChunks).values({
+        content: data.content,
+        embedding,
+        sourceBook: data.sourceBook,
+        chapter: data.chapter || null,
+        section: data.section || null,
+        page: data.page || null,
+        topic: data.topic,
+        subtopic: data.subtopic || null,
+        contentType: data.contentType,
+        difficulty: data.difficulty || "intermediate",
+        keywords: data.keywords || [],
+        relatedFormulas: data.relatedFormulas || [],
+        commonMisconceptions: data.commonMisconceptions || null,
+      }).returning();
+
+      res.json({ success: true, chunk: result[0] });
+    } catch (error: any) {
+      console.error("Knowledge upload error:", error);
+      res.status(500).json({ error: error?.message || "Failed to upload knowledge" });
+    }
+  });
+
+  // Bulk upload and chunk content
+  app.post("/api/knowledge/bulk-upload", requireTeacher, async (req, res) => {
+    try {
+      const { content, sourceBook, chapter, section, startPage } = req.body;
+      
+      if (!content || !sourceBook) {
+        return res.status(400).json({ error: "Content and source book are required" });
+      }
+
+      // Chunk the content intelligently
+      const chunks = chunkMathContent(content, {
+        chunkSize: 600,
+        overlap: 100,
+        preserveStructure: true,
+      });
+
+      if (chunks.length === 0) {
+        return res.status(400).json({ error: "No valid chunks could be created from the content" });
+      }
+
+      // Generate embeddings for all chunks
+      const texts = chunks.map(c => c.content);
+      const embeddings = await generateEmbeddings(texts);
+
+      // Insert all chunks
+      const insertedChunks = [];
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        const topic = detectTopic(chunk.content);
+        const difficulty = detectDifficulty(chunk.content);
+        
+        const result = await db.insert(knowledgeChunks).values({
+          content: chunk.content,
+          embedding: embeddings[i],
+          sourceBook,
+          chapter: chapter || null,
+          section: section || null,
+          page: startPage ? startPage + Math.floor(i / 3) : null,
+          topic,
+          subtopic: null,
+          contentType: chunk.contentType,
+          difficulty,
+          keywords: chunk.keywords,
+          relatedFormulas: chunk.relatedFormulas,
+          commonMisconceptions: null,
+        }).returning();
+        
+        insertedChunks.push(result[0]);
+      }
+
+      res.json({ 
+        success: true, 
+        chunksCreated: insertedChunks.length,
+        chunks: insertedChunks.map(c => ({
+          id: c.id,
+          contentType: c.contentType,
+          topic: c.topic,
+          difficulty: c.difficulty,
+          preview: c.content.substring(0, 100) + "...",
+        })),
+      });
+    } catch (error: any) {
+      console.error("Bulk upload error:", error);
+      res.status(500).json({ error: error?.message || "Failed to bulk upload knowledge" });
+    }
+  });
+
+  // Search knowledge base
+  app.post("/api/knowledge/search", async (req, res) => {
+    try {
+      const { query, topic, contentType, difficulty, topK } = req.body;
+      
+      if (!query) {
+        return res.status(400).json({ error: "Query is required" });
+      }
+
+      const chunks = await retrieveRelevantChunks(query, {
+        topK: topK || 8,
+        topic,
+        contentType,
+        difficulty,
+      });
+
+      res.json({
+        results: chunks.map(c => ({
+          id: c.chunk.id,
+          content: c.chunk.content,
+          sourceBook: c.chunk.sourceBook,
+          chapter: c.chunk.chapter,
+          section: c.chunk.section,
+          page: c.chunk.page,
+          topic: c.chunk.topic,
+          contentType: c.chunk.contentType,
+          difficulty: c.chunk.difficulty,
+          similarity: c.similarity,
+          citation: c.citation,
+          keywords: c.chunk.keywords,
+          relatedFormulas: c.chunk.relatedFormulas,
+        })),
+      });
+    } catch (error: any) {
+      console.error("Knowledge search error:", error);
+      res.status(500).json({ error: error?.message || "Failed to search knowledge" });
+    }
+  });
+
+  // Get knowledge base stats
+  app.get("/api/knowledge/stats", async (req, res) => {
+    try {
+      const stats = await getKnowledgeStats();
+      res.json(stats);
+    } catch (error: any) {
+      console.error("Knowledge stats error:", error);
+      res.status(500).json({ error: error?.message || "Failed to get knowledge stats" });
+    }
+  });
+
+  // RAG-enhanced solve endpoint
+  app.post("/api/solve-with-rag", async (req, res) => {
+    try {
+      const { problem, topic, difficulty, explanationFormat } = req.body;
+      
+      if (!problem) {
+        return res.status(400).json({ error: "Problem is required" });
+      }
+
+      // Retrieve relevant knowledge chunks
+      const retrievedChunks = await retrieveRelevantChunks(problem, {
+        topK: 10,
+        topic,
+        difficulty,
+      });
+
+      const hasContext = retrievedChunks.length > 0;
+      const ragContext = hasContext ? formatContextForAI(retrievedChunks) : "";
+
+      // Build the prompt with RAG context
+      const formatInstructions = {
+        beginner: "Explain in simple, beginner-friendly language. Use everyday analogies and avoid jargon. Break down each step thoroughly.",
+        "exam-oriented": "Provide a structured, exam-ready solution. Focus on the method that would score full marks. Include key formulas to memorize.",
+        "step-by-step": "Give a detailed step-by-step breakdown with clear reasoning for each step. Show all intermediate calculations.",
+      };
+
+      const format = explanationFormat || "step-by-step";
+      
+      const systemPrompt = `You are an intelligent mathematics tutor with access to a comprehensive knowledge base of math textbooks.
+
+${ragContext}
+
+YOUR TASK: Solve the given problem by:
+1. Analyzing what mathematical concepts are needed
+2. Using the textbook knowledge provided above when relevant
+3. Providing a clear, step-by-step solution with citations
+
+EXPLANATION STYLE: ${formatInstructions[format as keyof typeof formatInstructions] || formatInstructions["step-by-step"]}
+
+OUTPUT FORMAT (JSON):
+{
+  "solution": "The final answer clearly stated",
+  "steps": [
+    {
+      "title": "Step 1: Identify the approach",
+      "math": "Mathematical work shown here",
+      "reasoning": "Explanation of why this step is taken"
+    }
+  ],
+  "explanation": "Intuitive explanation of the overall solution",
+  "problemType": "math|science|other",
+  "references": [
+    {
+      "source": "Book name, Chapter X, Section Y",
+      "relevance": "How this source helped"
+    }
+  ],
+  "misconceptions": ["Common mistakes to avoid"],
+  "graphSpec": {
+    "expressions": ["y=x^2"],
+    "title": "Graph title if needed"
+  }
+}
+
+RULES:
+- Cite textbook sources for formulas and theorems when available
+- Show ALL mathematical steps clearly
+- Verify your answer when possible
+- Include intuitive explanations
+- Note common misconceptions if relevant
+
+Output ONLY valid JSON.`;
+
+      const response = await anthropic.messages.create({
+        model: "claude-sonnet-4-5-20250514",
+        max_tokens: 16000,
+        thinking: {
+          type: "enabled",
+          budget_tokens: 10000,
+        },
+        system: systemPrompt,
+        messages: [
+          { role: "user", content: `Solve this problem: ${problem}` }
+        ],
+      });
+
+      const textContent = response.content.find(block => block.type === "text");
+      let responseText = textContent?.type === "text" ? textContent.text : "";
+      
+      // Extract JSON
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        responseText = jsonMatch[0];
+      }
+
+      const result = JSON.parse(responseText);
+      
+      // Add RAG metadata
+      result.ragMetadata = {
+        chunksUsed: retrievedChunks.length,
+        sources: retrievedChunks.map(c => ({
+          citation: c.citation,
+          topic: c.chunk.topic,
+          contentType: c.chunk.contentType,
+          similarity: c.similarity,
+        })),
+      };
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("RAG solve error:", error);
+      res.status(500).json({ error: error?.message || "Failed to solve with RAG" });
     }
   });
 
