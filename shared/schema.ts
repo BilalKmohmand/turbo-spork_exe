@@ -1,4 +1,4 @@
-import { pgTable, text, varchar, integer, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, jsonb, vector, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { sql, relations } from "drizzle-orm";
@@ -150,4 +150,52 @@ export const submitWorkSchema = z.object({
 export const evaluateSchema = z.object({
   score: z.number().min(0).max(100),
   feedback: z.string().min(1, "Feedback is required"),
+});
+
+// Knowledge chunks table for RAG system
+export const knowledgeChunks = pgTable("knowledge_chunks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  content: text("content").notNull(),
+  embedding: vector("embedding", { dimensions: 1536 }),
+  sourceBook: text("source_book").notNull(),
+  chapter: text("chapter"),
+  section: text("section"),
+  page: integer("page"),
+  topic: text("topic").notNull(),
+  subtopic: text("subtopic"),
+  contentType: text("content_type").notNull().default("general"), // definition | theorem | formula | example | exercise | explanation
+  difficulty: text("difficulty").default("intermediate"), // beginner | intermediate | advanced
+  keywords: text("keywords").array(),
+  relatedFormulas: text("related_formulas").array(),
+  commonMisconceptions: text("common_misconceptions"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("knowledge_embedding_idx").using("hnsw", table.embedding.op("vector_cosine_ops")),
+  index("knowledge_topic_idx").on(table.topic),
+  index("knowledge_content_type_idx").on(table.contentType),
+]);
+
+export const insertKnowledgeChunkSchema = createInsertSchema(knowledgeChunks).omit({
+  id: true,
+  createdAt: true,
+  embedding: true,
+});
+
+export type InsertKnowledgeChunk = z.infer<typeof insertKnowledgeChunkSchema>;
+export type KnowledgeChunk = typeof knowledgeChunks.$inferSelect;
+
+// Schema for uploading knowledge content
+export const uploadKnowledgeSchema = z.object({
+  content: z.string().min(1, "Content is required"),
+  sourceBook: z.string().min(1, "Source book is required"),
+  chapter: z.string().optional(),
+  section: z.string().optional(),
+  page: z.number().optional(),
+  topic: z.string().min(1, "Topic is required"),
+  subtopic: z.string().optional(),
+  contentType: z.enum(["definition", "theorem", "formula", "example", "exercise", "explanation", "general"]),
+  difficulty: z.enum(["beginner", "intermediate", "advanced"]).optional(),
+  keywords: z.array(z.string()).optional(),
+  relatedFormulas: z.array(z.string()).optional(),
+  commonMisconceptions: z.string().optional(),
 });
