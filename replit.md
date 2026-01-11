@@ -51,6 +51,7 @@ Preferred communication style: Simple, everyday language.
 - **Submissions**: id, studentId, title, subject, content, status, aiSolution, aiSteps, aiExplanation
 - **Evaluations**: id, submissionId, teacherId, score, feedback, reviewedAt
 - **Sessions**: PostgreSQL table "user_sessions" (auto-created)
+- **KnowledgeChunks**: RAG knowledge base with vector embeddings (1536 dimensions)
 
 ### Key Pages
 - `/` - Landing page with hero, features, stats, testimonials
@@ -61,6 +62,7 @@ Preferred communication style: Simple, everyday language.
 - `/quiz` - Quiz generator from text
 - `/essay` - Essay writer tool
 - `/pricing` - Subscription pricing page
+- `/knowledge` - Knowledge base management for RAG (teachers only)
 
 ### API Endpoints
 - `POST /api/auth/register` - Register new user (bcrypt hashed password)
@@ -77,6 +79,11 @@ Preferred communication style: Simple, everyday language.
 - `POST /api/solve-image` - Solve image problem with AI
 - `POST /api/generate-quiz` - Generate quiz from text
 - `POST /api/generate-essay` - Generate essay
+- `POST /api/knowledge/upload` - Upload single knowledge chunk (teacher only)
+- `POST /api/knowledge/bulk-upload` - Bulk upload and chunk content (teacher only)
+- `POST /api/knowledge/search` - Search knowledge base with vector similarity
+- `GET /api/knowledge/stats` - Get knowledge base statistics
+- `POST /api/solve-with-rag` - Solve problem with RAG-grounded context and citations
 
 ### Build Process
 - Frontend builds to `dist/public` using Vite
@@ -98,3 +105,46 @@ Preferred communication style: Simple, everyday language.
 - lucide-react: Icons
 - tailwindcss: Styling
 - wouter: Routing
+
+## RAG (Retrieval-Augmented Generation) System
+
+### Overview
+The RAG system grounds AI answers in educational textbook content, providing cited and verified solutions.
+
+### Architecture
+- **Vector Database**: PostgreSQL with pgvector extension (HNSW indexing)
+- **Embeddings**: OpenAI text-embedding-3-small (1536 dimensions)
+- **Document Chunking**: Intelligent math-aware chunking preserving formulas, theorems, examples
+
+### Knowledge Chunk Schema
+- content: The educational text content
+- embedding: 1536-dimensional vector for similarity search
+- sourceBook: Book title (e.g., "Stewart's Calculus 8th Ed.")
+- chapter, section, page: Citation metadata
+- topic: Main topic (calculus, algebra, geometry, etc.)
+- contentType: definition | theorem | formula | example | exercise | explanation
+- difficulty: beginner | intermediate | advanced
+- keywords: Extracted topic keywords
+- relatedFormulas: Mathematical formulas in the content
+- commonMisconceptions: Common student mistakes
+
+### RAG-Enhanced Solving
+1. User submits a math problem
+2. System generates embedding for the problem
+3. Vector similarity search finds relevant knowledge chunks
+4. Context is formatted with citations and added to AI prompt
+5. AI generates grounded solution with textbook references
+6. Response includes source citations and common misconceptions
+
+### Content Types Detected
+- Definitions: Math definitions and terminology
+- Theorems: Proofs, lemmas, corollaries
+- Formulas: Mathematical equations and rules
+- Examples: Worked problems with solutions
+- Exercises: Practice problems
+- Explanations: Conceptual explanations
+
+### Files
+- `server/rag/embeddings.ts` - OpenAI embedding generation
+- `server/rag/chunker.ts` - Math-aware document chunking
+- `server/rag/retrieval.ts` - Vector similarity search and context formatting

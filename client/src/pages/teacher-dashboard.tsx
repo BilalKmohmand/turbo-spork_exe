@@ -18,7 +18,8 @@ import {
   LogOut,
   Star,
   Send,
-  Eye
+  Eye,
+  Database
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -137,6 +138,12 @@ export default function TeacherDashboard() {
             <span className="font-bold text-lg">Gradeio</span>
           </Link>
           <div className="flex items-center gap-4">
+            <Link href="/knowledge">
+              <Button variant="outline" size="sm" data-testid="button-knowledge">
+                <Database className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">Knowledge Base</span>
+              </Button>
+            </Link>
             <Badge variant="outline" className="hidden sm:flex">
               <Users className="w-3 h-3 mr-1" />
               Teacher

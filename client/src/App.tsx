@@ -13,6 +13,7 @@ import Pricing from "@/pages/pricing";
 import Auth from "@/pages/auth";
 import StudentDashboard from "@/pages/student-dashboard";
 import TeacherDashboard from "@/pages/teacher-dashboard";
+import Knowledge from "@/pages/knowledge";
 import { Button } from "@/components/ui/button";
 import { 
   Sparkles, 
@@ -151,6 +152,7 @@ function Router() {
       <Route path="/login" component={Auth} />
       <Route path="/student" component={StudentDashboard} />
       <Route path="/teacher" component={TeacherDashboard} />
+      <Route path="/knowledge" component={Knowledge} />
       <Route>
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
@@ -167,7 +169,7 @@ function Router() {
 
 function App() {
   const [location] = useLocation();
-  const standalonePages = ["/", "/auth", "/login", "/student", "/teacher", "/pricing"];
+  const standalonePages = ["/", "/auth", "/login", "/student", "/teacher", "/pricing", "/knowledge"];
   const isStandalonePage = standalonePages.includes(location);
 
   return (
