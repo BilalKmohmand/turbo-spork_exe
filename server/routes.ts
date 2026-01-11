@@ -114,9 +114,9 @@ function parseSteps(steps: any): StepObject[] {
 
 async function solveFromImage(base64Image: string, mimeType: string): Promise<SolveResult> {
   try {
-    // Use o3-mini reasoning model for better problem solving
+    // Use GPT-5.2 for best problem solving with deep reasoning
     const response = await openai.chat.completions.create({
-      model: "o3-mini",
+      model: "gpt-5.2",
       messages: [
         {
           role: "user",
@@ -169,7 +169,7 @@ Output ONLY valid JSON, no markdown or explanation outside the JSON.`,
           ],
         },
       ],
-      max_completion_tokens: 8192,
+      max_tokens: 8192,
     });
 
     let text = response.choices[0]?.message?.content || "";
