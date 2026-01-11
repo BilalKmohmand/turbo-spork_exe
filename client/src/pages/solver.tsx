@@ -172,10 +172,13 @@ export default function Solver() {
   };
 
   const processFile = async (file: File) => {
-    if (!file.type.startsWith("image/")) {
+    const isImage = file.type.startsWith("image/");
+    const isPDF = file.type === "application/pdf";
+    
+    if (!isImage && !isPDF) {
       toast({
         title: "Invalid file",
-        description: "Please upload an image file (JPG, PNG, etc.)",
+        description: "Please upload an image (JPG, PNG) or PDF file",
         variant: "destructive",
       });
       return;
@@ -184,7 +187,7 @@ export default function Solver() {
     if (file.size > 20 * 1024 * 1024) {
       toast({
         title: "File too large",
-        description: "Please upload an image smaller than 20MB.",
+        description: "Please upload a file smaller than 20MB.",
         variant: "destructive",
       });
       return;
@@ -196,11 +199,30 @@ export default function Solver() {
     setSubmittedProblem("");
 
     const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
+    setPreviewUrl(isPDF ? null : url);
     setUploadProgress(30);
 
     try {
-      const { base64, mimeType } = await compressImage(file);
+      let base64: string;
+      let mimeType: string;
+      
+      if (isPDF) {
+        // For PDFs, read as base64 directly
+        const arrayBuffer = await file.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+        let binary = '';
+        for (let i = 0; i < bytes.length; i++) {
+          binary += String.fromCharCode(bytes[i]);
+        }
+        base64 = btoa(binary);
+        mimeType = "application/pdf";
+      } else {
+        // For images, compress and convert
+        const result = await compressImage(file);
+        base64 = result.base64;
+        mimeType = result.mimeType;
+      }
+      
       setUploadProgress(50);
       setLastProblem({ type: "image", content: base64, mimeType });
       submitMutation.mutate({ base64, mimeType });
@@ -209,7 +231,7 @@ export default function Solver() {
       setUploadProgress(0);
       toast({
         title: "Error",
-        description: "Failed to process image. Please try again.",
+        description: "Failed to process file. Please try again.",
         variant: "destructive",
       });
     }
@@ -302,7 +324,7 @@ export default function Solver() {
         ref={fileInputRef}
         onChange={handleFileSelect}
         className="hidden"
-        accept="image/*"
+        accept="image/*,.pdf,application/pdf"
         data-testid="input-file"
       />
       <input

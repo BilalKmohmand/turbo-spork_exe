@@ -114,9 +114,9 @@ function parseSteps(steps: any): StepObject[] {
 
 async function solveFromImage(base64Image: string, mimeType: string): Promise<SolveResult> {
   try {
-    // Use GPT-5-mini for fast, capable problem solving
+    // Use GPT-5.2 for powerful problem solving with images and documents
     const response = await openai.chat.completions.create({
-      model: "gpt-5-mini",
+      model: "gpt-5.2",
       messages: [
         {
           role: "user",
