@@ -114,41 +114,51 @@ function parseSteps(steps: any): StepObject[] {
 
 async function solveFromImage(base64Image: string, mimeType: string): Promise<SolveResult> {
   try {
+    // Use o3-mini reasoning model for better problem solving
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "o3-mini",
       messages: [
-        {
-          role: "system",
-          content: `You are an expert math tutor. Solve the homework problem in the image completely.
-
-Respond with ONLY a JSON object:
-{
-  "solution": "Final answer (plain text or simple LaTeX like $x = 5$)",
-  "steps": [
-    {"title": "What we're doing", "math": "\\\\frac{30}{6} = 5", "reasoning": "We divide because..."}
-  ],
-  "explanation": "Key concepts",
-  "problemType": "math" or "science" or "other",
-  "graphSpec": null or {"expressions": ["y=2x+1"], "title": "Graph", "xMin": -10, "xMax": 10, "yMin": -10, "yMax": 10}
-}
-
-STEP FORMAT - Each step is an object with 3 fields:
-- "title": Short description of the operation (e.g., "Divide total by number of rows")
-- "math": LaTeX equation WITHOUT $$ delimiters (e.g., "\\\\frac{30}{6} = 5")
-- "reasoning": 1-2 sentences explaining WHY this step makes sense
-
-MATH FIELD RULES:
-- Do NOT include $$ or $ in the math field - just raw LaTeX
-- Use \\\\frac{a}{b} for fractions, x^2 for exponents, \\\\sqrt{x} for roots
-
-Output ONLY valid JSON`
-        },
         {
           role: "user",
           content: [
             {
               type: "text",
-              text: "Solve this problem completely. Include graphSpec if it involves graphable equations.",
+              text: `You are an expert math and science tutor with deep reasoning abilities. Analyze this homework problem image carefully and solve it step-by-step.
+
+THINK THROUGH THE PROBLEM:
+1. First, identify what type of problem this is (algebra, geometry, calculus, physics, chemistry, etc.)
+2. Identify all given information and what we need to find
+3. Plan your approach before solving
+4. Execute each step with clear reasoning
+5. Verify your answer makes sense
+
+Respond with ONLY a JSON object:
+{
+  "solution": "Final answer with units if applicable (use LaTeX like $x = 5$ for math)",
+  "steps": [
+    {"title": "Identify the problem type", "math": "", "reasoning": "This is a [type] problem because..."},
+    {"title": "List given information", "math": "", "reasoning": "We know that..."},
+    {"title": "Step description", "math": "\\\\frac{30}{6} = 5", "reasoning": "We divide because..."}
+  ],
+  "explanation": "Key concepts and why this approach works. Include any formulas or theorems used.",
+  "problemType": "math" or "science" or "other",
+  "graphSpec": null or {"expressions": ["y=2x+1", "y=-x+3"], "title": "Visual representation", "xMin": -10, "xMax": 10, "yMin": -10, "yMax": 10}
+}
+
+STEP FORMAT - Each step MUST have all 3 fields:
+- "title": Clear description of what we're doing in this step
+- "math": LaTeX equation WITHOUT $$ delimiters. Use \\\\frac{a}{b} for fractions, x^2 for exponents, \\\\sqrt{x} for roots, \\\\pi for pi
+- "reasoning": Explain WHY we do this step and how it connects to the solution
+
+GRAPH RULES - Include graphSpec when the problem involves:
+- Linear equations (y = mx + b)
+- Quadratic functions (y = ax² + bx + c)
+- Systems of equations (multiple expressions)
+- Inequalities (use dashed lines for < or >)
+- Trigonometric functions
+- Any function that can be visualized
+
+Output ONLY valid JSON, no markdown or explanation outside the JSON.`,
             },
             {
               type: "image_url",
@@ -159,7 +169,7 @@ Output ONLY valid JSON`
           ],
         },
       ],
-      max_tokens: 4096,
+      max_completion_tokens: 8192,
     });
 
     let text = response.choices[0]?.message?.content || "";
@@ -194,36 +204,60 @@ Output ONLY valid JSON`
 
 async function solveWithAI(content: string): Promise<SolveResult> {
   try {
+    // Use Claude with extended thinking for deeper reasoning
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-5",
-      max_tokens: 4096,
-      system: `You are an expert math tutor. Solve the homework problem completely.
+      max_tokens: 16000,
+      thinking: {
+        type: "enabled",
+        budget_tokens: 8000,
+      },
+      system: `You are an expert math and science tutor with deep reasoning abilities. Solve problems thoroughly with clear explanations.
+
+APPROACH:
+1. First understand what type of problem this is
+2. Identify all given information and unknowns
+3. Choose the best solving strategy
+4. Work through each step carefully
+5. Verify your answer
 
 Respond with ONLY a JSON object:
 {
-  "solution": "Final answer (plain text or simple LaTeX like $x = 5$)",
+  "solution": "Final answer with units if applicable (use LaTeX like $x = 5$ for math expressions)",
   "steps": [
-    {"title": "What we're doing", "math": "\\frac{30}{6} = 5", "reasoning": "We divide because..."}
+    {"title": "Understand the problem", "math": "", "reasoning": "This is a [type] problem. We need to find..."},
+    {"title": "Identify given values", "math": "", "reasoning": "We're given: ..."},
+    {"title": "Apply formula/method", "math": "\\frac{30}{6} = 5", "reasoning": "We use this approach because..."},
+    {"title": "Calculate result", "math": "x = 5", "reasoning": "Simplifying gives us..."},
+    {"title": "Verify answer", "math": "", "reasoning": "We can check: ..."}
   ],
-  "explanation": "Key concepts",
+  "explanation": "Key concepts, formulas, and theorems used. Explain WHY the method works.",
   "problemType": "math" or "science" or "other",
-  "graphSpec": null or {"expressions": ["y=2x+1"], "title": "Graph", "xMin": -10, "xMax": 10, "yMin": -10, "yMax": 10}
+  "graphSpec": null or {"expressions": ["y=2x+1", "y=-x+3"], "title": "Visual representation", "xMin": -10, "xMax": 10, "yMin": -10, "yMax": 10}
 }
 
-STEP FORMAT - Each step is an object with 3 fields:
-- "title": Short description of the operation (e.g., "Divide total by number of rows")
-- "math": LaTeX equation WITHOUT $$ delimiters (e.g., "\\frac{30}{6} = 5")
-- "reasoning": 1-2 sentences explaining WHY this step makes sense
+STEP FORMAT - Each step MUST have all 3 fields:
+- "title": Clear description of what we're doing
+- "math": LaTeX equation WITHOUT $$ delimiters. Examples: \\frac{a}{b}, x^2, \\sqrt{x}, \\pi, \\int_{a}^{b}
+- "reasoning": Explain the WHY - connect this step to the overall solution
 
-MATH FIELD RULES:
-- Do NOT include $$ or $ in the math field - just raw LaTeX
-- Use \\frac{a}{b} for fractions, x^2 for exponents, \\sqrt{x} for roots
+GRAPH RULES - ALWAYS include graphSpec when the problem involves:
+- Linear equations (y = mx + b)
+- Quadratic functions (y = ax² + bx + c) 
+- Systems of equations (show all lines/curves)
+- Polynomials and rational functions
+- Trigonometric functions (sin, cos, tan)
+- Exponential/logarithmic functions
+- Circles, ellipses, parabolas
+- Inequalities (use appropriate regions)
 
-Output ONLY valid JSON`,
+Format expressions for graphing as: "y=2x+1" or "x^2+y^2=4"
+
+Output ONLY valid JSON.`,
       messages: [
         {
           role: "user",
-          content: `Solve this problem completely. Include graphSpec if it involves graphable equations:\n\n${content}`,
+          content: `Solve this problem step-by-step with thorough explanations. Include a graph visualization if the problem involves any equations or functions:\n\n${content}`,
         },
       ],
     });
