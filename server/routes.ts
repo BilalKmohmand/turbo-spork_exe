@@ -173,7 +173,7 @@ Output ONLY valid JSON, no markdown or explanation outside the JSON.`,
           ],
         },
       ],
-      max_tokens: 8192,
+      max_completion_tokens: 8192,
     });
 
     let text = response.choices[0]?.message?.content || "";
@@ -211,7 +211,7 @@ async function solveWithAI(content: string): Promise<SolveResult> {
     // Use GPT-5.2 - the highest-end ChatGPT model for superior math solving
     const response = await openai.chat.completions.create({
       model: "gpt-5.2",
-      max_tokens: 16384,
+      max_completion_tokens: 16384,
       messages: [
         {
           role: "system",
@@ -607,7 +607,7 @@ export async function registerRoutes(
 
       const response = await openai.chat.completions.create({
         model: "gpt-5.2",
-        max_tokens: 4096,
+        max_completion_tokens: 4096,
         messages: [
           {
             role: "system",
@@ -661,7 +661,7 @@ Output ONLY valid JSON.`
 
       const response = await openai.chat.completions.create({
         model: "gpt-5.2",
-        max_tokens: 8192,
+        max_completion_tokens: 8192,
         messages: [
           {
             role: "system",
@@ -743,7 +743,7 @@ Now the student has a follow-up question. Answer it clearly and helpfully to dee
 
       const response = await openai.chat.completions.create({
         model: "gpt-5.2",
-        max_tokens: 1024,
+        max_completion_tokens: 1024,
         messages: [
           { role: "system", content: systemContext },
           ...chatMessages,
@@ -993,7 +993,7 @@ Output ONLY valid JSON.`;
 
       const response = await openai.chat.completions.create({
         model: "gpt-5.2",
-        max_tokens: 16384,
+        max_completion_tokens: 16384,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `Solve this problem: ${problem}` }
