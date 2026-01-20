@@ -208,15 +208,14 @@ Output ONLY valid JSON, no markdown or explanation outside the JSON.`,
 
 async function solveWithAI(content: string): Promise<SolveResult> {
   try {
-    // Use Claude with extended thinking for deeper reasoning
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-5",
-      max_tokens: 16000,
-      thinking: {
-        type: "enabled",
-        budget_tokens: 8000,
-      },
-      system: `You are an expert math and science tutor with deep reasoning abilities. Solve problems thoroughly with clear explanations.
+    // Use GPT-5.2 - the highest-end ChatGPT model for superior math solving
+    const response = await openai.chat.completions.create({
+      model: "gpt-5.2",
+      max_tokens: 16384,
+      messages: [
+        {
+          role: "system",
+          content: `You are an expert math and science tutor with world-class reasoning abilities. You can solve ANY math problem - from basic arithmetic to advanced calculus, differential equations, linear algebra, statistics, and beyond. Solve problems thoroughly with clear, step-by-step explanations.
 
 APPROACH:
 1. First understand what type of problem this is
@@ -258,7 +257,7 @@ GRAPH RULES - ALWAYS include graphSpec when the problem involves:
 Format expressions for graphing as: "y=2x+1" or "x^2+y^2=4"
 
 Output ONLY valid JSON.`,
-      messages: [
+        },
         {
           role: "user",
           content: `Solve this problem step-by-step with thorough explanations. Include a graph visualization if the problem involves any equations or functions:\n\n${content}`,
@@ -266,8 +265,7 @@ Output ONLY valid JSON.`,
       ],
     });
 
-    const textContent = response.content.find(block => block.type === "text");
-    let text = textContent?.type === "text" ? textContent.text : "";
+    let text = response.choices[0]?.message?.content || "";
     
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
@@ -988,21 +986,16 @@ RULES:
 
 Output ONLY valid JSON.`;
 
-      const response = await anthropic.messages.create({
-        model: "claude-sonnet-4-5-20250514",
-        max_tokens: 16000,
-        thinking: {
-          type: "enabled",
-          budget_tokens: 10000,
-        },
-        system: systemPrompt,
+      const response = await openai.chat.completions.create({
+        model: "gpt-5.2",
+        max_tokens: 16384,
         messages: [
+          { role: "system", content: systemPrompt },
           { role: "user", content: `Solve this problem: ${problem}` }
         ],
       });
 
-      const textContent = response.content.find(block => block.type === "text");
-      let responseText = textContent?.type === "text" ? textContent.text : "";
+      let responseText = response.choices[0]?.message?.content || "";
       
       // Extract JSON
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
