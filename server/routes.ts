@@ -145,24 +145,27 @@ THINK THROUGH EACH PROBLEM:
 
 Respond with ONLY a JSON object:
 {
-  "solution": "ALL final answers clearly listed. For multiple questions: Question 1: [answer], Question 2: [answer], etc. Use LaTeX like $x = 5$ for math",
+  "solution": "ALL final answers. ALWAYS wrap math in $...$ like: The roots are $x = 1$ and $x = \\frac{3}{2}$",
   "steps": [
-    {"title": "Question 1: Identify the problem", "math": "", "reasoning": "This is a [type] problem because..."},
-    {"title": "Question 1: Solve", "math": "\\\\frac{30}{6} = 5", "reasoning": "We divide because..."},
-    {"title": "Question 1: Answer", "math": "x = 5", "reasoning": "The answer to Q1 is..."},
-    {"title": "Question 2: Identify the problem", "math": "", "reasoning": "Moving to Q2..."},
-    {"title": "Question 2: Solve", "math": "y = 10", "reasoning": "Calculation..."},
-    {"title": "Question 2: Answer", "math": "y = 10", "reasoning": "The answer to Q2 is..."}
+    {"title": "Identify the problem", "math": "", "reasoning": "This is a [type] problem. We need to find $x$ where..."},
+    {"title": "Solve", "math": "\\frac{30}{6} = 5", "reasoning": "We divide $30$ by $6$ because..."},
+    {"title": "Final answer", "math": "x = 5", "reasoning": "Therefore $x = 5$ is our solution."}
   ],
-  "explanation": "Key concepts and why this approach works. Summary of methods used for all questions.",
+  "explanation": "Key concepts. Wrap any math in $...$ delimiters like $ax^2 + bx + c = 0$",
   "problemType": "math" or "science" or "other",
-  "graphSpec": null or {"expressions": ["y=2x+1", "y=-x+3"], "title": "Visual representation", "xMin": -10, "xMax": 10, "yMin": -10, "yMax": 10}
+  "graphSpec": null
 }
 
+CRITICAL FORMATTING RULES:
+- In "solution", "reasoning", and "explanation" fields: ALWAYS wrap math expressions in single $ delimiters like $x = 5$ or $\\frac{3}{2}$
+- In "math" field: Write LaTeX directly WITHOUT $ delimiters (e.g., \\frac{a}{b}, x^2, \\sqrt{x})
+- For fractions use $\\frac{3}{2}$ not 3/2 in text fields
+- For variables and equations in text, ALWAYS use $ delimiters
+
 STEP FORMAT - Each step MUST have all 3 fields:
-- "title": Include question number if multiple questions (e.g., "Q1: Calculate", "Q2: Simplify")
-- "math": LaTeX equation WITHOUT $$ delimiters. Use \\\\frac{a}{b} for fractions, x^2 for exponents, \\\\sqrt{x} for roots, \\\\pi for pi
-- "reasoning": Explain WHY we do this step and how it connects to the solution
+- "title": Clear description (include question number if multiple questions)
+- "math": LaTeX equation WITHOUT $ delimiters for the main calculation
+- "reasoning": Explanation with any inline math wrapped in $...$
 
 GRAPH RULES - Only include graphSpec when NECESSARY:
 - DO NOT include graphSpec for: arithmetic, word problems, percentages, ratios, simple algebra, statistics, probability, geometry calculations
@@ -240,24 +243,27 @@ APPROACH FOR EACH QUESTION:
 
 Respond with ONLY a JSON object:
 {
-  "solution": "ALL final answers clearly listed. For multiple questions: Question 1: [answer], Question 2: [answer], etc. Use LaTeX like $x = 5$ for math expressions",
+  "solution": "ALL final answers clearly listed. ALWAYS wrap math in $...$ like: The roots are $x = 1$ and $x = \\frac{3}{2}$",
   "steps": [
-    {"title": "Question 1: Understand the problem", "math": "", "reasoning": "This is a [type] problem. We need to find..."},
-    {"title": "Question 1: Solve", "math": "\\frac{30}{6} = 5", "reasoning": "Calculation with explanation..."},
-    {"title": "Question 1: Answer", "math": "x = 5", "reasoning": "Final answer for Q1..."},
-    {"title": "Question 2: Understand the problem", "math": "", "reasoning": "Moving to the next question..."},
-    {"title": "Question 2: Solve", "math": "y = 10", "reasoning": "Calculation with explanation..."},
-    {"title": "Question 2: Answer", "math": "y = 10", "reasoning": "Final answer for Q2..."}
+    {"title": "Understand the problem", "math": "", "reasoning": "This is a [type] problem. We need to find $x$ where..."},
+    {"title": "Apply method", "math": "\\frac{30}{6} = 5", "reasoning": "We divide $30$ by $6$ because..."},
+    {"title": "Final answer", "math": "x = 5", "reasoning": "Therefore $x = 5$ is our solution."}
   ],
-  "explanation": "Key concepts, formulas, and theorems used for all questions. Summary of methods.",
+  "explanation": "Key concepts used. Wrap any math in $...$ delimiters like $ax^2 + bx + c = 0$",
   "problemType": "math" or "science" or "other",
-  "graphSpec": null or {"expressions": ["y=2x+1", "y=-x+3"], "title": "Visual representation", "xMin": -10, "xMax": 10, "yMin": -10, "yMax": 10}
+  "graphSpec": null
 }
 
+CRITICAL FORMATTING RULES:
+- In "solution", "reasoning", and "explanation" fields: ALWAYS wrap math expressions in single $ delimiters like $x = 5$ or $\\frac{3}{2}$
+- In "math" field: Write LaTeX directly WITHOUT $ delimiters (e.g., \\frac{a}{b}, x^2, \\sqrt{x})
+- For fractions use $\\frac{3}{2}$ not 3/2 in text fields
+- For variables and equations in text, ALWAYS use $ delimiters
+
 STEP FORMAT - Each step MUST have all 3 fields:
-- "title": Include question number if multiple questions (e.g., "Q1: Calculate", "Q2: Simplify")
-- "math": LaTeX equation WITHOUT $$ delimiters. Examples: \\frac{a}{b}, x^2, \\sqrt{x}, \\pi, \\int_{a}^{b}
-- "reasoning": Explain the WHY - connect this step to the overall solution
+- "title": Clear description (include question number if multiple questions)
+- "math": LaTeX equation WITHOUT $ delimiters for the main calculation
+- "reasoning": Explanation with any inline math wrapped in $...$
 
 GRAPH RULES - Only include graphSpec when NECESSARY:
 - DO NOT include graphSpec for: arithmetic, word problems, percentages, ratios, simple algebra without graphing, statistics, probability, geometry area/perimeter calculations

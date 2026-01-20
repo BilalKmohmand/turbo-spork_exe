@@ -57,7 +57,7 @@ export function SolutionStep({ step, index }: { step: StepObject; index: number 
         <div className="flex-shrink-0 w-6 h-6 rounded-full bg-muted-foreground/20 flex items-center justify-center text-muted-foreground font-medium text-sm">
           {index + 1}
         </div>
-        <h4 className="font-semibold text-foreground pt-0.5">{step.title}</h4>
+        <h4 className="font-semibold text-foreground pt-0.5">{renderMathText(step.title)}</h4>
       </div>
       
       {step.math && (
@@ -68,7 +68,7 @@ export function SolutionStep({ step, index }: { step: StepObject; index: number 
       
       {step.reasoning && (
         <p className="ml-9 text-muted-foreground leading-relaxed">
-          {step.reasoning}
+          {renderMathText(step.reasoning)}
         </p>
       )}
     </div>
