@@ -36,8 +36,7 @@ Preferred communication style: Simple, everyday language.
 - **Framework**: Express.js with TypeScript
 - **API Design**: RESTful JSON API endpoints under `/api/*`
 - **AI Integration**: 
-  - OpenAI GPT-5.2 (highest-end model) for all math problem solving (text and images)
-  - Anthropic Claude for quiz generation and essay writing
+  - OpenAI GPT-5.2 (highest-end model) for ALL AI features: math solving, quiz generation, essay writing, follow-up questions
 - **Database**: PostgreSQL with Drizzle ORM (DatabaseStorage)
 - **Sessions**: PostgreSQL-backed sessions (connect-pg-simple)
 - **Security**: Bcrypt password hashing

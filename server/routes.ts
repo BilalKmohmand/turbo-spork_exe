@@ -605,10 +605,13 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Please provide at least 50 characters of text" });
       }
 
-      const response = await anthropic.messages.create({
-        model: "claude-sonnet-4-5",
+      const response = await openai.chat.completions.create({
+        model: "gpt-5.2",
         max_tokens: 4096,
-        system: `You are a quiz generator. Create a practice quiz from the provided text.
+        messages: [
+          {
+            role: "system",
+            content: `You are a quiz generator. Create a practice quiz from the provided text.
 
 Respond with ONLY a JSON object:
 {
@@ -627,14 +630,13 @@ Create 5-7 multiple choice questions that test understanding of the key concepts
 Each question should have exactly 4 options.
 correctAnswer is the index (0-3) of the correct option.
 
-Output ONLY valid JSON.`,
-        messages: [
+Output ONLY valid JSON.`
+          },
           { role: "user", content: `Generate a quiz from this text:\n\n${text.trim()}` }
         ],
       });
 
-      const textContent = response.content.find(block => block.type === "text");
-      let responseText = textContent?.type === "text" ? textContent.text : "";
+      let responseText = response.choices[0]?.message?.content || "";
       
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
@@ -657,10 +659,13 @@ Output ONLY valid JSON.`,
         return res.status(400).json({ error: "Please provide an essay topic" });
       }
 
-      const response = await anthropic.messages.create({
-        model: "claude-sonnet-4-5",
+      const response = await openai.chat.completions.create({
+        model: "gpt-5.2",
         max_tokens: 8192,
-        system: `You are an expert essay writer. Help students write well-structured essays.
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert essay writer. Help students write well-structured essays.
 
 Respond with ONLY a JSON object:
 {
@@ -681,14 +686,13 @@ Write a well-structured, coherent essay with:
 
 ${notes ? `Additional notes/requirements: ${notes}` : ""}
 
-Output ONLY valid JSON.`,
-        messages: [
+Output ONLY valid JSON.`
+          },
           { role: "user", content: `Write an essay about: ${topic.trim()}` }
         ],
       });
 
-      const textContent = response.content.find(block => block.type === "text");
-      let responseText = textContent?.type === "text" ? textContent.text : "";
+      let responseText = response.choices[0]?.message?.content || "";
       
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
@@ -737,15 +741,16 @@ Now the student has a follow-up question. Answer it clearly and helpfully to dee
         content: m.content 
       }));
 
-      const response = await anthropic.messages.create({
-        model: "claude-sonnet-4-5",
+      const response = await openai.chat.completions.create({
+        model: "gpt-5.2",
         max_tokens: 1024,
-        system: systemContext,
-        messages: chatMessages,
+        messages: [
+          { role: "system", content: systemContext },
+          ...chatMessages,
+        ],
       });
 
-      const textContent = response.content.find(block => block.type === "text");
-      const assistantMessage = textContent?.type === "text" ? textContent.text : "I couldn't process that question. Please try again.";
+      const assistantMessage = response.choices[0]?.message?.content || "I couldn't process that question. Please try again.";
       messages.push({ role: "assistant", content: assistantMessage });
 
       await storage.updateSubmission(req.params.id, { messages });
