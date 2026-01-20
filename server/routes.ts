@@ -164,13 +164,10 @@ STEP FORMAT - Each step MUST have all 3 fields:
 - "math": LaTeX equation WITHOUT $$ delimiters. Use \\\\frac{a}{b} for fractions, x^2 for exponents, \\\\sqrt{x} for roots, \\\\pi for pi
 - "reasoning": Explain WHY we do this step and how it connects to the solution
 
-GRAPH RULES - Include graphSpec when the problem involves:
-- Linear equations (y = mx + b)
-- Quadratic functions (y = ax² + bx + c)
-- Systems of equations (multiple expressions)
-- Inequalities (use dashed lines for < or >)
-- Trigonometric functions
-- Any function that can be visualized
+GRAPH RULES - Only include graphSpec when NECESSARY:
+- DO NOT include graphSpec for: arithmetic, word problems, percentages, ratios, simple algebra, statistics, probability, geometry calculations
+- ONLY include graphSpec when the problem EXPLICITLY asks to graph OR visualizing a function/equation helps understand it
+- Set graphSpec to null for most problems - graphs are the exception, not the rule
 
 Output ONLY valid JSON, no markdown or explanation outside the JSON.`,
             },
@@ -262,23 +259,18 @@ STEP FORMAT - Each step MUST have all 3 fields:
 - "math": LaTeX equation WITHOUT $$ delimiters. Examples: \\frac{a}{b}, x^2, \\sqrt{x}, \\pi, \\int_{a}^{b}
 - "reasoning": Explain the WHY - connect this step to the overall solution
 
-GRAPH RULES - ALWAYS include graphSpec when the problem involves:
-- Linear equations (y = mx + b)
-- Quadratic functions (y = ax² + bx + c) 
-- Systems of equations (show all lines/curves)
-- Polynomials and rational functions
-- Trigonometric functions (sin, cos, tan)
-- Exponential/logarithmic functions
-- Circles, ellipses, parabolas
-- Inequalities (use appropriate regions)
+GRAPH RULES - Only include graphSpec when NECESSARY:
+- DO NOT include graphSpec for: arithmetic, word problems, percentages, ratios, simple algebra without graphing, statistics, probability, geometry area/perimeter calculations
+- ONLY include graphSpec when the problem EXPLICITLY asks to graph OR when visualizing helps understand the solution (like plotting functions, systems of equations, coordinate geometry)
+- Set graphSpec to null for most problems - graphs are the exception, not the rule
 
-Format expressions for graphing as: "y=2x+1" or "x^2+y^2=4"
+When a graph IS needed, format expressions as: "y=2x+1" or "x^2+y^2=4"
 
 Output ONLY valid JSON.`,
         },
         {
           role: "user",
-          content: `Solve this problem step-by-step with thorough explanations. Include a graph visualization if the problem involves any equations or functions:\n\n${content}`,
+          content: `Solve this problem step-by-step with thorough explanations. Only include a graph if it's truly helpful for understanding (most problems don't need one):\n\n${content}`,
         },
       ],
     });
