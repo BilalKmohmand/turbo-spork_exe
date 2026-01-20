@@ -129,7 +129,14 @@ async function solveFromImage(base64Image: string, mimeType: string): Promise<So
               type: "text",
               text: `You are an expert math and science tutor with deep reasoning abilities. Analyze this homework problem image carefully and solve it step-by-step.
 
-THINK THROUGH THE PROBLEM:
+CRITICAL: MULTIPLE QUESTIONS HANDLING
+If the image contains MULTIPLE questions (numbered like 1, 2, 3 or Q1, Q2 or a), b), c)):
+- Solve EACH question separately and completely
+- Number each answer clearly (Question 1, Question 2, etc.)
+- Show complete steps for EACH question
+- Include ALL final answers in the solution field
+
+THINK THROUGH EACH PROBLEM:
 1. First, identify what type of problem this is (algebra, geometry, calculus, physics, chemistry, etc.)
 2. Identify all given information and what we need to find
 3. Plan your approach before solving
@@ -138,19 +145,22 @@ THINK THROUGH THE PROBLEM:
 
 Respond with ONLY a JSON object:
 {
-  "solution": "Final answer with units if applicable (use LaTeX like $x = 5$ for math)",
+  "solution": "ALL final answers clearly listed. For multiple questions: Question 1: [answer], Question 2: [answer], etc. Use LaTeX like $x = 5$ for math",
   "steps": [
-    {"title": "Identify the problem type", "math": "", "reasoning": "This is a [type] problem because..."},
-    {"title": "List given information", "math": "", "reasoning": "We know that..."},
-    {"title": "Step description", "math": "\\\\frac{30}{6} = 5", "reasoning": "We divide because..."}
+    {"title": "Question 1: Identify the problem", "math": "", "reasoning": "This is a [type] problem because..."},
+    {"title": "Question 1: Solve", "math": "\\\\frac{30}{6} = 5", "reasoning": "We divide because..."},
+    {"title": "Question 1: Answer", "math": "x = 5", "reasoning": "The answer to Q1 is..."},
+    {"title": "Question 2: Identify the problem", "math": "", "reasoning": "Moving to Q2..."},
+    {"title": "Question 2: Solve", "math": "y = 10", "reasoning": "Calculation..."},
+    {"title": "Question 2: Answer", "math": "y = 10", "reasoning": "The answer to Q2 is..."}
   ],
-  "explanation": "Key concepts and why this approach works. Include any formulas or theorems used.",
+  "explanation": "Key concepts and why this approach works. Summary of methods used for all questions.",
   "problemType": "math" or "science" or "other",
   "graphSpec": null or {"expressions": ["y=2x+1", "y=-x+3"], "title": "Visual representation", "xMin": -10, "xMax": 10, "yMin": -10, "yMax": 10}
 }
 
 STEP FORMAT - Each step MUST have all 3 fields:
-- "title": Clear description of what we're doing in this step
+- "title": Include question number if multiple questions (e.g., "Q1: Calculate", "Q2: Simplify")
 - "math": LaTeX equation WITHOUT $$ delimiters. Use \\\\frac{a}{b} for fractions, x^2 for exponents, \\\\sqrt{x} for roots, \\\\pi for pi
 - "reasoning": Explain WHY we do this step and how it connects to the solution
 
@@ -217,7 +227,14 @@ async function solveWithAI(content: string): Promise<SolveResult> {
           role: "system",
           content: `You are an expert math and science tutor with world-class reasoning abilities. You can solve ANY math problem - from basic arithmetic to advanced calculus, differential equations, linear algebra, statistics, and beyond. Solve problems thoroughly with clear, step-by-step explanations.
 
-APPROACH:
+CRITICAL: MULTIPLE QUESTIONS HANDLING
+If the input contains MULTIPLE questions (numbered like 1, 2, 3 or Q1, Q2, Q3 or a), b), c) or separated by line breaks):
+- Solve EACH question separately and completely
+- Number each answer clearly (Question 1, Question 2, etc.)
+- Show complete steps for EACH question
+- Include ALL final answers in the solution field
+
+APPROACH FOR EACH QUESTION:
 1. First understand what type of problem this is
 2. Identify all given information and unknowns
 3. Choose the best solving strategy
@@ -226,21 +243,22 @@ APPROACH:
 
 Respond with ONLY a JSON object:
 {
-  "solution": "Final answer with units if applicable (use LaTeX like $x = 5$ for math expressions)",
+  "solution": "ALL final answers clearly listed. For multiple questions: Question 1: [answer], Question 2: [answer], etc. Use LaTeX like $x = 5$ for math expressions",
   "steps": [
-    {"title": "Understand the problem", "math": "", "reasoning": "This is a [type] problem. We need to find..."},
-    {"title": "Identify given values", "math": "", "reasoning": "We're given: ..."},
-    {"title": "Apply formula/method", "math": "\\frac{30}{6} = 5", "reasoning": "We use this approach because..."},
-    {"title": "Calculate result", "math": "x = 5", "reasoning": "Simplifying gives us..."},
-    {"title": "Verify answer", "math": "", "reasoning": "We can check: ..."}
+    {"title": "Question 1: Understand the problem", "math": "", "reasoning": "This is a [type] problem. We need to find..."},
+    {"title": "Question 1: Solve", "math": "\\frac{30}{6} = 5", "reasoning": "Calculation with explanation..."},
+    {"title": "Question 1: Answer", "math": "x = 5", "reasoning": "Final answer for Q1..."},
+    {"title": "Question 2: Understand the problem", "math": "", "reasoning": "Moving to the next question..."},
+    {"title": "Question 2: Solve", "math": "y = 10", "reasoning": "Calculation with explanation..."},
+    {"title": "Question 2: Answer", "math": "y = 10", "reasoning": "Final answer for Q2..."}
   ],
-  "explanation": "Key concepts, formulas, and theorems used. Explain WHY the method works.",
+  "explanation": "Key concepts, formulas, and theorems used for all questions. Summary of methods.",
   "problemType": "math" or "science" or "other",
   "graphSpec": null or {"expressions": ["y=2x+1", "y=-x+3"], "title": "Visual representation", "xMin": -10, "xMax": 10, "yMin": -10, "yMax": 10}
 }
 
 STEP FORMAT - Each step MUST have all 3 fields:
-- "title": Clear description of what we're doing
+- "title": Include question number if multiple questions (e.g., "Q1: Calculate", "Q2: Simplify")
 - "math": LaTeX equation WITHOUT $$ delimiters. Examples: \\frac{a}{b}, x^2, \\sqrt{x}, \\pi, \\int_{a}^{b}
 - "reasoning": Explain the WHY - connect this step to the overall solution
 
