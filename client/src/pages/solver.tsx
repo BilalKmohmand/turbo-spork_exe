@@ -5,7 +5,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { GraphPanel } from "@/components/graph-panel";
-import { renderMathText, SolutionStep } from "@/components/math-display";
+import { renderMathText } from "@/components/math-display";
+import { BlockMath } from "react-katex";
 import { 
   Loader2, 
   Send, 
@@ -454,26 +455,27 @@ export default function Solver() {
                   <Sparkles className="w-4 h-4 text-white" />
                 </div>
                 <div className="flex-1 space-y-6 overflow-visible">
+                  {/* Final Answer Section */}
                   <div>
-                    <h3 className="text-base font-semibold text-emerald-600 dark:text-emerald-400 mb-3">
+                    <h3 className="text-base font-semibold text-emerald-500 mb-3">
                       Final Answer
                     </h3>
-                    <div className="p-4 bg-muted/50 rounded-xl" data-testid="text-solution">
-                      <div className="text-lg font-medium">
+                    <div className="px-5 py-4 bg-card border rounded-xl shadow-sm" data-testid="text-solution">
+                      <div className="text-xl font-semibold text-foreground">
                         {renderMathText(result.aiSolution || "")}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 mt-3">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleFeedback(true)} data-testid="button-thumbs-up">
+                    <div className="flex items-center gap-0.5 mt-3">
+                      <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" onClick={() => handleFeedback(true)} data-testid="button-thumbs-up">
                         <ThumbsUp className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleFeedback(false)} data-testid="button-thumbs-down">
+                      <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" onClick={() => handleFeedback(false)} data-testid="button-thumbs-down">
                         <ThumbsDown className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopy} data-testid="button-copy">
+                      <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" onClick={handleCopy} data-testid="button-copy">
                         <Copy className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleRegenerate} disabled={isLoading} data-testid="button-regenerate">
+                      <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" onClick={handleRegenerate} disabled={isLoading} data-testid="button-regenerate">
                         <RefreshCw className="w-4 h-4" />
                       </Button>
                     </div>
@@ -483,27 +485,43 @@ export default function Solver() {
                     <GraphPanel graphSpec={result.graphSpec} />
                   )}
 
-                  {result.aiSteps && result.aiSteps.length > 0 && (
+                  {/* Explanation Section - Problem Context */}
+                  {result.aiExplanation && (
                     <div>
-                      <h3 className="text-base font-semibold text-blue-600 dark:text-blue-400 mb-4">
-                        Step-by-Step Solution
+                      <h3 className="text-base font-semibold text-orange-500 mb-3">
+                        Explanation
                       </h3>
-                      <div className="space-y-5">
-                        {result.aiSteps.map((step, index) => (
-                          <div key={index} data-testid={`text-step-${index}`}>
-                            <SolutionStep step={step} index={index} />
-                          </div>
-                        ))}
-                      </div>
+                      <p className="text-foreground leading-relaxed" data-testid="text-explanation">
+                        {renderMathText(result.aiExplanation)}
+                      </p>
                     </div>
                   )}
 
-                  {result.aiExplanation && (
-                    <div className="pt-4 border-t border-border/50">
-                      <h4 className="text-sm font-medium text-muted-foreground mb-2">Key Concepts</h4>
-                      <div className="text-sm leading-relaxed" data-testid="text-explanation">
-                        {renderMathText(result.aiExplanation)}
-                      </div>
+                  {/* Step-by-Step Solution */}
+                  {result.aiSteps && result.aiSteps.length > 0 && (
+                    <div className="space-y-4">
+                      {result.aiSteps.map((step, index) => (
+                        <div key={index} className="flex gap-3" data-testid={`text-step-${index}`}>
+                          <div className="flex-shrink-0 w-6 h-6 rounded-full bg-muted flex items-center justify-center text-muted-foreground font-medium text-sm">
+                            {index + 1}
+                          </div>
+                          <div className="flex-1 space-y-2">
+                            <h4 className="font-semibold text-foreground">
+                              {renderMathText(step.title)}
+                            </h4>
+                            {step.reasoning && (
+                              <p className="text-foreground leading-relaxed">
+                                {renderMathText(step.reasoning)}
+                              </p>
+                            )}
+                            {step.math && (
+                              <div className="py-3 text-center overflow-x-auto">
+                                <BlockMath math={step.math} />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
