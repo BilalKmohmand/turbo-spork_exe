@@ -9,6 +9,9 @@ import { generateEmbedding, generateEmbeddings } from "./rag/embeddings";
 import { chunkMathContent, detectTopic, detectDifficulty } from "./rag/chunker";
 import { retrieveRelevantChunks, formatContextForAI, getKnowledgeStats } from "./rag/retrieval";
 import { db } from "./db";
+// @ts-ignore - pdf-parse doesn't have proper types
+import * as pdfParseModule from "pdf-parse";
+const pdfParse = (pdfParseModule as any).default || pdfParseModule;
 
 // Extend express-session types
 declare module "express-session" {
@@ -465,12 +468,36 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Image and mimeType are required" });
       }
 
-      if (!mimeType.startsWith("image/")) {
-        return res.status(400).json({ error: "Invalid file type. Please upload an image." });
+      const isImage = mimeType.startsWith("image/");
+      const isPDF = mimeType === "application/pdf";
+      
+      if (!isImage && !isPDF) {
+        return res.status(400).json({ error: "Invalid file type. Please upload an image or PDF." });
       }
 
-      // Solve directly from image - no extraction step
-      const aiResult = await solveFromImage(image, mimeType);
+      let aiResult: SolveResult;
+      
+      if (isPDF) {
+        // Extract text from PDF and solve as text
+        try {
+          const pdfBuffer = Buffer.from(image, "base64");
+          const pdfData = await pdfParse(pdfBuffer);
+          const extractedText = pdfData.text?.trim();
+          
+          if (!extractedText || extractedText.length < 5) {
+            return res.status(400).json({ error: "Could not extract text from PDF. Please try an image instead." });
+          }
+          
+          console.log("PDF text extracted:", extractedText.substring(0, 200) + "...");
+          aiResult = await solveWithAI(extractedText);
+        } catch (pdfError: any) {
+          console.error("PDF parsing error:", pdfError?.message);
+          return res.status(400).json({ error: "Failed to read PDF. Please try uploading an image instead." });
+        }
+      } else {
+        // Solve directly from image
+        aiResult = await solveFromImage(image, mimeType);
+      }
       
       const submission = await storage.createSubmission({
         title: "Image Problem",
