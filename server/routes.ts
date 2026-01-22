@@ -259,6 +259,8 @@ Output ONLY valid JSON.`,
 
     let text = response.choices[0]?.message?.content || "";
     
+    console.log("[solveFromImage] Raw AI response:", text.slice(0, 500));
+    
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       text = jsonMatch[0];
@@ -266,12 +268,16 @@ Output ONLY valid JSON.`,
     
     try {
       const result = JSON.parse(text);
+      console.log("[solveFromImage] Parsed keys:", Object.keys(result));
+      console.log("[solveFromImage] Has questions?", !!result.questions, "Is array?", Array.isArray(result.questions));
       
       // Handle new question-based format
       if (result.questions && Array.isArray(result.questions)) {
+        console.log("[solveFromImage] Using question-based format, count:", result.questions.length);
         return parseQuestionBasedResponse(result);
       }
       
+      console.log("[solveFromImage] Falling back to old format");
       // Fallback to old format
       return {
         solution: cleanupLatex(ensureString(result.solution) || "See steps below."),
@@ -280,7 +286,9 @@ Output ONLY valid JSON.`,
         problemType: result.problemType || "other",
         graphSpec: result.graphSpec || undefined,
       };
-    } catch {
+    } catch (parseError: any) {
+      console.error("[solveFromImage] JSON parse error:", parseError.message);
+      console.log("[solveFromImage] Failed text:", text.slice(0, 300));
       return {
         solution: cleanupLatex(text.slice(0, 1000) || "Solution generated."),
         steps: [{ title: "Solution", math: "", reasoning: "Review the answer above." }],
@@ -402,6 +410,8 @@ Output ONLY valid JSON.`,
 
     let text = response.choices[0]?.message?.content || "";
     
+    console.log("[solveWithAI] Raw AI response:", text.slice(0, 500));
+    
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       text = jsonMatch[0];
@@ -409,12 +419,16 @@ Output ONLY valid JSON.`,
     
     try {
       const result = JSON.parse(text);
+      console.log("[solveWithAI] Parsed keys:", Object.keys(result));
+      console.log("[solveWithAI] Has questions?", !!result.questions, "Is array?", Array.isArray(result.questions));
       
       // Handle new question-based format
       if (result.questions && Array.isArray(result.questions)) {
+        console.log("[solveWithAI] Using question-based format, count:", result.questions.length);
         return parseQuestionBasedResponse(result);
       }
       
+      console.log("[solveWithAI] Falling back to old format");
       // Fallback to old format
       return {
         solution: cleanupLatex(ensureString(result.solution) || "See steps below."),
@@ -423,7 +437,9 @@ Output ONLY valid JSON.`,
         problemType: result.problemType || "other",
         graphSpec: result.graphSpec || undefined,
       };
-    } catch {
+    } catch (parseError: any) {
+      console.error("[solveWithAI] JSON parse error:", parseError.message);
+      console.log("[solveWithAI] Failed text:", text.slice(0, 300));
       return {
         solution: cleanupLatex(text.slice(0, 1000) || "Solution generated."),
         steps: [{ title: "Solution", math: "", reasoning: "Review the answer above." }],
