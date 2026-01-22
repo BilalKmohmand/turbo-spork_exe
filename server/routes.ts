@@ -197,11 +197,15 @@ async function solveFromImage(base64Image: string, mimeType: string): Promise<So
               type: "text",
               text: `You are an expert math tutor like Solvely AI. Analyze this image CAREFULLY and solve ALL problems with step-by-step explanations.
 
-CRITICAL: READ VALUES CAREFULLY FROM THE IMAGE
-- Look at EVERY number label in the image precisely
-- The HEIGHT of a pyramid is the PERPENDICULAR/VERTICAL height (often shown as a dashed line inside)
-- Do NOT confuse slant height (along the face) with perpendicular height
-- Double-check all dimensions before calculating
+CRITICAL: READ VALUES EXTREMELY CAREFULLY FROM THE IMAGE
+- ZOOM IN mentally on EVERY number label in the image
+- READ EACH DIGIT CAREFULLY - distinguish 14 from 16, 11 from 17, etc.
+- Numbers like 16 can look like 14 if not read carefully - LOOK TWICE
+- The HEIGHT of a pyramid is the PERPENDICULAR/VERTICAL height (often shown as a dashed line inside the pyramid)
+- The height label is typically near the CENTER of the pyramid on a vertical dashed line
+- Do NOT confuse slant height (along the slanted edge/face) with perpendicular height
+- DOUBLE-CHECK and TRIPLE-CHECK all dimensions before calculating
+- If a number could be 14 or 16, look at the context and read more carefully
 
 RESPONSE FORMAT - Return ONLY this JSON:
 {

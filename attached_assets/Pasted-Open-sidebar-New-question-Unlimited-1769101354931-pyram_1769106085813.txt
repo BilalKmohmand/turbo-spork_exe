@@ -1,0 +1,87 @@
+Open sidebar
+New question
+
+Unlimited
+1769101354931-pyramid 1.pdf
+PDF
+Question 1
+Find the volume of the pyramid in problem 1.
+
+Calculate the Area of the Base
+The area of the rectangular base (B) is 110 square inches. The base is a rectangle with side lengths of 10 inches and 11 inches. The area is calculated as length times width.
+Calculate the Volume of the Pyramid
+The volume of the pyramid is approximately 586.67 cubic inches. The volume (V) is calculated using the formula 
+, where B is the base area and h is the height. The height is given as 16 inches.
+Answer
+The volume of the pyramid is 
+.
+Question 2
+Find the volume of the pyramid in problem 2.
+
+Calculate the Area of the Base
+The area of the rectangular base (B) is 189 square yards. The base is a rectangle with side lengths of 21 yards and 9 yards. The area is calculated as length times width.
+Calculate the Volume of the Pyramid
+The volume of the pyramid is 315 cubic yards. The volume (V) is calculated using the formula 
+, where B is the base area and h is the height. The height is given as 5 yards.
+Answer
+The volume of the pyramid is 
+.
+Question 3
+Find the volume of the pyramid in problem 3.
+
+Calculate the Area of the Base
+The area of the square base (B) is 196 square feet. The base is a square with side lengths of 14 feet. The area is calculated as side squared.
+Calculate the Volume of the Pyramid
+The volume of the pyramid is approximately 1633.33 cubic feet. The volume (V) is calculated using the formula 
+, where B is the base area and h is the height. The height is given as 25 feet.
+Answer
+The volume of the pyramid is 
+.
+Question 4
+Find the volume of the pyramid in problem 4.
+
+Calculate the Area of the Base
+The area of the triangular base (B) is 45 square millimeters. The base is a triangle with a base length of 12 mm and a height of 7.5 mm. The area is calculated as 
+.
+Calculate the Volume of the Pyramid
+The volume of the pyramid is 150 cubic millimeters. The volume (V) is calculated using the formula 
+, where B is the base area and h is the height of the pyramid. The pyramid's height is given as 10 mm.
+Answer
+The volume of the pyramid is 
+.
+Question 5
+Find the volume of the pyramid in problem 5.
+
+Calculate the Area of the Base
+The area of the triangular base (B) is 154.7 square meters. The base is a triangle with a base length of 22.1 m and a height of 14 m. The area is calculated as 
+.
+Calculate the Volume of the Pyramid
+The volume of the pyramid is approximately 979.43 cubic meters. The volume (V) is calculated using the formula 
+, where B is the base area and h is the height of the pyramid. The pyramid's height is given as 19 m.
+Answer
+The volume of the pyramid is 
+.
+Question 6
+Find the volume of the pyramid in problem 6.
+
+Calculate the Area of the Base
+The area of the square base (B) is 100 square centimeters. The base is a square with side lengths of 10 cm. The area is calculated as side squared.
+Calculate the Volume of the Pyramid
+The volume of the pyramid is approximately 533.33 cubic centimeters. The volume (V) is calculated using the formula 
+, where B is the base area and h is the height. The height is given as 16 cm.
+Answer
+The volume of the pyramid is 
+.
+
+
+
+
+
+Type text, or add images or a PDF by uploading, pasting, or dragging here
+
+Screenshot
+
+Image / PDF
+
+Solvely AI
+
