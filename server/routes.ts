@@ -99,22 +99,43 @@ interface SolveResult {
   };
 }
 
+// Clean up malformed LaTeX in AI responses
+function cleanupLatex(text: string): string {
+  if (!text) return text;
+  
+  let cleaned = text;
+  
+  // 1. Fix backslash before numbers like \400 -> $400$
+  cleaned = cleaned.replace(/\\(\d+)(?![a-zA-Z])/g, '$$$1$');
+  
+  // 2. Fix malformed patterns like \306aftera -> $306$ after a
+  cleaned = cleaned.replace(/\\(\d+)([a-zA-Z]+)/g, '$$$1$ $2');
+  
+  // 3. Fix standalone \% outside of $ delimiters
+  cleaned = cleaned.replace(/(?<!\$[^$]*)(\d+)\\%(?![^$]*\$)/g, '$$$1\\%$');
+  
+  // 4. Remove stray backslashes before long text words
+  cleaned = cleaned.replace(/\\([a-zA-Z]{5,})/g, '$1');
+  
+  return cleaned;
+}
+
 function parseSteps(steps: any): StepObject[] {
   if (!Array.isArray(steps)) return [];
   
   return steps.map((step: any) => {
     if (typeof step === 'object' && step !== null) {
       return {
-        title: String(step.title || ''),
+        title: cleanupLatex(String(step.title || '')),
         math: String(step.math || ''),
-        reasoning: String(step.reasoning || '')
+        reasoning: cleanupLatex(String(step.reasoning || ''))
       };
     }
     // Fallback for string steps
     return {
       title: '',
       math: '',
-      reasoning: String(step)
+      reasoning: cleanupLatex(String(step))
     };
   });
 }
@@ -130,52 +151,33 @@ async function solveFromImage(base64Image: string, mimeType: string): Promise<So
           content: [
             {
               type: "text",
-              text: `You are an expert math and science tutor with deep reasoning abilities. Analyze this homework problem image carefully and solve it step-by-step.
+              text: `You are an expert math tutor. Analyze this image and solve the problem step-by-step.
 
-CRITICAL: MULTIPLE QUESTIONS HANDLING
-If the image contains MULTIPLE questions (numbered like 1, 2, 3 or Q1, Q2 or a), b), c)):
-- Solve EACH question separately and completely
-- Number each answer clearly (Question 1, Question 2, etc.)
-- Show complete steps for EACH question
-- Include ALL final answers in the solution field
-
-THINK THROUGH EACH PROBLEM:
-1. First, identify what type of problem this is (algebra, geometry, calculus, physics, chemistry, etc.)
-2. Identify all given information and what we need to find
-3. Plan your approach before solving
-4. Execute each step with clear reasoning
-5. Verify your answer makes sense
-
-Respond with ONLY a JSON object:
+RESPONSE FORMAT - Return ONLY this JSON:
 {
-  "solution": "ALL final answers. ALWAYS wrap math in $...$ like: The roots are $x = 1$ and $x = \\frac{3}{2}$",
+  "solution": "The answer is $400$.",
   "steps": [
-    {"title": "Identify the problem", "math": "", "reasoning": "This is a [type] problem. We need to find $x$ where..."},
-    {"title": "Solve", "math": "\\frac{30}{6} = 5", "reasoning": "We divide $30$ by $6$ because..."},
-    {"title": "Final answer", "math": "x = 5", "reasoning": "Therefore $x = 5$ is our solution."}
+    {"title": "Understand the problem", "math": "", "reasoning": "We need to find the original price. The final price is $306$ after two discounts."},
+    {"title": "Set up the equation", "math": "306 = P \\times 0.90 \\times 0.85", "reasoning": "After $10\\%$ off we have $0.90P$, then after $15\\%$ off we have $0.765P$."},
+    {"title": "Solve", "math": "P = \\frac{306}{0.765} = 400", "reasoning": "Dividing gives us $P = 400$."}
   ],
-  "explanation": "Key concepts. Wrap any math in $...$ delimiters like $ax^2 + bx + c = 0$",
-  "problemType": "math" or "science" or "other",
+  "explanation": "This is a successive discount problem.",
+  "problemType": "math",
   "graphSpec": null
 }
 
-CRITICAL FORMATTING RULES:
-- In "solution", "reasoning", and "explanation" fields: ALWAYS wrap math expressions in single $ delimiters like $x = 5$ or $\\frac{3}{2}$
-- In "math" field: Write LaTeX directly WITHOUT $ delimiters (e.g., \\frac{a}{b}, x^2, \\sqrt{x})
-- For fractions use $\\frac{3}{2}$ not 3/2 in text fields
-- For variables and equations in text, ALWAYS use $ delimiters
+MATH FORMATTING - CRITICAL:
+- In solution/reasoning/explanation: Wrap ALL numbers and equations in $...$ like $306$, $x = 5$
+- In "math" field: Write LaTeX WITHOUT $ signs
+- Use \\times for multiplication, \\frac{a}{b} for fractions
+- NEVER put text inside $ delimiters
+- WRONG: "$306 after discount$"
+- RIGHT: "$306$ after discount"
 
-STEP FORMAT - Each step MUST have all 3 fields:
-- "title": Clear description (include question number if multiple questions)
-- "math": LaTeX equation WITHOUT $ delimiters for the main calculation
-- "reasoning": Explanation with any inline math wrapped in $...$
+MULTIPLE QUESTIONS: Solve each separately with clear numbering.
+GRAPHS: Set graphSpec to null unless asked to graph.
 
-GRAPH RULES - Only include graphSpec when NECESSARY:
-- DO NOT include graphSpec for: arithmetic, word problems, percentages, ratios, simple algebra, statistics, probability, geometry calculations
-- ONLY include graphSpec when the problem EXPLICITLY asks to graph OR visualizing a function/equation helps understand it
-- Set graphSpec to null for most problems - graphs are the exception, not the rule
-
-Output ONLY valid JSON, no markdown or explanation outside the JSON.`,
+Output ONLY valid JSON.`,
             },
             {
               type: "image_url",
@@ -199,15 +201,15 @@ Output ONLY valid JSON, no markdown or explanation outside the JSON.`,
     try {
       const result = JSON.parse(text);
       return {
-        solution: ensureString(result.solution) || "See steps below.",
+        solution: cleanupLatex(ensureString(result.solution) || "See steps below."),
         steps: parseSteps(result.steps),
-        explanation: ensureString(result.explanation) || "Review the steps for understanding.",
+        explanation: cleanupLatex(ensureString(result.explanation) || "Review the steps for understanding."),
         problemType: result.problemType || "other",
         graphSpec: result.graphSpec || undefined,
       };
     } catch {
       return {
-        solution: text.slice(0, 1000) || "Solution generated.",
+        solution: cleanupLatex(text.slice(0, 1000) || "Solution generated."),
         steps: [{ title: "Solution", math: "", reasoning: "Review the answer above." }],
         explanation: "The problem has been solved.",
         problemType: "other",
@@ -228,58 +230,37 @@ async function solveWithAI(content: string): Promise<SolveResult> {
       messages: [
         {
           role: "system",
-          content: `You are an expert math and science tutor with world-class reasoning abilities. You can solve ANY math problem - from basic arithmetic to advanced calculus, differential equations, linear algebra, statistics, and beyond. Solve problems thoroughly with clear, step-by-step explanations.
+          content: `You are an expert math tutor. Solve problems step-by-step with clear explanations.
 
-CRITICAL: MULTIPLE QUESTIONS HANDLING
-If the input contains MULTIPLE questions (numbered like 1, 2, 3 or Q1, Q2, Q3 or a), b), c) or separated by line breaks):
-- Solve EACH question separately and completely
-- Number each answer clearly (Question 1, Question 2, etc.)
-- Show complete steps for EACH question
-- Include ALL final answers in the solution field
-
-APPROACH FOR EACH QUESTION:
-1. First understand what type of problem this is
-2. Identify all given information and unknowns
-3. Choose the best solving strategy
-4. Work through each step carefully
-5. Verify your answer
-
-Respond with ONLY a JSON object:
+RESPONSE FORMAT - Return ONLY this JSON:
 {
-  "solution": "ALL final answers clearly listed. ALWAYS wrap math in $...$ like: The roots are $x = 1$ and $x = \\frac{3}{2}$",
+  "solution": "The answer is $400$.",
   "steps": [
-    {"title": "Understand the problem", "math": "", "reasoning": "This is a [type] problem. We need to find $x$ where..."},
-    {"title": "Apply method", "math": "\\frac{30}{6} = 5", "reasoning": "We divide $30$ by $6$ because..."},
-    {"title": "Final answer", "math": "x = 5", "reasoning": "Therefore $x = 5$ is our solution."}
+    {"title": "Understand the problem", "math": "", "reasoning": "We need to find the original price. The final price is $306 after two discounts: 10% then 15%."},
+    {"title": "Set up the equation", "math": "306 = P \\times 0.90 \\times 0.85", "reasoning": "If P is the original price, after 10% off we have $0.90P$, then after 15% off we have $0.90 \\times 0.85 = 0.765$ of the original."},
+    {"title": "Solve for P", "math": "P = \\frac{306}{0.765} = 400", "reasoning": "Dividing $306$ by $0.765$ gives us $P = 400$."}
   ],
-  "explanation": "Key concepts used. Wrap any math in $...$ delimiters like $ax^2 + bx + c = 0$",
-  "problemType": "math" or "science" or "other",
+  "explanation": "This is a successive discount problem. When discounts are applied one after another, we multiply the remaining percentages.",
+  "problemType": "math",
   "graphSpec": null
 }
 
-CRITICAL FORMATTING RULES:
-- In "solution", "reasoning", and "explanation" fields: ALWAYS wrap math expressions in single $ delimiters like $x = 5$ or $\\frac{3}{2}$
-- In "math" field: Write LaTeX directly WITHOUT $ delimiters (e.g., \\frac{a}{b}, x^2, \\sqrt{x})
-- For fractions use $\\frac{3}{2}$ not 3/2 in text fields
-- For variables and equations in text, ALWAYS use $ delimiters
+MATH FORMATTING - CRITICAL:
+- In solution/reasoning/explanation: Wrap ALL numbers, variables, and equations in $...$ like $306$, $x = 5$, $0.90 \\times 0.85$
+- In the "math" field: Write LaTeX WITHOUT $ signs (e.g., x = 5, \\frac{a}{b})
+- Use \\times for multiplication, \\frac{a}{b} for fractions
+- NEVER write text inside $ delimiters - only math symbols
+- WRONG: "$306 after a 10% discount$" 
+- RIGHT: "$306$ after a $10\\%$ discount"
 
-STEP FORMAT - Each step MUST have all 3 fields:
-- "title": Clear description (include question number if multiple questions)
-- "math": LaTeX equation WITHOUT $ delimiters for the main calculation
-- "reasoning": Explanation with any inline math wrapped in $...$
-
-GRAPH RULES - Only include graphSpec when NECESSARY:
-- DO NOT include graphSpec for: arithmetic, word problems, percentages, ratios, simple algebra without graphing, statistics, probability, geometry area/perimeter calculations
-- ONLY include graphSpec when the problem EXPLICITLY asks to graph OR when visualizing helps understand the solution (like plotting functions, systems of equations, coordinate geometry)
-- Set graphSpec to null for most problems - graphs are the exception, not the rule
-
-When a graph IS needed, format expressions as: "y=2x+1" or "x^2+y^2=4"
+MULTIPLE QUESTIONS: Solve each separately with clear numbering.
+GRAPHS: Set graphSpec to null unless explicitly asked to graph.
 
 Output ONLY valid JSON.`,
         },
         {
           role: "user",
-          content: `Solve this problem step-by-step with thorough explanations. Only include a graph if it's truly helpful for understanding (most problems don't need one):\n\n${content}`,
+          content: `Solve this problem with clear steps:\n\n${content}`,
         },
       ],
     });
@@ -294,15 +275,15 @@ Output ONLY valid JSON.`,
     try {
       const result = JSON.parse(text);
       return {
-        solution: ensureString(result.solution) || "See steps below.",
+        solution: cleanupLatex(ensureString(result.solution) || "See steps below."),
         steps: parseSteps(result.steps),
-        explanation: ensureString(result.explanation) || "Review the steps for understanding.",
+        explanation: cleanupLatex(ensureString(result.explanation) || "Review the steps for understanding."),
         problemType: result.problemType || "other",
         graphSpec: result.graphSpec || undefined,
       };
     } catch {
       return {
-        solution: text.slice(0, 1000) || "Solution generated.",
+        solution: cleanupLatex(text.slice(0, 1000) || "Solution generated."),
         steps: [{ title: "Solution", math: "", reasoning: "Review the answer above." }],
         explanation: "The problem has been solved.",
         problemType: "other",
