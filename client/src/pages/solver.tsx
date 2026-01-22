@@ -409,21 +409,21 @@ export default function Solver() {
 
         {hasConversation && (
           <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+            {/* User's Problem/Question - prominently displayed */}
             {(submittedProblem || previewUrl) && (
-              <div className="flex justify-end">
-                <div className="max-w-[85%] bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-2xl rounded-br-md px-4 py-3">
-                  {previewUrl && (
-                    <img 
-                      src={previewUrl} 
-                      alt="Uploaded problem" 
-                      className="max-h-48 rounded-lg mb-2"
-                      data-testid="img-preview"
-                    />
-                  )}
-                  {submittedProblem && (
-                    <p className="text-sm whitespace-pre-wrap">{submittedProblem}</p>
-                  )}
-                </div>
+              <div className="bg-muted/50 rounded-xl border p-4" data-testid="user-problem-section">
+                <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Your Problem</div>
+                {previewUrl && (
+                  <img 
+                    src={previewUrl} 
+                    alt="Uploaded problem" 
+                    className="max-h-64 rounded-lg mb-3 border"
+                    data-testid="img-preview"
+                  />
+                )}
+                {submittedProblem && (
+                  <p className="text-foreground whitespace-pre-wrap leading-relaxed">{submittedProblem}</p>
+                )}
               </div>
             )}
 
@@ -497,29 +497,29 @@ export default function Solver() {
                     </div>
                   )}
 
-                  {/* Step-by-Step Solution */}
+                  {/* Step-by-Step Solution - Solvely Style */}
                   {result.aiSteps && result.aiSteps.length > 0 && (
-                    <div className="space-y-4">
+                    <div className="space-y-5">
                       {result.aiSteps.map((step, index) => (
-                        <div key={index} className="flex gap-3" data-testid={`text-step-${index}`}>
-                          <div className="flex-shrink-0 w-6 h-6 rounded-full bg-muted flex items-center justify-center text-muted-foreground font-medium text-sm">
-                            {index + 1}
-                          </div>
-                          <div className="flex-1 space-y-2">
+                        <div key={index} className="border-l-2 border-blue-500/50 pl-4" data-testid={`text-step-${index}`}>
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-500/20 text-blue-500 text-xs font-bold">
+                              {index + 1}
+                            </span>
                             <h4 className="font-semibold text-foreground">
                               {renderMathText(step.title)}
                             </h4>
-                            {step.reasoning && (
-                              <p className="text-foreground leading-relaxed">
-                                {renderMathText(step.reasoning)}
-                              </p>
-                            )}
-                            {step.math && (
-                              <div className="py-3 text-center overflow-x-auto">
-                                <BlockMath math={step.math} />
-                              </div>
-                            )}
                           </div>
+                          {step.reasoning && (
+                            <p className="text-muted-foreground leading-relaxed mb-2">
+                              {renderMathText(step.reasoning)}
+                            </p>
+                          )}
+                          {step.math && (
+                            <div className="py-3 px-4 bg-muted/50 rounded-lg overflow-x-auto text-center">
+                              <BlockMath math={step.math} />
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

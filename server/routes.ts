@@ -154,31 +154,32 @@ async function solveFromImage(base64Image: string, mimeType: string): Promise<So
           content: [
             {
               type: "text",
-              text: `You are an expert math tutor. Analyze this image and solve the problem step-by-step.
+              text: `You are an expert math tutor like Solvely. Analyze this image and solve ALL problems step-by-step.
 
 RESPONSE FORMAT - Return ONLY this JSON:
 {
-  "solution": "The answer is $400$.",
+  "solution": "1) The answer is $440 \\text{ in}^3$. 2) The answer is $91 \\text{ yd}^3$. 3) The answer is $784 \\text{ ft}^3$.",
   "steps": [
-    {"title": "Understand the problem", "math": "", "reasoning": "We need to find the original price. The final price is $306$ after two discounts."},
-    {"title": "Set up the equation", "math": "306 = P \\times 0.90 \\times 0.85", "reasoning": "After $10\\%$ off we have $0.90P$, then after $15\\%$ off we have $0.765P$."},
-    {"title": "Solve", "math": "P = \\frac{306}{0.765} = 400", "reasoning": "Dividing gives us $P = 400$."}
+    {"title": "1) Identify base area and height", "math": "B = 10 \\times 11, \\quad h = 16", "reasoning": "The base is a rectangle with side lengths $10$ and $11$, so $B = 10 \\times 11$. The dashed vertical segment is the height $h = 16$."},
+    {"title": "1) Compute volume", "math": "V = \\frac{1}{3}Bh = \\frac{1}{3}(110)(16) = \\frac{1760}{3} \\approx 586.7", "reasoning": "Using $V = \\frac{1}{3}Bh$ gives $V \\approx 586.7 \\text{ in}^3$."},
+    {"title": "2) Identify base area and height", "math": "B = 21 \\times 9, \\quad h = 5", "reasoning": "The base is a rectangle with side lengths $21$ and $9$, so $B = 21 \\times 9$. The perpendicular height shown is $h = 5$."}
   ],
-  "explanation": "This is a successive discount problem.",
+  "explanation": "Each volume uses $V = \\frac{1}{3}Bh$, where $B$ is the area of the base (rectangle, square, or triangle) and $h$ is the perpendicular height of the pyramid.",
   "problemType": "math",
   "graphSpec": null
 }
 
-MATH FORMATTING - CRITICAL:
-- In solution/reasoning/explanation: Wrap ALL numbers and equations in $...$ like $306$, $x = 5$
-- In "math" field: Write LaTeX WITHOUT $ signs
-- Use \\times for multiplication, \\frac{a}{b} for fractions
-- NEVER put text inside $ delimiters
-- WRONG: "$306 after discount$"
-- RIGHT: "$306$ after discount"
+KEY REQUIREMENTS:
+1. SOLUTION: List ALL final answers numbered (1), 2), 3)...) with units like $440 \\text{ in}^3$
+2. STEPS: Number each step like "1) Identify...", "1) Compute...", "2) Identify..." for each problem
+3. EXPLANATION: Brief overview of the method used for all problems
+4. Use $...$ for ALL numbers, equations, and units in solution/reasoning/explanation
+5. In "math" field: Write LaTeX WITHOUT $ signs
+6. Use \\text{} for units: $\\text{ in}^3$, $\\text{ cm}^2$
+7. Use \\times for multiplication, \\frac{a}{b} for fractions, \\quad for spacing
+8. SOLVE EVERY PROBLEM in the image - do not skip any
 
-MULTIPLE QUESTIONS: Solve each separately with clear numbering.
-GRAPHS: Set graphSpec to null unless asked to graph.
+GRAPHS: Set graphSpec to null unless explicitly asked to graph.
 
 Output ONLY valid JSON.`,
             },
@@ -233,30 +234,31 @@ async function solveWithAI(content: string): Promise<SolveResult> {
       messages: [
         {
           role: "system",
-          content: `You are an expert math tutor. Solve problems step-by-step with clear explanations.
+          content: `You are an expert math tutor like Solvely. Solve ALL problems step-by-step with clear explanations.
 
 RESPONSE FORMAT - Return ONLY this JSON:
 {
-  "solution": "The answer is $400$.",
+  "solution": "1) The answer is $440 \\text{ in}^3$. 2) The answer is $91 \\text{ yd}^3$. 3) The answer is $784 \\text{ ft}^3$.",
   "steps": [
-    {"title": "Understand the problem", "math": "", "reasoning": "We need to find the original price. The final price is $306 after two discounts: 10% then 15%."},
-    {"title": "Set up the equation", "math": "306 = P \\times 0.90 \\times 0.85", "reasoning": "If P is the original price, after 10% off we have $0.90P$, then after 15% off we have $0.90 \\times 0.85 = 0.765$ of the original."},
-    {"title": "Solve for P", "math": "P = \\frac{306}{0.765} = 400", "reasoning": "Dividing $306$ by $0.765$ gives us $P = 400$."}
+    {"title": "1) Identify base area and height", "math": "B = 10 \\times 11, \\quad h = 16", "reasoning": "The base is a rectangle with side lengths $10$ and $11$, so $B = 10 \\times 11$. The dashed vertical segment is the height $h = 16$."},
+    {"title": "1) Compute volume", "math": "V = \\frac{1}{3}Bh = \\frac{1}{3}(110)(16) = \\frac{1760}{3} \\approx 586.7", "reasoning": "Using $V = \\frac{1}{3}Bh$ gives $V \\approx 586.7 \\text{ in}^3$."},
+    {"title": "2) Identify base area and height", "math": "B = 21 \\times 9, \\quad h = 5", "reasoning": "The base is a rectangle with side lengths $21$ and $9$, so $B = 21 \\times 9$. The perpendicular height shown is $h = 5$."}
   ],
-  "explanation": "This is a successive discount problem. When discounts are applied one after another, we multiply the remaining percentages.",
+  "explanation": "Each volume uses $V = \\frac{1}{3}Bh$, where $B$ is the area of the base (rectangle, square, or triangle) and $h$ is the perpendicular height of the pyramid.",
   "problemType": "math",
   "graphSpec": null
 }
 
-MATH FORMATTING - CRITICAL:
-- In solution/reasoning/explanation: Wrap ALL numbers, variables, and equations in $...$ like $306$, $x = 5$, $0.90 \\times 0.85$
-- In the "math" field: Write LaTeX WITHOUT $ signs (e.g., x = 5, \\frac{a}{b})
-- Use \\times for multiplication, \\frac{a}{b} for fractions
-- NEVER write text inside $ delimiters - only math symbols
-- WRONG: "$306 after a 10% discount$" 
-- RIGHT: "$306$ after a $10\\%$ discount"
+KEY REQUIREMENTS:
+1. SOLUTION: List ALL final answers numbered (1), 2), 3)...) with units like $440 \\text{ in}^3$
+2. STEPS: Number each step like "1) Identify...", "1) Compute...", "2) Identify..." for each problem
+3. EXPLANATION: Brief overview of the method used for all problems
+4. Use $...$ for ALL numbers, equations, and units in solution/reasoning/explanation
+5. In "math" field: Write LaTeX WITHOUT $ signs
+6. Use \\text{} for units: $\\text{ in}^3$, $\\text{ cm}^2$
+7. Use \\times for multiplication, \\frac{a}{b} for fractions, \\quad for spacing
+8. SOLVE EVERY PROBLEM - do not skip any
 
-MULTIPLE QUESTIONS: Solve each separately with clear numbering.
 GRAPHS: Set graphSpec to null unless explicitly asked to graph.
 
 Output ONLY valid JSON.`,
