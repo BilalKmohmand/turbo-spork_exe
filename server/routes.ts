@@ -9,6 +9,8 @@ import { generateEmbedding, generateEmbeddings } from "./rag/embeddings";
 import { chunkMathContent, detectTopic, detectDifficulty } from "./rag/chunker";
 import { retrieveRelevantChunks, formatContextForAI, getKnowledgeStats } from "./rag/retrieval";
 import { db } from "./db";
+import fs from "fs";
+import path from "path";
 // Use createRequire for pdf-parse due to ESM compatibility issues
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
@@ -946,6 +948,109 @@ Now the student has a follow-up question. Answer it clearly and helpfully to dee
     } catch (error: any) {
       console.error("Knowledge stats error:", error);
       res.status(500).json({ error: error?.message || "Failed to get knowledge stats" });
+    }
+  });
+
+  // Process local calculus PDF materials (admin endpoint)
+  app.post("/api/knowledge/process-calculus-materials", requireTeacher, async (req, res) => {
+    try {
+      const CALCULUS_MATERIALS = [
+        { filename: "mitres_18_001_f17_guide_ch14_1769095294279.pdf", sourceBook: "Strang's Calculus (MIT OCW)", chapter: "14", section: "Double Integrals", startPage: 526 },
+        { filename: "mitres_18_001_f17_guide_ch15_1769095294291.pdf", sourceBook: "Strang's Calculus (MIT OCW)", chapter: "15", section: "Vector Calculus", startPage: 554 },
+        { filename: "mitres_18_001_f17_manual_ch05_1769095294291.pdf", sourceBook: "Strang's Calculus Solutions (MIT OCW)", chapter: "5", section: "Integrals", startPage: 181 },
+        { filename: "mitres_18_001_f17_manual_ch06_1769095294292.pdf", sourceBook: "Strang's Calculus Solutions (MIT OCW)", chapter: "6", section: "Exponentials and Logarithms", startPage: 234 },
+        { filename: "mitres_18_001_f17_manual_ch07_1769095294292.pdf", sourceBook: "Strang's Calculus Solutions (MIT OCW)", chapter: "7", section: "Integration Techniques", startPage: 287 },
+        { filename: "mitres_18_001_f17_manual_ch08_1769095294292.pdf", sourceBook: "Strang's Calculus Solutions (MIT OCW)", chapter: "8", section: "Applications of the Integral", startPage: 318 },
+        { filename: "mitres_18_001_f17_manual_ch09_1769095294292.pdf", sourceBook: "Strang's Calculus Solutions (MIT OCW)", chapter: "9", section: "Polar Coordinates", startPage: 350 },
+        { filename: "mitres_18_001_f17_manual_ch10_1769095294292.pdf", sourceBook: "Strang's Calculus Solutions (MIT OCW)", chapter: "10", section: "Infinite Series", startPage: 373 },
+        { filename: "mitres_18_001_f17_manual_ch11_1769095294292.pdf", sourceBook: "Strang's Calculus Solutions (MIT OCW)", chapter: "11", section: "Vectors and Matrices", startPage: 405 },
+        { filename: "mitres_18_001_f17_manual_ch12_1769095294293.pdf", sourceBook: "Strang's Calculus Solutions (MIT OCW)", chapter: "12", section: "Motion Along a Curve", startPage: 452 },
+        { filename: "mitres_18_001_f17_manual_ch13_1769095294293.pdf", sourceBook: "Strang's Calculus Solutions (MIT OCW)", chapter: "13", section: "Partial Derivatives", startPage: 475 },
+        { filename: "mitres_18_001_f17_manual_ch14_1769095294293.pdf", sourceBook: "Strang's Calculus Solutions (MIT OCW)", chapter: "14", section: "Multiple Integrals", startPage: 526 },
+        { filename: "mitres_18_001_f17_manual_ch15_1769095294293.pdf", sourceBook: "Strang's Calculus Solutions (MIT OCW)", chapter: "15", section: "Vector Calculus", startPage: 554 },
+        { filename: "mitres_18_001_f17_manual_ch16_1769095294293.pdf", sourceBook: "Strang's Calculus Solutions (MIT OCW)", chapter: "16", section: "Linear Algebra", startPage: 602 },
+      ];
+
+      const results: any[] = [];
+      let totalChunks = 0;
+
+      for (const material of CALCULUS_MATERIALS) {
+        const filePath = path.join(process.cwd(), "attached_assets", material.filename);
+        
+        if (!fs.existsSync(filePath)) {
+          results.push({ file: material.filename, status: "not_found" });
+          continue;
+        }
+
+        try {
+          const buffer = fs.readFileSync(filePath);
+          const uint8Array = new Uint8Array(buffer);
+          const pdfParser = new PDFParse(uint8Array);
+          const pdfResult = await pdfParser.getText();
+          const content = pdfResult.text?.trim().replace(/\n*-- \d+ of \d+ --\n*/g, '').trim() || "";
+
+          if (content.length < 200) {
+            results.push({ file: material.filename, status: "insufficient_content", chars: content.length });
+            continue;
+          }
+
+          const chunks = chunkMathContent(content, {
+            chunkSize: 600,
+            overlap: 100,
+            preserveStructure: true,
+          });
+
+          if (chunks.length === 0) {
+            results.push({ file: material.filename, status: "no_chunks" });
+            continue;
+          }
+
+          const texts = chunks.map(c => c.content);
+          const embeddings = await generateEmbeddings(texts);
+
+          for (let i = 0; i < chunks.length; i++) {
+            const chunk = chunks[i];
+            const topic = detectTopic(chunk.content);
+            const difficulty = detectDifficulty(chunk.content);
+            
+            await db.insert(knowledgeChunks).values({
+              content: chunk.content,
+              embedding: embeddings[i],
+              sourceBook: material.sourceBook,
+              chapter: material.chapter,
+              section: material.section,
+              page: material.startPage + Math.floor(i / 3),
+              topic,
+              subtopic: null,
+              contentType: chunk.contentType,
+              difficulty,
+              keywords: chunk.keywords,
+              relatedFormulas: chunk.relatedFormulas,
+              commonMisconceptions: null,
+            });
+          }
+
+          totalChunks += chunks.length;
+          results.push({ 
+            file: material.filename, 
+            status: "success", 
+            chunksCreated: chunks.length,
+            chapter: material.chapter,
+            section: material.section 
+          });
+        } catch (error: any) {
+          results.push({ file: material.filename, status: "error", error: error.message });
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        totalChunksCreated: totalChunks,
+        results 
+      });
+    } catch (error: any) {
+      console.error("Process calculus materials error:", error);
+      res.status(500).json({ error: error?.message || "Failed to process calculus materials" });
     }
   });
 
