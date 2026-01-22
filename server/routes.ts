@@ -12,7 +12,7 @@ import { db } from "./db";
 // Use createRequire for pdf-parse due to ESM compatibility issues
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
-const pdfParse = require("pdf-parse");
+const { PDFParse } = require("pdf-parse");
 
 // Extend express-session types
 declare module "express-session" {
@@ -460,14 +460,20 @@ export async function registerRoutes(
       let aiResult: SolveResult;
       
       if (isPDF) {
-        // Extract text from PDF and solve as text
+        // Extract text from PDF using PDFParse class
         try {
           const pdfBuffer = Buffer.from(image, "base64");
-          const pdfData = await pdfParse(pdfBuffer);
-          const extractedText = pdfData.text?.trim();
+          const uint8Array = new Uint8Array(pdfBuffer);
+          const parser = new PDFParse(uint8Array);
+          const pdfResult = await parser.getText();
+          const extractedText = pdfResult.text?.trim().replace(/\n*-- \d+ of \d+ --\n*/g, '').trim();
           
-          if (!extractedText || extractedText.length < 5) {
-            return res.status(400).json({ error: "Could not extract text from PDF. Please try an image instead." });
+          if (!extractedText || extractedText.length < 10) {
+            // PDF likely contains scanned images, not text - inform user
+            console.log("PDF has minimal text, likely scanned/image-based");
+            return res.status(400).json({ 
+              error: "This PDF appears to contain scanned images rather than text. Please take a screenshot of the problem and upload it as an image instead." 
+            });
           }
           
           console.log("PDF text extracted:", extractedText.substring(0, 200) + "...");
