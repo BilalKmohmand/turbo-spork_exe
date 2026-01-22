@@ -169,7 +169,7 @@ function Router() {
 
 function App() {
   const [location] = useLocation();
-  const standalonePages = ["/", "/auth", "/login", "/student", "/teacher", "/pricing", "/knowledge"];
+  const standalonePages = ["/", "/auth", "/login", "/student", "/teacher", "/pricing", "/knowledge", "/solver", "/quiz", "/essay"];
   const isStandalonePage = standalonePages.includes(location);
 
   return (
