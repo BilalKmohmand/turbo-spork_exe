@@ -477,19 +477,22 @@ export async function registerRoutes(
             console.log("PDF has minimal text, converting to image for Vision processing");
             
             try {
-              // Convert PDF to PNG using pdf2pic
+              // Convert PDF to PNG using pdf2pic - optimized for speed
               const { fromBuffer } = await import("pdf2pic");
               const options = {
-                density: 150,
+                density: 100,  // Lower density = faster conversion
                 saveFilename: "page",
                 savePath: "/tmp",
                 format: "png",
-                width: 1200,
-                height: 1600
+                width: 800,    // Smaller size for faster AI processing
+                height: 1000
               };
               
+              console.log("Starting PDF to image conversion...");
+              const startTime = Date.now();
               const convert = fromBuffer(pdfBuffer, options);
               const pageOutput = await convert(1, { responseType: "base64" });
+              console.log(`PDF conversion took ${Date.now() - startTime}ms`);
               
               if (pageOutput && pageOutput.base64) {
                 console.log("PDF converted to image, sending to Vision");
