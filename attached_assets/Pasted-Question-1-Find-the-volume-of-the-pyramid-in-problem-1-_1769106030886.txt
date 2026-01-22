@@ -1,0 +1,783 @@
+Question 1
+Find the volume of the pyramid in problem 1.
+
+1
+Identify the Base Area and Height
+The base is a rectangle with side lengths 
+10
+ in
+10 in and 
+11
+ in
+11 in. The perpendicular (vertical) height shown is 
+14
+ in
+14 in.
+
+B
+=
+10
+×
+11
+,
+h
+=
+14
+B=10×11,h=14
+2
+Calculate the Area of the Base
+Area of a rectangular base is 
+length
+×
+width
+length×width.
+
+B
+=
+10
+×
+11
+=
+110
+ in
+2
+B=10×11=110 in 
+2
+ 
+3
+Calculate the Volume of the Pyramid
+Use 
+V
+=
+1
+3
+B
+h
+V= 
+3
+1
+​
+ Bh with 
+B
+=
+110
+ in
+2
+B=110 in 
+2
+  and 
+h
+=
+14
+ in
+h=14 in.
+
+V
+=
+1
+3
+B
+h
+=
+1
+3
+×
+110
+×
+14
+=
+1540
+3
+≈
+513.33
+ in
+3
+V= 
+3
+1
+​
+ Bh= 
+3
+1
+​
+ ×110×14= 
+3
+1540
+​
+ ≈513.33 in 
+3
+ 
+4
+Answer
+The volume of the pyramid is 
+1540
+3
+ in
+3
+≈
+513.33
+ in
+3
+3
+1540
+​
+  in 
+3
+ ≈513.33 in 
+3
+ .
+
+Question 2
+Find the volume of the pyramid in problem 2.
+
+1
+Identify the Base Area and Height
+The base is a rectangle labeled 
+21
+ yd
+21 yd by 
+9
+ yd
+9 yd. The perpendicular height inside the pyramid is labeled 
+5
+ yd
+5 yd.
+
+B
+=
+21
+×
+9
+,
+h
+=
+5
+B=21×9,h=5
+2
+Calculate the Area of the Base
+Area of a rectangular base is 
+length
+×
+width
+length×width.
+
+B
+=
+21
+×
+9
+=
+189
+ yd
+2
+B=21×9=189 yd 
+2
+ 
+3
+Calculate the Volume of the Pyramid
+Use 
+V
+=
+1
+3
+B
+h
+V= 
+3
+1
+​
+ Bh with 
+B
+=
+189
+ yd
+2
+B=189 yd 
+2
+  and 
+h
+=
+5
+ yd
+h=5 yd.
+
+V
+=
+1
+3
+B
+h
+=
+1
+3
+×
+189
+×
+5
+=
+315
+ yd
+3
+V= 
+3
+1
+​
+ Bh= 
+3
+1
+​
+ ×189×5=315 yd 
+3
+ 
+4
+Answer
+The volume of the pyramid is 
+315
+ yd
+3
+315 yd 
+3
+ .
+
+Question 3
+Find the volume of the pyramid in problem 3.
+
+1
+Identify the Base Area and Height
+The base shows two sides labeled 
+14
+ ft
+14 ft, so it is a 
+14
+ ft
+×
+14
+ ft
+14 ft×14 ft square. The perpendicular height is labeled 
+25
+ ft
+25 ft.
+
+B
+=
+14
+×
+14
+,
+h
+=
+25
+B=14×14,h=25
+2
+Calculate the Area of the Base
+Area of a square base is 
+s
+2
+s 
+2
+ .
+
+B
+=
+14
+×
+14
+=
+196
+ ft
+2
+B=14×14=196 ft 
+2
+ 
+3
+Calculate the Volume of the Pyramid
+Use 
+V
+=
+1
+3
+B
+h
+V= 
+3
+1
+​
+ Bh with 
+B
+=
+196
+ ft
+2
+B=196 ft 
+2
+  and 
+h
+=
+25
+ ft
+h=25 ft.
+
+V
+=
+1
+3
+B
+h
+=
+1
+3
+×
+196
+×
+25
+=
+4900
+3
+≈
+1633.33
+ ft
+3
+V= 
+3
+1
+​
+ Bh= 
+3
+1
+​
+ ×196×25= 
+3
+4900
+​
+ ≈1633.33 ft 
+3
+ 
+4
+Answer
+The volume of the pyramid is 
+4900
+3
+ ft
+3
+≈
+1633.33
+ ft
+3
+3
+4900
+​
+  ft 
+3
+ ≈1633.33 ft 
+3
+ .
+
+Question 4
+Find the volume of the pyramid in problem 4.
+
+1
+Identify the Base Area and Height
+The base is a triangle with base 
+12
+ mm
+12 mm and a perpendicular height to that base of 
+7.5
+ mm
+7.5 mm. The pyramid's perpendicular height is labeled 
+10
+ mm
+10 mm.
+
+B
+=
+1
+2
+×
+12
+×
+7.5
+,
+h
+=
+10
+B= 
+2
+1
+​
+ ×12×7.5,h=10
+2
+Calculate the Area of the Base
+Area of a triangular base is 
+B
+=
+1
+2
+b
+h
+B= 
+2
+1
+​
+ bh.
+
+B
+=
+1
+2
+×
+12
+×
+7.5
+=
+45
+ mm
+2
+B= 
+2
+1
+​
+ ×12×7.5=45 mm 
+2
+ 
+3
+Calculate the Volume of the Pyramid
+Use 
+V
+=
+1
+3
+B
+h
+V= 
+3
+1
+​
+ Bh with base area 
+45
+ mm
+2
+45 mm 
+2
+  and perpendicular height 
+10
+ mm
+10 mm.
+
+V
+=
+1
+3
+B
+h
+=
+1
+3
+×
+45
+×
+10
+=
+150
+ mm
+3
+V= 
+3
+1
+​
+ Bh= 
+3
+1
+​
+ ×45×10=150 mm 
+3
+ 
+4
+Answer
+The volume of the pyramid is 
+150
+ mm
+3
+150 mm 
+3
+ .
+
+Question 5
+Find the volume of the pyramid in problem 5.
+
+1
+Identify the Base Area and Height
+The base is a triangle with base 
+22.1
+ m
+22.1 m and a perpendicular height to that base of 
+14
+ m
+14 m. The pyramid's perpendicular height is labeled 
+19
+ m
+19 m.
+
+B
+=
+1
+2
+×
+22.1
+×
+14
+,
+h
+=
+19
+B= 
+2
+1
+​
+ ×22.1×14,h=19
+2
+Calculate the Area of the Base
+Area of a triangular base is 
+B
+=
+1
+2
+b
+h
+B= 
+2
+1
+​
+ bh.
+
+B
+=
+1
+2
+×
+22.1
+×
+14
+=
+154.7
+ m
+2
+B= 
+2
+1
+​
+ ×22.1×14=154.7 m 
+2
+ 
+3
+Calculate the Volume of the Pyramid
+Use 
+V
+=
+1
+3
+B
+h
+V= 
+3
+1
+​
+ Bh with 
+B
+=
+154.7
+ m
+2
+B=154.7 m 
+2
+  and 
+h
+=
+19
+ m
+h=19 m.
+
+V
+=
+1
+3
+B
+h
+=
+1
+3
+×
+154.7
+×
+19
+=
+2939.3
+3
+≈
+979.77
+ m
+3
+V= 
+3
+1
+​
+ Bh= 
+3
+1
+​
+ ×154.7×19= 
+3
+2939.3
+​
+ ≈979.77 m 
+3
+ 
+4
+Answer
+The volume of the pyramid is 
+2939.3
+3
+ m
+3
+≈
+979.77
+ m
+3
+3
+2939.3
+​
+  m 
+3
+ ≈979.77 m 
+3
+ .
+
+Question 6
+Find the volume of the pyramid in problem 6.
+
+1
+Identify the Base Area and Height
+The base is a square with side lengths 
+10
+ cm
+10 cm and 
+10
+ cm
+10 cm. The perpendicular height inside the pyramid is labeled 
+16
+ cm
+16 cm (the 
+10
+ cm
+10 cm on the right is a slant edge, not the vertical height).
+
+B
+=
+10
+×
+10
+,
+h
+=
+16
+B=10×10,h=16
+2
+Calculate the Area of the Base
+Area of a square base is 
+s
+2
+s 
+2
+ .
+
+B
+=
+10
+×
+10
+=
+100
+ cm
+2
+B=10×10=100 cm 
+2
+ 
+3
+Calculate the Volume of the Pyramid
+Use 
+V
+=
+1
+3
+B
+h
+V= 
+3
+1
+​
+ Bh with 
+B
+=
+100
+ cm
+2
+B=100 cm 
+2
+  and perpendicular height 
+16
+ cm
+16 cm.
+
+V
+=
+1
+3
+B
+h
+=
+1
+3
+×
+100
+×
+16
+=
+1600
+3
+≈
+533.33
+ cm
+3
+V= 
+3
+1
+​
+ Bh= 
+3
+1
+​
+ ×100×16= 
+3
+1600
+​
+ ≈533.33 cm 
+3
+ 
+4
+Answer
+The volume of the pyramid is 
+1600
+3
+ cm
+3
+≈
+533.33
+ cm
+3
+3
+1600
+​
+  cm 
+3
+ ≈533.33 cm 
+3
+ .
