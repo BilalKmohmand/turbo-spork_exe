@@ -92,6 +92,13 @@ interface StepObject {
   reasoning: string;
 }
 
+interface QuestionResult {
+  questionNumber: number;
+  problemStatement: string;
+  steps: StepObject[];
+  answer: string;
+}
+
 interface SolveResult {
   solution: string;
   steps: StepObject[];
@@ -105,6 +112,7 @@ interface SolveResult {
     yMin?: number;
     yMax?: number;
   };
+  questions?: QuestionResult[];
 }
 
 // Clean up malformed LaTeX in AI responses
@@ -122,8 +130,36 @@ function cleanupLatex(text: string): string {
   // 3. Fix standalone \% outside of $ delimiters
   cleaned = cleaned.replace(/(?<!\$[^$]*)(\d+)\\%(?![^$]*\$)/g, '$$$1\\%$');
   
-  // 4. Remove stray backslashes before long text words
-  cleaned = cleaned.replace(/\\([a-zA-Z]{5,})/g, '$1');
+  // 4. Remove stray backslashes before NON-LATEX words only
+  // Preserve ALL valid LaTeX commands (any length)
+  const latexCommands = new Set([
+    // Short commands (2-4 chars)
+    'le', 'ge', 'ne', 'pm', 'mp', 'pi', 'mu', 'nu', 'xi', 'to', 'in', 'ni',
+    'sin', 'cos', 'tan', 'cot', 'sec', 'csc', 'log', 'exp', 'lim', 'sum', 'int', 'max', 'min',
+    'neq', 'leq', 'geq', 'sim', 'cup', 'cap', 'sub', 'sup', 'div', 'mod', 'gcd', 'det', 'dim',
+    // Medium commands (5+ chars) 
+    'times', 'approx', 'frac', 'text', 'sqrt', 'cdot', 'quad', 'left', 'right', 'begin', 'end',
+    'infty', 'alpha', 'beta', 'gamma', 'delta', 'theta', 'lambda', 'sigma', 'omega', 'prime',
+    'overline', 'underline', 'mathbb', 'mathbf', 'mathrm', 'textbf', 'textit',
+    'hline', 'vline', 'ldots', 'cdots', 'ddots', 'therefore', 'because',
+    'forall', 'exists', 'nabla', 'partial', 'equiv', 'cong', 'perp', 'parallel',
+    'angle', 'triangle', 'square', 'circle', 'degree', 'arcsin', 'arccos', 'arctan',
+    'sinh', 'cosh', 'tanh', 'circ', 'oplus', 'otimes', 'subset', 'supset', 'implies', 'iff'
+  ]);
+  
+  // Only strip backslashes from words that are NOT valid LaTeX commands
+  cleaned = cleaned.replace(/\\([a-zA-Z]+)/g, (match, word) => {
+    // Keep all valid LaTeX commands
+    if (latexCommands.has(word.toLowerCase())) {
+      return match;
+    }
+    // Only remove backslash from clearly non-LaTeX words (6+ chars and not in set)
+    if (word.length >= 6) {
+      return word;
+    }
+    // For shorter unknown words, keep the backslash (might be a LaTeX command we don't know)
+    return match;
+  });
   
   return cleaned;
 }
@@ -159,30 +195,51 @@ async function solveFromImage(base64Image: string, mimeType: string): Promise<So
           content: [
             {
               type: "text",
-              text: `You are an expert math tutor like Solvely. Analyze this image and solve ALL problems step-by-step.
+              text: `You are an expert math tutor like Solvely AI. Analyze this image CAREFULLY and solve ALL problems with step-by-step explanations.
+
+CRITICAL: READ VALUES CAREFULLY FROM THE IMAGE
+- Look at EVERY number label in the image precisely
+- The HEIGHT of a pyramid is the PERPENDICULAR/VERTICAL height (often shown as a dashed line inside)
+- Do NOT confuse slant height (along the face) with perpendicular height
+- Double-check all dimensions before calculating
 
 RESPONSE FORMAT - Return ONLY this JSON:
 {
-  "solution": "1) The answer is $440 \\text{ in}^3$. 2) The answer is $91 \\text{ yd}^3$. 3) The answer is $784 \\text{ ft}^3$.",
-  "steps": [
-    {"title": "1) Identify base area and height", "math": "B = 10 \\times 11, \\quad h = 16", "reasoning": "The base is a rectangle with side lengths $10$ and $11$, so $B = 10 \\times 11$. The dashed vertical segment is the height $h = 16$."},
-    {"title": "1) Compute volume", "math": "V = \\frac{1}{3}Bh = \\frac{1}{3}(110)(16) = \\frac{1760}{3} \\approx 586.7", "reasoning": "Using $V = \\frac{1}{3}Bh$ gives $V \\approx 586.7 \\text{ in}^3$."},
-    {"title": "2) Identify base area and height", "math": "B = 21 \\times 9, \\quad h = 5", "reasoning": "The base is a rectangle with side lengths $21$ and $9$, so $B = 21 \\times 9$. The perpendicular height shown is $h = 5$."}
+  "questions": [
+    {
+      "questionNumber": 1,
+      "problemStatement": "Find the volume of the pyramid in problem 1.",
+      "steps": [
+        {"title": "Calculate the Area of the Base", "math": "B = 10 \\times 11 = 110 \\text{ in}^2", "reasoning": "The area of the rectangular base (B) is $110$ square inches. The base is a rectangle with side lengths of $10$ inches and $11$ inches."},
+        {"title": "Calculate the Volume of the Pyramid", "math": "V = \\frac{1}{3}Bh = \\frac{1}{3} \\times 110 \\times 16 = \\frac{1760}{3} \\approx 586.67", "reasoning": "The volume (V) is calculated using the formula $V = \\frac{1}{3}Bh$, where B is the base area and h is the height. The height is $16$ inches."}
+      ],
+      "answer": "The volume of the pyramid is $586.67 \\text{ in}^3$."
+    },
+    {
+      "questionNumber": 2,
+      "problemStatement": "Find the volume of the pyramid in problem 2.",
+      "steps": [
+        {"title": "Calculate the Area of the Base", "math": "B = 21 \\times 9 = 189 \\text{ yd}^2", "reasoning": "The area of the rectangular base (B) is $189$ square yards. The base is a rectangle with side lengths of $21$ yards and $9$ yards."},
+        {"title": "Calculate the Volume of the Pyramid", "math": "V = \\frac{1}{3} \\times 189 \\times 5 = 315", "reasoning": "The volume (V) is calculated using $V = \\frac{1}{3}Bh$. The height is $5$ yards."}
+      ],
+      "answer": "The volume of the pyramid is $315 \\text{ yd}^3$."
+    }
   ],
-  "explanation": "Each volume uses $V = \\frac{1}{3}Bh$, where $B$ is the area of the base (rectangle, square, or triangle) and $h$ is the perpendicular height of the pyramid.",
+  "explanation": "For each pyramid, use $V = \\frac{1}{3}Bh$, where $B$ is the area of the base and $h$ is the perpendicular height.",
   "problemType": "math",
   "graphSpec": null
 }
 
 KEY REQUIREMENTS:
-1. SOLUTION: List ALL final answers numbered (1), 2), 3)...) with units like $440 \\text{ in}^3$
-2. STEPS: Number each step like "1) Identify...", "1) Compute...", "2) Identify..." for each problem
-3. EXPLANATION: Brief overview of the method used for all problems
-4. Use $...$ for ALL numbers, equations, and units in solution/reasoning/explanation
-5. In "math" field: Write LaTeX WITHOUT $ signs
-6. Use \\text{} for units: $\\text{ in}^3$, $\\text{ cm}^2$
-7. Use \\times for multiplication, \\frac{a}{b} for fractions, \\quad for spacing
-8. SOLVE EVERY PROBLEM in the image - do not skip any
+1. QUESTIONS ARRAY: Each problem gets its own object with questionNumber, problemStatement, steps, and answer
+2. STEP TITLES: Clear action titles like "Calculate the Area of the Base", "Calculate the Volume of the Pyramid"
+3. MATH FIELD: Show the full calculation with = signs
+4. ANSWER: A complete sentence with the final answer and units
+5. Use $...$ for inline math in reasoning and answer fields
+6. In "math" field: Write LaTeX WITHOUT $ signs
+7. Use \\text{} for units: \\text{ in}^3, \\text{ cm}^2
+8. Use \\times for multiplication, \\frac{a}{b} for fractions
+9. SOLVE EVERY PROBLEM - do not skip any
 
 GRAPHS: Set graphSpec to null unless explicitly asked to graph.
 
@@ -209,6 +266,13 @@ Output ONLY valid JSON.`,
     
     try {
       const result = JSON.parse(text);
+      
+      // Handle new question-based format
+      if (result.questions && Array.isArray(result.questions)) {
+        return parseQuestionBasedResponse(result);
+      }
+      
+      // Fallback to old format
       return {
         solution: cleanupLatex(ensureString(result.solution) || "See steps below."),
         steps: parseSteps(result.steps),
@@ -230,6 +294,61 @@ Output ONLY valid JSON.`,
   }
 }
 
+// Parse new question-based response format into SolveResult
+function parseQuestionBasedResponse(result: any): SolveResult {
+  const questions = result.questions || [];
+  
+  // Build solution summary with all answers
+  const solutionParts = questions.map((q: any) => 
+    `**Question ${q.questionNumber}**\n${cleanupLatex(q.answer || "")}`
+  );
+  const solution = solutionParts.join("\n\n");
+  
+  // Build steps array - each question becomes a header followed by its steps
+  const allSteps: StepObject[] = [];
+  
+  for (const q of questions) {
+    // Add question header as a step
+    allSteps.push({
+      title: `Question ${q.questionNumber}`,
+      math: "",
+      reasoning: cleanupLatex(q.problemStatement || "")
+    });
+    
+    // Add the question's steps
+    if (Array.isArray(q.steps)) {
+      for (const step of q.steps) {
+        allSteps.push({
+          title: cleanupLatex(String(step.title || "")),
+          math: String(step.math || ""),
+          reasoning: cleanupLatex(String(step.reasoning || ""))
+        });
+      }
+    }
+    
+    // Add the answer step
+    allSteps.push({
+      title: "Answer",
+      math: "",
+      reasoning: cleanupLatex(q.answer || "")
+    });
+  }
+  
+  return {
+    solution: solution,
+    steps: allSteps,
+    explanation: cleanupLatex(result.explanation || "Review the steps above."),
+    problemType: result.problemType || "math",
+    graphSpec: result.graphSpec || undefined,
+    questions: questions.map((q: any) => ({
+      questionNumber: q.questionNumber,
+      problemStatement: cleanupLatex(q.problemStatement || ""),
+      steps: parseSteps(q.steps),
+      answer: cleanupLatex(q.answer || "")
+    }))
+  };
+}
+
 async function solveWithAI(content: string): Promise<SolveResult> {
   try {
     // Use GPT-5.2 - the highest-end ChatGPT model for superior math solving
@@ -239,30 +358,36 @@ async function solveWithAI(content: string): Promise<SolveResult> {
       messages: [
         {
           role: "system",
-          content: `You are an expert math tutor like Solvely. Solve ALL problems step-by-step with clear explanations.
+          content: `You are an expert math tutor like Solvely AI. Solve ALL problems with step-by-step explanations.
 
 RESPONSE FORMAT - Return ONLY this JSON:
 {
-  "solution": "1) The answer is $440 \\text{ in}^3$. 2) The answer is $91 \\text{ yd}^3$. 3) The answer is $784 \\text{ ft}^3$.",
-  "steps": [
-    {"title": "1) Identify base area and height", "math": "B = 10 \\times 11, \\quad h = 16", "reasoning": "The base is a rectangle with side lengths $10$ and $11$, so $B = 10 \\times 11$. The dashed vertical segment is the height $h = 16$."},
-    {"title": "1) Compute volume", "math": "V = \\frac{1}{3}Bh = \\frac{1}{3}(110)(16) = \\frac{1760}{3} \\approx 586.7", "reasoning": "Using $V = \\frac{1}{3}Bh$ gives $V \\approx 586.7 \\text{ in}^3$."},
-    {"title": "2) Identify base area and height", "math": "B = 21 \\times 9, \\quad h = 5", "reasoning": "The base is a rectangle with side lengths $21$ and $9$, so $B = 21 \\times 9$. The perpendicular height shown is $h = 5$."}
+  "questions": [
+    {
+      "questionNumber": 1,
+      "problemStatement": "Find the volume of the pyramid in problem 1.",
+      "steps": [
+        {"title": "Calculate the Area of the Base", "math": "B = 10 \\times 11 = 110 \\text{ in}^2", "reasoning": "The area of the rectangular base (B) is $110$ square inches. The base is a rectangle with side lengths of $10$ inches and $11$ inches."},
+        {"title": "Calculate the Volume of the Pyramid", "math": "V = \\frac{1}{3}Bh = \\frac{1}{3} \\times 110 \\times 16 = \\frac{1760}{3} \\approx 586.67", "reasoning": "The volume (V) is calculated using the formula $V = \\frac{1}{3}Bh$, where B is the base area and h is the height. The height is $16$ inches."}
+      ],
+      "answer": "The volume of the pyramid is $586.67 \\text{ in}^3$."
+    }
   ],
-  "explanation": "Each volume uses $V = \\frac{1}{3}Bh$, where $B$ is the area of the base (rectangle, square, or triangle) and $h$ is the perpendicular height of the pyramid.",
+  "explanation": "For each pyramid, use $V = \\frac{1}{3}Bh$, where $B$ is the area of the base and $h$ is the perpendicular height.",
   "problemType": "math",
   "graphSpec": null
 }
 
 KEY REQUIREMENTS:
-1. SOLUTION: List ALL final answers numbered (1), 2), 3)...) with units like $440 \\text{ in}^3$
-2. STEPS: Number each step like "1) Identify...", "1) Compute...", "2) Identify..." for each problem
-3. EXPLANATION: Brief overview of the method used for all problems
-4. Use $...$ for ALL numbers, equations, and units in solution/reasoning/explanation
-5. In "math" field: Write LaTeX WITHOUT $ signs
-6. Use \\text{} for units: $\\text{ in}^3$, $\\text{ cm}^2$
-7. Use \\times for multiplication, \\frac{a}{b} for fractions, \\quad for spacing
-8. SOLVE EVERY PROBLEM - do not skip any
+1. QUESTIONS ARRAY: Each problem gets its own object with questionNumber, problemStatement, steps, and answer
+2. STEP TITLES: Clear action titles like "Calculate the Area of the Base", "Calculate the Volume"
+3. MATH FIELD: Show the full calculation with = signs
+4. ANSWER: A complete sentence with the final answer and units
+5. Use $...$ for inline math in reasoning and answer fields
+6. In "math" field: Write LaTeX WITHOUT $ signs
+7. Use \\text{} for units: \\text{ in}^3, \\text{ cm}^2
+8. Use \\times for multiplication, \\frac{a}{b} for fractions
+9. SOLVE EVERY PROBLEM - do not skip any
 
 GRAPHS: Set graphSpec to null unless explicitly asked to graph.
 
@@ -284,6 +409,13 @@ Output ONLY valid JSON.`,
     
     try {
       const result = JSON.parse(text);
+      
+      // Handle new question-based format
+      if (result.questions && Array.isArray(result.questions)) {
+        return parseQuestionBasedResponse(result);
+      }
+      
+      // Fallback to old format
       return {
         solution: cleanupLatex(ensureString(result.solution) || "See steps below."),
         steps: parseSteps(result.steps),
@@ -542,7 +674,11 @@ export async function registerRoutes(
       });
 
       const updated = await storage.getSubmission(submission.id);
-      res.status(201).json(updated);
+      // Include questions array in response for Solvely-style display
+      res.status(201).json({
+        ...updated,
+        questions: aiResult.questions || [],
+      });
     } catch (error: any) {
       console.error("Image submission error:", error?.message || error);
       res.status(500).json({ error: error?.message || "Failed to process image" });
@@ -575,7 +711,11 @@ export async function registerRoutes(
       });
 
       const updated = await storage.getSubmission(submission.id);
-      res.status(201).json(updated);
+      // Include questions array in response for Solvely-style display
+      res.status(201).json({
+        ...updated,
+        questions: aiResult.questions || [],
+      });
     } catch (error: any) {
       console.error("Text submission error:", error?.message || error);
       res.status(500).json({ error: error?.message || "Failed to solve problem" });

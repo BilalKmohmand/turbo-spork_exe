@@ -22,7 +22,7 @@ import {
   LogOut
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import type { Message, GraphSpec, StepObject } from "@shared/schema";
+import type { Message, GraphSpec, StepObject, QuestionObject } from "@shared/schema";
 
 interface SubmissionResult {
   id: string;
@@ -34,6 +34,7 @@ interface SubmissionResult {
   problemType?: "math" | "science" | "other";
   graphSpec?: GraphSpec;
   messages?: Message[];
+  questions?: QuestionObject[];
 }
 
 export default function Solver() {
@@ -489,74 +490,145 @@ export default function Solver() {
                   <Sparkles className="w-4 h-4 text-white" />
                 </div>
                 <div className="flex-1 space-y-6 overflow-visible">
-                  {/* Final Answer Section */}
-                  <div>
-                    <h3 className="text-base font-semibold text-emerald-500 mb-3">
-                      Final Answer
-                    </h3>
-                    <div className="px-5 py-4 bg-card border rounded-xl shadow-sm" data-testid="text-solution">
-                      <div className="text-xl font-semibold text-foreground">
-                        {renderMathText(result.aiSolution || "")}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-0.5 mt-3">
-                      <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" onClick={() => handleFeedback(true)} data-testid="button-thumbs-up">
-                        <ThumbsUp className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" onClick={() => handleFeedback(false)} data-testid="button-thumbs-down">
-                        <ThumbsDown className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" onClick={handleCopy} data-testid="button-copy">
-                        <Copy className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" onClick={handleRegenerate} disabled={isLoading} data-testid="button-regenerate">
-                        <RefreshCw className="w-4 h-4" />
-                      </Button>
-                    </div>
+                  {/* Feedback buttons at top */}
+                  <div className="flex items-center gap-0.5">
+                    <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={() => handleFeedback(true)} data-testid="button-thumbs-up">
+                      <ThumbsUp className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={() => handleFeedback(false)} data-testid="button-thumbs-down">
+                      <ThumbsDown className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={handleCopy} data-testid="button-copy">
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={handleRegenerate} disabled={isLoading} data-testid="button-regenerate">
+                      <RefreshCw className="w-4 h-4" />
+                    </Button>
                   </div>
 
                   {result.graphSpec && result.graphSpec.expressions.length > 0 && (
                     <GraphPanel graphSpec={result.graphSpec} />
                   )}
 
-                  {/* Explanation Section - Problem Context */}
-                  {result.aiExplanation && (
-                    <div>
-                      <h3 className="text-base font-semibold text-orange-500 mb-3">
-                        Explanation
-                      </h3>
-                      <p className="text-foreground leading-relaxed" data-testid="text-explanation">
-                        {renderMathText(result.aiExplanation)}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Step-by-Step Solution - Solvely Style */}
-                  {result.aiSteps && result.aiSteps.length > 0 && (
-                    <div className="space-y-5">
-                      {result.aiSteps.map((step, index) => (
-                        <div key={index} className="border-l-2 border-blue-500/50 pl-4" data-testid={`text-step-${index}`}>
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-500/20 text-blue-500 text-xs font-bold">
-                              {index + 1}
-                            </span>
-                            <h4 className="font-semibold text-foreground">
-                              {renderMathText(step.title)}
-                            </h4>
+                  {/* Solvely-style Question-by-Question Display */}
+                  {result.questions && Array.isArray(result.questions) && result.questions.length > 0 ? (
+                    <div className="space-y-8">
+                      {result.questions.map((question) => (
+                        <div key={question.questionNumber} className="space-y-4" data-testid={`question-${question.questionNumber}`}>
+                          {/* Question Header */}
+                          <div className="border-b-2 border-blue-500 pb-2">
+                            <h2 className="text-lg font-bold text-blue-500">
+                              Question {question.questionNumber}
+                            </h2>
                           </div>
-                          {step.reasoning && (
-                            <p className="text-muted-foreground leading-relaxed mb-2">
-                              {renderMathText(step.reasoning)}
-                            </p>
-                          )}
-                          {step.math && (
-                            <div className="py-3 px-4 bg-muted/50 rounded-lg overflow-x-auto text-center">
-                              <BlockMath math={step.math} />
+                          
+                          {/* Problem Statement */}
+                          <p className="text-foreground font-medium">
+                            {renderMathText(question.problemStatement || "")}
+                          </p>
+                          
+                          {/* Steps for this question */}
+                          <div className="space-y-4">
+                            {Array.isArray(question.steps) && question.steps.map((step, stepIndex) => (
+                              <div key={stepIndex} className="space-y-2" data-testid={`question-${question.questionNumber}-step-${stepIndex}`}>
+                                <div className="flex items-start gap-2">
+                                  <span className="inline-flex items-center justify-center min-w-[24px] h-6 rounded bg-blue-500/20 text-blue-500 text-sm font-bold px-2">
+                                    {stepIndex + 1}
+                                  </span>
+                                  <h4 className="font-semibold text-foreground underline decoration-1 underline-offset-2">
+                                    {renderMathText(step.title)}
+                                  </h4>
+                                </div>
+                                {step.reasoning && (
+                                  <p className="text-muted-foreground leading-relaxed ml-8">
+                                    {renderMathText(step.reasoning)}
+                                  </p>
+                                )}
+                                {step.math && (
+                                  <div className="py-3 px-4 bg-muted/30 border rounded-lg overflow-x-auto text-center ml-8">
+                                    <BlockMath math={step.math} />
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                          
+                          {/* Answer for this question */}
+                          <div className="space-y-2">
+                            <div className="flex items-start gap-2">
+                              <span className="inline-flex items-center justify-center min-w-[24px] h-6 rounded bg-emerald-500/20 text-emerald-500 text-sm font-bold px-2">
+                                {(Array.isArray(question.steps) ? question.steps.length : 0) + 1}
+                              </span>
+                              <h4 className="font-semibold text-foreground underline decoration-1 underline-offset-2">
+                                Answer
+                              </h4>
                             </div>
-                          )}
+                            <div className="px-5 py-3 bg-card border rounded-lg ml-8" data-testid={`answer-${question.questionNumber}`}>
+                              <p className="text-foreground font-medium">
+                                {renderMathText(question.answer)}
+                              </p>
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
+                  ) : (
+                    <>
+                      {/* Fallback: Old format display */}
+                      {/* Final Answer Section */}
+                      {result.aiSolution && (
+                        <div>
+                          <h3 className="text-base font-semibold text-emerald-500 mb-3">
+                            Final Answer
+                          </h3>
+                          <div className="px-5 py-4 bg-card border rounded-xl shadow-sm" data-testid="text-solution">
+                            <div className="text-xl font-semibold text-foreground">
+                              {renderMathText(result.aiSolution)}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Explanation Section */}
+                      {result.aiExplanation && (
+                        <div>
+                          <h3 className="text-base font-semibold text-orange-500 mb-3">
+                            Explanation
+                          </h3>
+                          <p className="text-foreground leading-relaxed" data-testid="text-explanation">
+                            {renderMathText(result.aiExplanation)}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Step-by-Step Solution */}
+                      {result.aiSteps && result.aiSteps.length > 0 && (
+                        <div className="space-y-5">
+                          {result.aiSteps.map((step, index) => (
+                            <div key={index} className="border-l-2 border-blue-500/50 pl-4" data-testid={`text-step-${index}`}>
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-500/20 text-blue-500 text-xs font-bold">
+                                  {index + 1}
+                                </span>
+                                <h4 className="font-semibold text-foreground">
+                                  {renderMathText(step.title)}
+                                </h4>
+                              </div>
+                              {step.reasoning && (
+                                <p className="text-muted-foreground leading-relaxed mb-2">
+                                  {renderMathText(step.reasoning)}
+                                </p>
+                              )}
+                              {step.math && (
+                                <div className="py-3 px-4 bg-muted/50 rounded-lg overflow-x-auto text-center">
+                                  <BlockMath math={step.math} />
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>

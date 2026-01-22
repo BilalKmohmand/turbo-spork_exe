@@ -119,6 +119,13 @@ export interface StepObject {
   reasoning: string;
 }
 
+export interface QuestionObject {
+  questionNumber: number;
+  problemStatement: string;
+  steps: StepObject[];
+  answer: string;
+}
+
 export interface DashboardStats {
   totalSubmissions: number;
   pendingReview: number;
