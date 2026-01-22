@@ -471,15 +471,40 @@ export async function registerRoutes(
           const extractedText = pdfResult.text?.trim().replace(/\n*-- \d+ of \d+ --\n*/g, '').trim();
           
           if (!extractedText || extractedText.length < 10) {
-            // PDF likely contains scanned images, not text - inform user
-            console.log("PDF has minimal text, likely scanned/image-based");
-            return res.status(400).json({ 
-              error: "This PDF appears to contain scanned images rather than text. Please take a screenshot of the problem and upload it as an image instead." 
-            });
+            // PDF is scanned/image-based - convert to image and use GPT Vision
+            console.log("PDF has minimal text, converting to image for Vision processing");
+            
+            try {
+              // Convert PDF to PNG using pdf2pic
+              const { fromBuffer } = await import("pdf2pic");
+              const options = {
+                density: 150,
+                saveFilename: "page",
+                savePath: "/tmp",
+                format: "png",
+                width: 1200,
+                height: 1600
+              };
+              
+              const convert = fromBuffer(pdfBuffer, options);
+              const pageOutput = await convert(1, { responseType: "base64" });
+              
+              if (pageOutput && pageOutput.base64) {
+                console.log("PDF converted to image, sending to Vision");
+                aiResult = await solveFromImage(pageOutput.base64, "image/png");
+              } else {
+                throw new Error("PDF to image conversion failed");
+              }
+            } catch (convErr: any) {
+              console.error("PDF to image conversion error:", convErr?.message);
+              return res.status(400).json({ 
+                error: "Could not process this scanned PDF. Please take a screenshot of the problem and upload it as an image." 
+              });
+            }
+          } else {
+            console.log("PDF text extracted:", extractedText.substring(0, 200) + "...");
+            aiResult = await solveWithAI(extractedText);
           }
-          
-          console.log("PDF text extracted:", extractedText.substring(0, 200) + "...");
-          aiResult = await solveWithAI(extractedText);
         } catch (pdfError: any) {
           console.error("PDF parsing error:", pdfError?.message);
           return res.status(400).json({ error: "Failed to read PDF. Please try uploading an image instead." });
