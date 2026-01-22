@@ -9,9 +9,10 @@ import { generateEmbedding, generateEmbeddings } from "./rag/embeddings";
 import { chunkMathContent, detectTopic, detectDifficulty } from "./rag/chunker";
 import { retrieveRelevantChunks, formatContextForAI, getKnowledgeStats } from "./rag/retrieval";
 import { db } from "./db";
-// @ts-ignore - pdf-parse doesn't have proper types
-import * as pdfParseModule from "pdf-parse";
-const pdfParse = (pdfParseModule as any).default || pdfParseModule;
+// Use createRequire for pdf-parse due to ESM compatibility issues
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const pdfParse = require("pdf-parse");
 
 // Extend express-session types
 declare module "express-session" {
