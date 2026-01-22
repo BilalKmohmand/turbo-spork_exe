@@ -375,10 +375,10 @@ export default function Solver() {
 
       <div 
         ref={chatContainerRef}
-        className="flex-1 overflow-y-auto"
+        className="flex-1 overflow-y-auto flex flex-col"
       >
         {!hasConversation && (
-          <div className="flex flex-col items-center justify-center h-full px-3 sm:px-4">
+          <div className="flex flex-col items-center justify-center flex-1 min-h-full px-3 sm:px-4">
             <div className="w-full max-w-2xl space-y-4 sm:space-y-6">
               <div className="text-center space-y-2 sm:space-y-3 mb-4 sm:mb-8">
                 <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white">
