@@ -17,8 +17,11 @@ import {
   ThumbsDown,
   Copy,
   RefreshCw,
-  Camera
+  Camera,
+  Brain,
+  LogOut
 } from "lucide-react";
+import { Link, useLocation } from "wouter";
 import type { Message, GraphSpec, StepObject } from "@shared/schema";
 
 interface SubmissionResult {
@@ -47,6 +50,16 @@ export default function Solver() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
+
+  const handleLogout = async () => {
+    try {
+      await apiRequest("POST", "/api/auth/logout", {});
+      setLocation("/");
+    } catch {
+      setLocation("/");
+    }
+  };
 
   const handleCopy = () => {
     if (result?.aiSolution) {
@@ -320,6 +333,27 @@ export default function Solver() {
       onDragOver={handleDrag}
       onDrop={handleDrop}
     >
+      {/* Header with navigation */}
+      <header className="flex items-center justify-between px-4 py-3 border-b bg-background/95 backdrop-blur sticky top-0 z-50">
+        <Link href="/">
+          <div className="flex items-center gap-2 cursor-pointer" data-testid="link-home">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center">
+              <Brain className="w-5 h-5 text-white" />
+            </div>
+            <span className="font-bold text-lg">Gradeio</span>
+          </div>
+        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/pricing">
+            <Button variant="ghost" size="sm" data-testid="link-pricing">Pricing</Button>
+          </Link>
+          <Button variant="ghost" size="sm" onClick={handleLogout} data-testid="button-logout">
+            <LogOut className="w-4 h-4 mr-1" />
+            Sign Out
+          </Button>
+        </div>
+      </header>
+
       <input
         type="file"
         ref={fileInputRef}

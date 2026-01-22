@@ -11,10 +11,15 @@ import { retrieveRelevantChunks, formatContextForAI, getKnowledgeStats } from ".
 import { db } from "./db";
 import fs from "fs";
 import path from "path";
-// Use createRequire for pdf-parse due to ESM compatibility issues
-import { createRequire } from "module";
-const require = createRequire(import.meta.url);
-const { PDFParse } = require("pdf-parse");
+// Dynamic import for pdf-parse to avoid ESM/CJS bundling issues
+let PDFParse: any = null;
+async function getPDFParse() {
+  if (!PDFParse) {
+    const pdfParseModule: any = await import("pdf-parse");
+    PDFParse = pdfParseModule.PDFParse || pdfParseModule.default?.PDFParse || pdfParseModule.default;
+  }
+  return PDFParse;
+}
 
 // Extend express-session types
 declare module "express-session" {
@@ -468,7 +473,8 @@ export async function registerRoutes(
         try {
           const pdfBuffer = Buffer.from(image, "base64");
           const uint8Array = new Uint8Array(pdfBuffer);
-          const parser = new PDFParse(uint8Array);
+          const PDFParseClass = await getPDFParse();
+          const parser = new PDFParseClass(uint8Array);
           const pdfResult = await parser.getText();
           const extractedText = pdfResult.text?.trim().replace(/\n*-- \d+ of \d+ --\n*/g, '').trim();
           
@@ -1015,7 +1021,8 @@ Now the student has a follow-up question. Answer it clearly and helpfully to dee
         try {
           const buffer = fs.readFileSync(filePath);
           const uint8Array = new Uint8Array(buffer);
-          const pdfParser = new PDFParse(uint8Array);
+          const PDFParseClass = await getPDFParse();
+          const pdfParser = new PDFParseClass(uint8Array);
           const pdfResult = await pdfParser.getText();
           const content = pdfResult.text?.trim().replace(/\n*-- \d+ of \d+ --\n*/g, '').trim() || "";
 
