@@ -37,8 +37,6 @@ interface SubmissionResult {
   questions?: QuestionObject[];
 }
 
-type ConversationStage = "initial" | "asking_format" | "solving" | "solved";
-
 export default function Solver() {
   const [result, setResult] = useState<SubmissionResult | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -49,9 +47,6 @@ export default function Solver() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [submittedProblem, setSubmittedProblem] = useState<string>("");
   const [lastProblem, setLastProblem] = useState<{ type: "text" | "image"; content: string; mimeType?: string }>({ type: "text", content: "" });
-  const [conversationStage, setConversationStage] = useState<ConversationStage>("initial");
-  const [pendingProblem, setPendingProblem] = useState<{ type: "text" | "image"; content: string; mimeType?: string } | null>(null);
-  const [explanationFormat, setExplanationFormat] = useState<"step-by-step" | "quick-answer" | "beginner">("step-by-step");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -107,10 +102,7 @@ export default function Solver() {
 
   const textMutation = useMutation({
     mutationFn: async (problem: string) => {
-      const response = await apiRequest("POST", "/api/solve-text", { 
-        problem, 
-        format: explanationFormat 
-      });
+      const response = await apiRequest("POST", "/api/solve-text", { problem });
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || "Failed to solve");
@@ -119,11 +111,9 @@ export default function Solver() {
     },
     onSuccess: (data) => {
       setResult(data);
-      setConversationStage("solved");
       scrollToBottom();
     },
     onError: (error: Error) => {
-      setConversationStage("initial");
       toast({
         title: "Error",
         description: error.message || "Failed to solve problem.",
@@ -137,7 +127,6 @@ export default function Solver() {
       const response = await apiRequest("POST", "/api/solve-image", {
         image: base64,
         mimeType,
-        format: explanationFormat,
       });
       if (!response.ok) {
         const error = await response.json();
@@ -149,13 +138,11 @@ export default function Solver() {
       setResult(data);
       setIsUploading(false);
       setUploadProgress(100);
-      setConversationStage("solved");
       scrollToBottom();
     },
     onError: (error: Error) => {
       setIsUploading(false);
       setUploadProgress(0);
-      setConversationStage("initial");
       toast({
         title: "Error",
         description: error.message || "Failed to process image. Please try again.",
@@ -252,8 +239,8 @@ export default function Solver() {
       }
       
       setUploadProgress(50);
-      setPendingProblem({ type: "image", content: base64, mimeType });
-      setConversationStage("asking_format");
+      setLastProblem({ type: "image", content: base64, mimeType });
+      submitMutation.mutate({ base64, mimeType });
     } catch {
       setIsUploading(false);
       setUploadProgress(0);
@@ -314,8 +301,6 @@ export default function Solver() {
     setTextProblem("");
     setUploadProgress(0);
     setSubmittedProblem("");
-    setConversationStage("initial");
-    setPendingProblem(null);
     setIsUploading(false);
   };
 
@@ -324,24 +309,9 @@ export default function Solver() {
       const problem = textProblem.trim();
       setSubmittedProblem(problem);
       setPreviewUrl(null);
-      setPendingProblem({ type: "text", content: problem });
-      setConversationStage("asking_format");
+      setLastProblem({ type: "text", content: problem });
+      textMutation.mutate(problem);
       setTextProblem("");
-    }
-  };
-
-  const handleFormatSelection = (format: "step-by-step" | "quick-answer" | "beginner") => {
-    setExplanationFormat(format);
-    setConversationStage("solving");
-    setIsUploading(false);
-    
-    if (pendingProblem) {
-      setLastProblem(pendingProblem);
-      if (pendingProblem.type === "text") {
-        textMutation.mutate(pendingProblem.content);
-      } else if (pendingProblem.type === "image" && pendingProblem.mimeType) {
-        submitMutation.mutate({ base64: pendingProblem.content, mimeType: pendingProblem.mimeType });
-      }
     }
   };
 
@@ -356,8 +326,8 @@ export default function Solver() {
     }
   };
 
-  const isLoading = submitMutation.isPending || textMutation.isPending || (isUploading && conversationStage === "solving");
-  const hasConversation = result || isLoading || submittedProblem || previewUrl || conversationStage !== "initial";
+  const isLoading = submitMutation.isPending || textMutation.isPending || isUploading;
+  const hasConversation = result || isLoading || submittedProblem || previewUrl;
 
   return (
     <div 
@@ -490,51 +460,6 @@ export default function Solver() {
                 {submittedProblem && (
                   <p className="text-foreground whitespace-pre-wrap leading-relaxed">{submittedProblem}</p>
                 )}
-              </div>
-            )}
-
-            {/* AI asks about explanation format */}
-            {conversationStage === "asking_format" && !isLoading && (
-              <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center flex-shrink-0">
-                  <Sparkles className="w-4 h-4 text-white" />
-                </div>
-                <div className="flex-1 space-y-4">
-                  <div className="bg-muted rounded-2xl rounded-tl-md p-4">
-                    <p className="text-foreground mb-4">
-                      I can help you solve this! How would you like me to explain the solution?
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleFormatSelection("step-by-step")}
-                        className="gap-2"
-                        data-testid="button-step-by-step"
-                      >
-                        Step-by-Step
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleFormatSelection("quick-answer")}
-                        className="gap-2"
-                        data-testid="button-quick-answer"
-                      >
-                        Quick Answer Only
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleFormatSelection("beginner")}
-                        className="gap-2"
-                        data-testid="button-beginner"
-                      >
-                        Beginner-Friendly
-                      </Button>
-                    </div>
-                  </div>
-                </div>
               </div>
             )}
 
