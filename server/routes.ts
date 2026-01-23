@@ -195,17 +195,9 @@ async function solveFromImage(base64Image: string, mimeType: string): Promise<So
           content: [
             {
               type: "text",
-              text: `You are an expert math tutor like Solvely AI. Analyze this image CAREFULLY and solve ALL problems with step-by-step explanations.
+              text: `Solve ALL math problems in this image with step-by-step solutions.
 
-CRITICAL: READ VALUES EXTREMELY CAREFULLY FROM THE IMAGE
-- ZOOM IN mentally on EVERY number label in the image
-- READ EACH DIGIT CAREFULLY - distinguish 14 from 16, 11 from 17, etc.
-- Numbers like 16 can look like 14 if not read carefully - LOOK TWICE
-- The HEIGHT of a pyramid is the PERPENDICULAR/VERTICAL height (often shown as a dashed line inside the pyramid)
-- The height label is typically near the CENTER of the pyramid on a vertical dashed line
-- Do NOT confuse slant height (along the slanted edge/face) with perpendicular height
-- DOUBLE-CHECK and TRIPLE-CHECK all dimensions before calculating
-- If a number could be 14 or 16, look at the context and read more carefully
+READ CAREFULLY: Distinguish similar digits (14 vs 16, 11 vs 17). Use perpendicular height for pyramids (dashed vertical line), not slant height.
 
 RESPONSE FORMAT - Return ONLY this JSON:
 {
@@ -258,12 +250,12 @@ Output ONLY valid JSON.`,
           ],
         },
       ],
-      max_completion_tokens: 8192,
+      max_completion_tokens: 4096,
     });
 
     let text = response.choices[0]?.message?.content || "";
     
-    console.log("[solveFromImage] Raw AI response:", text.slice(0, 500));
+    console.log("[solveFromImage] Raw AI response:", text.slice(0, 300));
     
     // Try to extract JSON from various formats
     let jsonText = text;
@@ -389,44 +381,14 @@ async function solveWithAI(content: string): Promise<SolveResult> {
     // Use GPT-5.2 - the highest-end ChatGPT model for superior math solving
     const response = await openai.chat.completions.create({
       model: "gpt-5.2",
-      max_completion_tokens: 16384,
+      max_completion_tokens: 4096,
       messages: [
         {
           role: "system",
-          content: `You are an expert math tutor like Solvely AI. Solve ALL problems with step-by-step explanations.
+          content: `Solve math problems with step-by-step solutions. Return ONLY JSON:
+{"questions":[{"questionNumber":1,"problemStatement":"problem text","steps":[{"title":"Step Title","math":"LaTeX without $ signs","reasoning":"Explanation with $inline math$"}],"answer":"Final answer with $math$"}],"explanation":"Summary","problemType":"math","graphSpec":null}
 
-RESPONSE FORMAT - Return ONLY this JSON:
-{
-  "questions": [
-    {
-      "questionNumber": 1,
-      "problemStatement": "Find the volume of the pyramid in problem 1.",
-      "steps": [
-        {"title": "Calculate the Area of the Base", "math": "B = 10 \\times 11 = 110 \\text{ in}^2", "reasoning": "The area of the rectangular base (B) is $110$ square inches. The base is a rectangle with side lengths of $10$ inches and $11$ inches."},
-        {"title": "Calculate the Volume of the Pyramid", "math": "V = \\frac{1}{3}Bh = \\frac{1}{3} \\times 110 \\times 16 = \\frac{1760}{3} \\approx 586.67", "reasoning": "The volume (V) is calculated using the formula $V = \\frac{1}{3}Bh$, where B is the base area and h is the height. The height is $16$ inches."}
-      ],
-      "answer": "The volume of the pyramid is $586.67 \\text{ in}^3$."
-    }
-  ],
-  "explanation": "For each pyramid, use $V = \\frac{1}{3}Bh$, where $B$ is the area of the base and $h$ is the perpendicular height.",
-  "problemType": "math",
-  "graphSpec": null
-}
-
-KEY REQUIREMENTS:
-1. QUESTIONS ARRAY: Each problem gets its own object with questionNumber, problemStatement, steps, and answer
-2. STEP TITLES: Clear action titles like "Calculate the Area of the Base", "Calculate the Volume"
-3. MATH FIELD: Show the full calculation with = signs
-4. ANSWER: A complete sentence with the final answer and units
-5. Use $...$ for inline math in reasoning and answer fields
-6. In "math" field: Write LaTeX WITHOUT $ signs
-7. Use \\text{} for units: \\text{ in}^3, \\text{ cm}^2
-8. Use \\times for multiplication, \\frac{a}{b} for fractions
-9. SOLVE EVERY PROBLEM - do not skip any
-
-GRAPHS: Set graphSpec to null unless explicitly asked to graph.
-
-Output ONLY valid JSON.`,
+Rules: Use $...$ for inline math in reasoning/answer. In "math" field: no $ signs. Use \\times, \\frac{}{}, \\text{units}. Output ONLY valid JSON.`,
         },
         {
           role: "user",
