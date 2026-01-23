@@ -265,13 +265,23 @@ Output ONLY valid JSON.`,
     
     console.log("[solveFromImage] Raw AI response:", text.slice(0, 500));
     
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    // Try to extract JSON from various formats
+    let jsonText = text;
+    
+    // Try markdown code block first
+    const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (codeBlockMatch) {
+      jsonText = codeBlockMatch[1].trim();
+    }
+    
+    // Then try to find raw JSON object
+    const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      text = jsonMatch[0];
+      jsonText = jsonMatch[0];
     }
     
     try {
-      const result = JSON.parse(text);
+      const result = JSON.parse(jsonText);
       console.log("[solveFromImage] Parsed keys:", Object.keys(result));
       console.log("[solveFromImage] Has questions?", !!result.questions, "Is array?", Array.isArray(result.questions));
       
@@ -292,12 +302,25 @@ Output ONLY valid JSON.`,
       };
     } catch (parseError: any) {
       console.error("[solveFromImage] JSON parse error:", parseError.message);
-      console.log("[solveFromImage] Failed text:", text.slice(0, 300));
+      console.log("[solveFromImage] Failed text:", jsonText.slice(0, 300));
+      
+      // Create a structured fallback from the raw text
+      const cleanText = cleanupLatex(text);
       return {
-        solution: cleanupLatex(text.slice(0, 1000) || "Solution generated."),
-        steps: [{ title: "Solution", math: "", reasoning: "Review the answer above." }],
+        solution: "See the detailed solution below.",
+        steps: [{ 
+          title: "Solution", 
+          math: "", 
+          reasoning: cleanText
+        }],
         explanation: "The problem has been solved.",
-        problemType: "other",
+        problemType: "math",
+        questions: [{
+          questionNumber: 1,
+          problemStatement: "Problem Solution",
+          steps: [{ title: "Solution", math: "", reasoning: cleanText }],
+          answer: "See the solution steps above."
+        }]
       };
     }
   } catch (error: any) {
@@ -416,13 +439,23 @@ Output ONLY valid JSON.`,
     
     console.log("[solveWithAI] Raw AI response:", text.slice(0, 500));
     
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    // Try to extract JSON from various formats
+    let jsonText = text;
+    
+    // Try markdown code block first
+    const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (codeBlockMatch) {
+      jsonText = codeBlockMatch[1].trim();
+    }
+    
+    // Then try to find raw JSON object
+    const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      text = jsonMatch[0];
+      jsonText = jsonMatch[0];
     }
     
     try {
-      const result = JSON.parse(text);
+      const result = JSON.parse(jsonText);
       console.log("[solveWithAI] Parsed keys:", Object.keys(result));
       console.log("[solveWithAI] Has questions?", !!result.questions, "Is array?", Array.isArray(result.questions));
       
@@ -443,12 +476,25 @@ Output ONLY valid JSON.`,
       };
     } catch (parseError: any) {
       console.error("[solveWithAI] JSON parse error:", parseError.message);
-      console.log("[solveWithAI] Failed text:", text.slice(0, 300));
+      console.log("[solveWithAI] Failed text:", jsonText.slice(0, 300));
+      
+      // Create a structured fallback from the raw text
+      const cleanText = cleanupLatex(text);
       return {
-        solution: cleanupLatex(text.slice(0, 1000) || "Solution generated."),
-        steps: [{ title: "Solution", math: "", reasoning: "Review the answer above." }],
+        solution: "See the detailed solution below.",
+        steps: [{ 
+          title: "Solution", 
+          math: "", 
+          reasoning: cleanText
+        }],
         explanation: "The problem has been solved.",
-        problemType: "other",
+        problemType: "math",
+        questions: [{
+          questionNumber: 1,
+          problemStatement: "Problem Solution",
+          steps: [{ title: "Solution", math: "", reasoning: cleanText }],
+          answer: "See the solution steps above."
+        }]
       };
     }
   } catch (error: any) {
