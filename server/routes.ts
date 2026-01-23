@@ -184,8 +184,16 @@ function parseSteps(steps: any): StepObject[] {
   });
 }
 
-async function solveFromImage(base64Image: string, mimeType: string): Promise<SolveResult> {
+async function solveFromImage(base64Image: string, mimeType: string, format: string = "step-by-step"): Promise<SolveResult> {
   try {
+    const formatInstructions: Record<string, string> = {
+      "step-by-step": "Provide detailed step-by-step explanations with 3-5 steps per problem.",
+      "quick-answer": "Provide a concise solution with 1-2 key steps and focus on the final answer.",
+      "beginner": "Explain in simple, beginner-friendly language. Use everyday analogies. Break down each step thoroughly."
+    };
+    
+    const formatGuide = formatInstructions[format] || formatInstructions["step-by-step"];
+    
     // Use GPT-5.2 for powerful problem solving with images and documents
     const response = await openai.chat.completions.create({
       model: "gpt-5.2",
@@ -195,9 +203,9 @@ async function solveFromImage(base64Image: string, mimeType: string): Promise<So
           content: [
             {
               type: "text",
-              text: `Solve ALL math problems in this image with step-by-step solutions.
+              text: `Solve ALL math problems in this image. ${formatGuide}
 
-READ CAREFULLY: Distinguish similar digits (14 vs 16, 11 vs 17). Use perpendicular height for pyramids (dashed vertical line), not slant height.
+READ CAREFULLY: Distinguish similar digits (14 vs 16, 11 vs 17). Use perpendicular height for pyramids.
 
 RESPONSE FORMAT - Return ONLY this JSON:
 {
@@ -376,8 +384,16 @@ function parseQuestionBasedResponse(result: any): SolveResult {
   };
 }
 
-async function solveWithAI(content: string): Promise<SolveResult> {
+async function solveWithAI(content: string, format: string = "step-by-step"): Promise<SolveResult> {
   try {
+    const formatInstructions: Record<string, string> = {
+      "step-by-step": "Provide detailed step-by-step explanations with 3-5 steps per problem.",
+      "quick-answer": "Provide a concise solution with 1-2 key steps and focus on the final answer.",
+      "beginner": "Explain in simple, beginner-friendly language. Use everyday analogies. Break down each step thoroughly with extra detail."
+    };
+    
+    const formatGuide = formatInstructions[format] || formatInstructions["step-by-step"];
+    
     // Use GPT-5.2 - the highest-end ChatGPT model for superior math solving
     const response = await openai.chat.completions.create({
       model: "gpt-5.2",
@@ -385,7 +401,7 @@ async function solveWithAI(content: string): Promise<SolveResult> {
       messages: [
         {
           role: "system",
-          content: `Solve math problems with step-by-step solutions. Return ONLY JSON:
+          content: `Solve math problems. ${formatGuide} Return ONLY JSON:
 {"questions":[{"questionNumber":1,"problemStatement":"problem text","steps":[{"title":"Step Title","math":"LaTeX without $ signs","reasoning":"Explanation with $inline math$"}],"answer":"Final answer with $math$"}],"explanation":"Summary","problemType":"math","graphSpec":null}
 
 Rules: Use $...$ for inline math in reasoning/answer. In "math" field: no $ signs. Use \\times, \\frac{}{}, \\text{units}. Output ONLY valid JSON.`,
@@ -613,7 +629,8 @@ export async function registerRoutes(
 
   app.post("/api/solve-image", async (req, res) => {
     try {
-      const { image, mimeType } = req.body;
+      const { image, mimeType, format } = req.body;
+      const explanationFormat = format || "step-by-step";
       
       if (!image || !mimeType) {
         return res.status(400).json({ error: "Image and mimeType are required" });
@@ -662,7 +679,7 @@ export async function registerRoutes(
               
               if (pageOutput && pageOutput.base64) {
                 console.log("PDF converted to image, sending to Vision");
-                aiResult = await solveFromImage(pageOutput.base64, "image/png");
+                aiResult = await solveFromImage(pageOutput.base64, "image/png", explanationFormat);
               } else {
                 throw new Error("PDF to image conversion failed");
               }
@@ -674,7 +691,7 @@ export async function registerRoutes(
             }
           } else {
             console.log("PDF text extracted:", extractedText.substring(0, 200) + "...");
-            aiResult = await solveWithAI(extractedText);
+            aiResult = await solveWithAI(extractedText, explanationFormat);
           }
         } catch (pdfError: any) {
           console.error("PDF parsing error:", pdfError?.message);
@@ -682,7 +699,7 @@ export async function registerRoutes(
         }
       } else {
         // Solve directly from image
-        aiResult = await solveFromImage(image, mimeType);
+        aiResult = await solveFromImage(image, mimeType, explanationFormat);
       }
       
       const submission = await storage.createSubmission({
@@ -715,13 +732,14 @@ export async function registerRoutes(
 
   app.post("/api/solve-text", async (req, res) => {
     try {
-      const { problem } = req.body;
+      const { problem, format } = req.body;
+      const explanationFormat = format || "step-by-step";
       
       if (!problem || typeof problem !== "string" || !problem.trim()) {
         return res.status(400).json({ error: "Please enter a problem to solve" });
       }
 
-      const aiResult = await solveWithAI(problem.trim());
+      const aiResult = await solveWithAI(problem.trim(), explanationFormat);
       
       const submission = await storage.createSubmission({
         title: "Text Problem",
