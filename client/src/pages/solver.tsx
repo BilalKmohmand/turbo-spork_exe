@@ -19,7 +19,8 @@ import {
   RefreshCw,
   Camera,
   Brain,
-  LogOut
+  LogOut,
+  User
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import type { Message, GraphSpec, StepObject, QuestionObject } from "@shared/schema";
@@ -445,21 +446,27 @@ export default function Solver() {
 
         {hasConversation && (
           <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-            {/* User's Problem/Question - prominently displayed */}
+            {/* User's Message Bubble */}
             {(submittedProblem || previewUrl) && (
-              <div className="bg-muted/50 rounded-xl border p-4" data-testid="user-problem-section">
-                <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Your Problem</div>
-                {previewUrl && (
-                  <img 
-                    src={previewUrl} 
-                    alt="Uploaded problem" 
-                    className="max-h-64 rounded-lg mb-3 border"
-                    data-testid="img-preview"
-                  />
-                )}
-                {submittedProblem && (
-                  <p className="text-foreground whitespace-pre-wrap leading-relaxed">{submittedProblem}</p>
-                )}
+              <div className="flex gap-3 justify-end" data-testid="user-problem-section">
+                <div className="max-w-[85%] space-y-3">
+                  {previewUrl && (
+                    <img 
+                      src={previewUrl} 
+                      alt="Uploaded problem" 
+                      className="max-h-64 rounded-lg border ml-auto"
+                      data-testid="img-preview"
+                    />
+                  )}
+                  {submittedProblem && (
+                    <div className="bg-violet-600 text-white rounded-2xl rounded-tr-md p-4">
+                      <p className="whitespace-pre-wrap leading-relaxed">{submittedProblem}</p>
+                    </div>
+                  )}
+                </div>
+                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                  <User className="w-4 h-4 text-muted-foreground" />
+                </div>
               </div>
             )}
 
@@ -490,90 +497,92 @@ export default function Solver() {
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center flex-shrink-0">
                   <Sparkles className="w-4 h-4 text-white" />
                 </div>
-                <div className="flex-1 space-y-6 overflow-visible">
-                  {/* Feedback buttons at top */}
-                  <div className="flex items-center gap-0.5">
-                    <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={() => handleFeedback(true)} data-testid="button-thumbs-up">
-                      <ThumbsUp className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={() => handleFeedback(false)} data-testid="button-thumbs-down">
-                      <ThumbsDown className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={handleCopy} data-testid="button-copy">
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={handleRegenerate} disabled={isLoading} data-testid="button-regenerate">
-                      <RefreshCw className="w-4 h-4" />
-                    </Button>
-                  </div>
-
-                  {result.graphSpec && result.graphSpec.expressions.length > 0 && (
-                    <GraphPanel graphSpec={result.graphSpec} />
-                  )}
-
-                  {/* Solvely-style Question-by-Question Display */}
-                  {result.questions && Array.isArray(result.questions) && result.questions.length > 0 ? (
-                    <div className="space-y-8">
-                      {result.questions.map((question) => (
-                        <div key={question.questionNumber} className="space-y-4" data-testid={`question-${question.questionNumber}`}>
-                          {/* Question Header */}
-                          <div className="border-b-2 border-blue-500 pb-2">
-                            <h2 className="text-lg font-bold text-blue-500">
-                              Question {question.questionNumber}
-                            </h2>
-                          </div>
-                          
-                          {/* Problem Statement */}
-                          <p className="text-foreground font-medium">
-                            {renderMathText(question.problemStatement || "")}
-                          </p>
-                          
-                          {/* Steps for this question */}
-                          <div className="space-y-4">
-                            {Array.isArray(question.steps) && question.steps.map((step, stepIndex) => (
-                              <div key={stepIndex} className="space-y-2" data-testid={`question-${question.questionNumber}-step-${stepIndex}`}>
-                                <div className="flex items-start gap-2">
-                                  <span className="inline-flex items-center justify-center min-w-[24px] h-6 rounded bg-blue-500/20 text-blue-500 text-sm font-bold px-2">
-                                    {stepIndex + 1}
-                                  </span>
-                                  <h4 className="font-semibold text-foreground underline decoration-1 underline-offset-2">
-                                    {renderMathText(step.title)}
-                                  </h4>
-                                </div>
-                                {step.reasoning && (
-                                  <p className="text-muted-foreground leading-relaxed ml-8">
-                                    {renderMathText(step.reasoning)}
-                                  </p>
-                                )}
-                                {step.math && (
-                                  <div className="py-3 px-4 bg-muted/30 border rounded-lg overflow-x-auto text-center ml-8">
-                                    <BlockMath math={step.math} />
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                          
-                          {/* Answer for this question */}
-                          <div className="space-y-2">
-                            <div className="flex items-start gap-2">
-                              <span className="inline-flex items-center justify-center min-w-[24px] h-6 rounded bg-emerald-500/20 text-emerald-500 text-sm font-bold px-2">
-                                {(Array.isArray(question.steps) ? question.steps.length : 0) + 1}
-                              </span>
-                              <h4 className="font-semibold text-foreground underline decoration-1 underline-offset-2">
-                                Answer
-                              </h4>
-                            </div>
-                            <div className="px-5 py-3 bg-card border rounded-lg ml-8" data-testid={`answer-${question.questionNumber}`}>
-                              <p className="text-foreground font-medium">
-                                {renderMathText(question.answer)}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                <div className="flex-1 space-y-4 overflow-visible">
+                  {/* AI Response Bubble */}
+                  <div className="bg-muted rounded-2xl rounded-tl-md p-5 space-y-6">
+                    {/* Feedback buttons */}
+                    <div className="flex items-center gap-0.5 border-b pb-3">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => handleFeedback(true)} data-testid="button-thumbs-up">
+                        <ThumbsUp className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => handleFeedback(false)} data-testid="button-thumbs-down">
+                        <ThumbsDown className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={handleCopy} data-testid="button-copy">
+                        <Copy className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={handleRegenerate} disabled={isLoading} data-testid="button-regenerate">
+                        <RefreshCw className="w-3.5 h-3.5" />
+                      </Button>
                     </div>
-                  ) : (
+
+                    {result.graphSpec && result.graphSpec.expressions.length > 0 && (
+                      <GraphPanel graphSpec={result.graphSpec} />
+                    )}
+
+                    {/* Solvely-style Question-by-Question Display */}
+                    {result.questions && Array.isArray(result.questions) && result.questions.length > 0 ? (
+                      <div className="space-y-8">
+                        {result.questions.map((question) => (
+                          <div key={question.questionNumber} className="space-y-4" data-testid={`question-${question.questionNumber}`}>
+                            {/* Question Header */}
+                            <div className="border-b-2 border-blue-500 pb-2">
+                              <h2 className="text-lg font-bold text-blue-500">
+                                Question {question.questionNumber}
+                              </h2>
+                            </div>
+                            
+                            {/* Problem Statement */}
+                            <p className="text-foreground font-medium">
+                              {renderMathText(question.problemStatement || "")}
+                            </p>
+                            
+                            {/* Steps for this question */}
+                            <div className="space-y-4">
+                              {Array.isArray(question.steps) && question.steps.map((step, stepIndex) => (
+                                <div key={stepIndex} className="space-y-2" data-testid={`question-${question.questionNumber}-step-${stepIndex}`}>
+                                  <div className="flex items-start gap-2">
+                                    <span className="inline-flex items-center justify-center min-w-[24px] h-6 rounded bg-blue-500/20 text-blue-500 text-sm font-bold px-2">
+                                      {stepIndex + 1}
+                                    </span>
+                                    <h4 className="font-semibold text-foreground underline decoration-1 underline-offset-2">
+                                      {renderMathText(step.title)}
+                                    </h4>
+                                  </div>
+                                  {step.reasoning && (
+                                    <p className="text-muted-foreground leading-relaxed ml-8">
+                                      {renderMathText(step.reasoning)}
+                                    </p>
+                                  )}
+                                  {step.math && (
+                                    <div className="py-3 px-4 bg-background/50 border rounded-lg overflow-x-auto text-center ml-8">
+                                      <BlockMath math={step.math} />
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                            
+                            {/* Answer for this question */}
+                            <div className="space-y-2">
+                              <div className="flex items-start gap-2">
+                                <span className="inline-flex items-center justify-center min-w-[24px] h-6 rounded bg-emerald-500/20 text-emerald-500 text-sm font-bold px-2">
+                                  {(Array.isArray(question.steps) ? question.steps.length : 0) + 1}
+                                </span>
+                                <h4 className="font-semibold text-foreground underline decoration-1 underline-offset-2">
+                                  Answer
+                                </h4>
+                              </div>
+                              <div className="px-5 py-3 bg-background/80 border rounded-lg ml-8" data-testid={`answer-${question.questionNumber}`}>
+                                <p className="text-foreground font-medium">
+                                  {renderMathText(question.answer)}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
                     <>
                       {/* Fallback: Old format display */}
                       {/* Final Answer Section */}
@@ -629,8 +638,9 @@ export default function Solver() {
                           ))}
                         </div>
                       )}
-                    </>
-                  )}
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
