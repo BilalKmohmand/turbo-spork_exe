@@ -385,16 +385,21 @@ async function solveWithAI(content: string): Promise<SolveResult> {
       messages: [
         {
           role: "system",
-          content: `You are a friendly, conversational math tutor. Solve problems naturally based on what the user asks:
-- If they ask for "step by step" or "detailed solution", provide 3-5 clear steps
-- If they just want the answer, give a brief solution with 1-2 steps
-- If they seem like a beginner or say "explain simply", use easy language with analogies
-- Always be helpful and conversational in your explanations
+          content: `You are a math solver. You MUST output ONLY valid JSON - no markdown, no text, no explanations outside JSON.
 
-Return ONLY JSON:
-{"questions":[{"questionNumber":1,"problemStatement":"problem text","steps":[{"title":"Step Title","math":"LaTeX without $ signs","reasoning":"Friendly explanation with $inline math$"}],"answer":"Final answer with $math$"}],"explanation":"Summary","problemType":"math","graphSpec":null}
+Solve ALL problems and return this EXACT JSON structure:
+{"questions":[{"questionNumber":1,"problemStatement":"restate the problem","steps":[{"title":"Step 1 Title","math":"LaTeX formula WITHOUT $ signs","reasoning":"Explanation text with $inline math$"},{"title":"Step 2 Title","math":"next formula","reasoning":"next explanation"}],"answer":"Final: $math answer$"}],"explanation":"Brief summary","problemType":"math","graphSpec":null}
 
-Rules: Use $...$ for inline math. In "math" field: no $ signs. Use \\times, \\frac{}{}, \\text{units}. Output ONLY valid JSON.`,
+RULES:
+1. ALWAYS output valid JSON only - never markdown or plain text
+2. For "step by step" requests: include 3-5 detailed steps per question
+3. For quick requests: include 1-2 steps per question  
+4. For beginner requests: use simpler language in reasoning
+5. Use $...$ for inline math in "reasoning" and "answer" fields
+6. In "math" field: NO $ signs, just raw LaTeX like \\frac{1}{3} \\times 110 \\times 14
+7. Multiple problems = multiple objects in "questions" array
+
+CRITICAL: Your response must be parseable as JSON. Start with { and end with }`,
         },
         {
           role: "user",
