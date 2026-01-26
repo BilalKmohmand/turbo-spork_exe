@@ -265,10 +265,17 @@ export default function Solver() {
                   scrollToBottom();
                 }
                 
-                if (data.done && data.result) {
-                  // Keep showing the streamed text as the final result
-                  setResult({ ...data.result, aiSolution: fullText, rawText: fullText });
-                  setStreamingText("");
+                if (data.done) {
+                  // Set final result with all the streamed text
+                  setResult({ 
+                    id: data.result?.id || "",
+                    content: "Image problem",
+                    status: "ai_graded",
+                    aiSolution: fullText, 
+                    rawText: fullText,
+                    isChat: false,
+                    ...(data.result || {})
+                  });
                 }
                 
                 if (data.error) {
@@ -280,6 +287,18 @@ export default function Solver() {
             }
           }
         }
+        
+        // If we got text but no explicit done message, still show it
+        if (fullText) {
+          setResult({ 
+            id: "", 
+            content: "Image problem", 
+            status: "ai_graded",
+            aiSolution: fullText, 
+            rawText: fullText, 
+            isChat: false 
+          });
+        }
       }
     } catch (error: any) {
       toast({
@@ -289,6 +308,7 @@ export default function Solver() {
       });
     } finally {
       setIsStreaming(false);
+      setStreamingText("");
     }
   };
 
