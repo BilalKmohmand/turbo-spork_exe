@@ -381,25 +381,13 @@ async function solveWithAI(content: string): Promise<SolveResult> {
     // Use GPT-5.2 - the highest-end ChatGPT model for superior math solving
     const response = await openai.chat.completions.create({
       model: "gpt-5.2",
-      max_completion_tokens: 4096,
+      max_completion_tokens: 2048,
       messages: [
         {
           role: "system",
-          content: `You are a math solver. You MUST output ONLY valid JSON - no markdown, no text, no explanations outside JSON.
-
-Solve ALL problems and return this EXACT JSON structure:
-{"questions":[{"questionNumber":1,"problemStatement":"restate the problem","steps":[{"title":"Step 1 Title","math":"LaTeX formula WITHOUT $ signs","reasoning":"Explanation text with $inline math$"},{"title":"Step 2 Title","math":"next formula","reasoning":"next explanation"}],"answer":"Final: $math answer$"}],"explanation":"Brief summary","problemType":"math","graphSpec":null}
-
-RULES:
-1. ALWAYS output valid JSON only - never markdown or plain text
-2. For "step by step" requests: include 3-5 detailed steps per question
-3. For quick requests: include 1-2 steps per question  
-4. For beginner requests: use simpler language in reasoning
-5. Use $...$ for inline math in "reasoning" and "answer" fields
-6. In "math" field: NO $ signs, just raw LaTeX like \\frac{1}{3} \\times 110 \\times 14
-7. Multiple problems = multiple objects in "questions" array
-
-CRITICAL: Your response must be parseable as JSON. Start with { and end with }`,
+          content: `Output ONLY JSON. Solve math and return:
+{"questions":[{"questionNumber":1,"problemStatement":"problem","steps":[{"title":"Step","math":"LaTeX no $","reasoning":"text with $math$"}],"answer":"$answer$"}],"explanation":"","problemType":"math","graphSpec":null}
+Rules: JSON only. $...$ for inline math. "math" field: no $ signs. 2-3 steps per question. Start with {`,
         },
         {
           role: "user",
