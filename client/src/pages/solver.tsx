@@ -145,7 +145,20 @@ export default function Solver() {
               if (data.done && data.result) {
                 // Parse final result
                 const r = data.result;
-                if (r.type === "chat") {
+                if (r.type === "graph") {
+                  setResult({
+                    id: Date.now().toString(),
+                    content: problem,
+                    status: "completed",
+                    aiSolution: r.aiSolution || r.message,
+                    graphSpec: r.graphSpec,
+                    problemType: "math",
+                  });
+                  setChatHistory(prev => [...prev, 
+                    { role: "user", content: problem },
+                    { role: "assistant", content: r.message }
+                  ]);
+                } else if (r.type === "chat") {
                   setResult({
                     id: Date.now().toString(),
                     content: problem,

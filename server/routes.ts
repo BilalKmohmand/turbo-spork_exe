@@ -748,6 +748,61 @@ export async function registerRoutes(
       res.setHeader("Connection", "keep-alive");
       res.flushHeaders();
 
+      // Check if this is a graph request
+      const graphPatterns = /\b(graph|plot|draw|sketch)\b.*\b(y\s*=|f\(x\)|function|equation|line|parabola|curve)\b/i;
+      const graphMatch = problem.match(graphPatterns);
+      
+      if (graphMatch) {
+        // Extract the expression to graph
+        const exprMatch = problem.match(/(?:y\s*=\s*|f\(x\)\s*=\s*)?([x\d\s\+\-\*\/\^\(\)sincostandeflogln]+)/i);
+        let expression = exprMatch ? exprMatch[1].trim() : "x^2";
+        
+        // Common function conversions
+        expression = expression.replace(/\^/g, "^").replace(/×/g, "*");
+        
+        // Stream the explanation
+        const stream = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          max_tokens: 1000,
+          messages: [
+            { role: "system", content: "You are a math tutor. Briefly explain the graph being shown. Describe its key features (intercepts, asymptotes, domain, range) in plain text. Don't use LaTeX." },
+            { role: "user", content: `Explain the graph of y = ${expression}` }
+          ],
+          stream: true,
+        });
+
+        let fullText = "";
+        for await (const chunk of stream) {
+          const content = chunk.choices[0]?.delta?.content || "";
+          if (content) {
+            fullText += content;
+            res.write(`data: ${JSON.stringify({ token: content })}\n\n`);
+          }
+        }
+        
+        // Send graphSpec with the done message
+        const graphSpec = {
+          expressions: [expression],
+          title: `Graph of y = ${expression}`,
+          xMin: -10,
+          xMax: 10,
+          yMin: -10,
+          yMax: 10,
+        };
+        
+        res.write(`data: ${JSON.stringify({ 
+          done: true, 
+          result: { 
+            type: "graph", 
+            message: fullText, 
+            aiSolution: fullText,
+            graphSpec 
+          } 
+        })}\n\n`);
+        res.end();
+        return;
+      }
+
       // Check if this is casual chat
       const chatPatterns = /^(hi|hello|hey|thanks|thank you|how are you|what's up|yo|sup|good morning|good evening|bye|goodbye|ok|okay|cool|nice|great|awesome|perfect|got it|understood|help me|can you help)/i;
       const isChat = chatPatterns.test(problem.trim());
