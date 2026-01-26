@@ -48,7 +48,9 @@ app.use("/api", generalLimiter);
 
 // Apply stricter rate limiting to AI endpoints
 app.use("/api/solve-text", aiLimiter);
+app.use("/api/solve-text-stream", aiLimiter);
 app.use("/api/solve-image", aiLimiter);
+app.use("/api/solve-image-stream", aiLimiter);
 app.use("/api/solve-with-rag", aiLimiter);
 app.use("/api/generate-quiz", aiLimiter);
 app.use("/api/generate-essay", aiLimiter);
@@ -60,6 +62,14 @@ app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/register", authLimiter);
 const httpServer = createServer(app);
 
+// Validate SESSION_SECRET in production
+if (!process.env.SESSION_SECRET) {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("SESSION_SECRET must be set in production");
+  }
+  console.warn("Warning: SESSION_SECRET not set, using fallback for development");
+}
+
 // Session configuration with PostgreSQL store
 const PgSession = connectPgSimple(session);
 app.use(
@@ -69,7 +79,7 @@ app.use(
       tableName: "user_sessions",
       createTableIfMissing: true,
     }),
-    secret: process.env.SESSION_SECRET!,
+    secret: process.env.SESSION_SECRET || "dev-fallback-secret",
     resave: false,
     saveUninitialized: false,
     cookie: {

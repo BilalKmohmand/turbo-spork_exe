@@ -15,6 +15,8 @@ Preferred communication style: Simple, everyday language.
 - **Sessions**: Server-side sessions with express-session + connect-pg-simple
 - **Authentication**: Bcrypt password hashing (10 rounds)
 - **Payments**: Stripe integration available but not configured (user dismissed setup)
+- **Security**: Helmet security headers, rate limiting on all API endpoints
+- **Error Handling**: Client-side error boundaries, centralized server error handler
 
 ### To Add Stripe Payments Later
 1. Use the Replit integrations to set up Stripe connector
