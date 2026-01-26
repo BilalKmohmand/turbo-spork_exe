@@ -196,51 +196,23 @@ async function solveFromImage(base64Image: string, mimeType: string): Promise<So
           content: [
             {
               type: "text",
-              text: `Solve ALL math problems in this image with clear step-by-step solutions.
+              text: `CRITICAL: Solve EVERY SINGLE problem in this image. Count all questions first, then solve each one.
 
-READ CAREFULLY: Distinguish similar digits (14 vs 16, 11 vs 17). Use perpendicular height for pyramids.
+IMPORTANT: If image has 6 questions, return 6 solutions. If 10 questions, return 10 solutions. NEVER skip any.
 
-RESPONSE FORMAT - Return ONLY this JSON:
-{
-  "questions": [
-    {
-      "questionNumber": 1,
-      "problemStatement": "Find the volume of the pyramid in problem 1.",
-      "steps": [
-        {"title": "Calculate the Area of the Base", "math": "B = 10 \\times 11 = 110 \\text{ in}^2", "reasoning": "The area of the rectangular base (B) is $110$ square inches. The base is a rectangle with side lengths of $10$ inches and $11$ inches."},
-        {"title": "Calculate the Volume of the Pyramid", "math": "V = \\frac{1}{3}Bh = \\frac{1}{3} \\times 110 \\times 16 = \\frac{1760}{3} \\approx 586.67", "reasoning": "The volume (V) is calculated using the formula $V = \\frac{1}{3}Bh$, where B is the base area and h is the height. The height is $16$ inches."}
-      ],
-      "answer": "The volume of the pyramid is $586.67 \\text{ in}^3$."
-    },
-    {
-      "questionNumber": 2,
-      "problemStatement": "Find the volume of the pyramid in problem 2.",
-      "steps": [
-        {"title": "Calculate the Area of the Base", "math": "B = 21 \\times 9 = 189 \\text{ yd}^2", "reasoning": "The area of the rectangular base (B) is $189$ square yards. The base is a rectangle with side lengths of $21$ yards and $9$ yards."},
-        {"title": "Calculate the Volume of the Pyramid", "math": "V = \\frac{1}{3} \\times 189 \\times 5 = 315", "reasoning": "The volume (V) is calculated using $V = \\frac{1}{3}Bh$. The height is $5$ yards."}
-      ],
-      "answer": "The volume of the pyramid is $315 \\text{ yd}^3$."
-    }
-  ],
-  "explanation": "For each pyramid, use $V = \\frac{1}{3}Bh$, where $B$ is the area of the base and $h$ is the perpendicular height.",
-  "problemType": "math",
-  "graphSpec": null
-}
+Return ONLY JSON:
+{"questions":[{"questionNumber":1,"problemStatement":"problem text","steps":[{"title":"Step Name","math":"LaTeX no $","reasoning":"explanation with $math$"}],"answer":"$answer$"},{"questionNumber":2,...},{"questionNumber":3,...}],"explanation":"summary","problemType":"math","graphSpec":null}
 
-KEY REQUIREMENTS:
-1. QUESTIONS ARRAY: Each problem gets its own object with questionNumber, problemStatement, steps, and answer
-2. STEP TITLES: Clear action titles like "Calculate the Area of the Base", "Calculate the Volume of the Pyramid"
-3. MATH FIELD: Show the full calculation with = signs
-4. ANSWER: A complete sentence with the final answer and units
-5. Use $...$ for inline math in reasoning and answer fields
-6. In "math" field: Write LaTeX WITHOUT $ signs
-7. Use \\text{} for units: \\text{ in}^3, \\text{ cm}^2
-8. Use \\times for multiplication, \\frac{a}{b} for fractions
-9. SOLVE EVERY PROBLEM - do not skip any
+RULES:
+- Count ALL problems in image first
+- Return one object per problem in questions array
+- questionNumber must match the problem number
+- $...$ for inline math in reasoning/answer
+- "math" field: pure LaTeX, NO $ signs
+- Use \\text{} for units
+- SOLVE ALL - if there are 6 problems, return 6 question objects
 
-GRAPHS: Set graphSpec to null unless explicitly asked to graph.
-
-Output ONLY valid JSON.`,
+Start with {`,
             },
             {
               type: "image_url",
