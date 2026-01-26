@@ -383,8 +383,9 @@ export default function Solver() {
   };
 
   const processFile = async (file: File) => {
-    const isImage = file.type.startsWith("image/");
-    const isPDF = file.type === "application/pdf";
+    const isImage = file.type.startsWith("image/") || 
+                    /\.(jpg|jpeg|png|gif|webp|bmp|tiff|tif|heic|heif)$/i.test(file.name);
+    const isPDF = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
     const isWord = file.type === "application/msword" || 
                    file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
                    file.name.endsWith(".doc") || file.name.endsWith(".docx");
@@ -392,7 +393,7 @@ export default function Solver() {
     if (!isImage && !isPDF && !isWord) {
       toast({
         title: "Invalid file",
-        description: "Please upload an image (JPG, PNG), PDF, or Word document",
+        description: "Please upload an image (JPG, PNG, GIF, WebP, BMP, TIFF, HEIC), PDF, or Word document",
         variant: "destructive",
       });
       return;
@@ -649,7 +650,7 @@ export default function Solver() {
         ref={fileInputRef}
         onChange={handleFileSelect}
         className="hidden"
-        accept="image/*,.pdf,application/pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        accept="image/*,.jpg,.jpeg,.png,.gif,.webp,.bmp,.tiff,.heic,.heif,.pdf,application/pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         data-testid="input-file"
       />
       <input
@@ -657,7 +658,7 @@ export default function Solver() {
         ref={cameraInputRef}
         onChange={handleFileSelect}
         className="hidden"
-        accept="image/*"
+        accept="image/*,.jpg,.jpeg,.png,.gif,.webp,.bmp,.tiff,.heic,.heif"
         capture="environment"
         data-testid="input-camera"
       />

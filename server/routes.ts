@@ -924,13 +924,15 @@ RULES:
         return res.status(400).json({ error: "Image and mimeType are required" });
       }
 
-      const isImage = mimeType.startsWith("image/");
+      const isImage = mimeType.startsWith("image/") || 
+                       ["image/jpeg", "image/png", "image/gif", "image/webp", "image/bmp", 
+                        "image/tiff", "image/heic", "image/heif"].includes(mimeType);
       const isPDF = mimeType === "application/pdf";
       const isWord = mimeType === "application/msword" || 
                      mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
       
       if (!isImage && !isPDF && !isWord) {
-        return res.status(400).json({ error: "Invalid file type" });
+        return res.status(400).json({ error: "Invalid file type. Supported: JPG, PNG, GIF, WebP, BMP, TIFF, HEIC, PDF, Word" });
       }
 
       // Set up SSE headers
