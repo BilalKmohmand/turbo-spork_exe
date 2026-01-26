@@ -886,8 +886,15 @@ Rules: Solve ALL questions, use $...$ for inline math, "math" field: pure LaTeX.
           
           const updated = await storage.getSubmission(submission.id);
           res.write(`data: ${JSON.stringify({ done: true, result, submission: updated })}\n\n`);
+        } else {
+          // No valid JSON found - send raw text as chat response
+          res.write(`data: ${JSON.stringify({ done: true, result: { type: "chat", message: fullText } })}\n\n`);
         }
-      } catch {}
+      } catch (parseErr) {
+        console.error("Parse error:", parseErr);
+        // Send raw text on parse failure
+        res.write(`data: ${JSON.stringify({ done: true, result: { type: "chat", message: fullText } })}\n\n`);
+      }
       
       res.end();
     } catch (error: any) {

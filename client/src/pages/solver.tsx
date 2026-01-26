@@ -384,15 +384,31 @@ export default function Solver() {
                 scrollToBottom();
               }
               if (data.done && data.result) {
-                const questions = data.result.questions || [];
-                setResult({
-                  id: data.submission?.id || 0,
-                  questions,
-                  aiSolution: questions.map((q: any) => `Q${q.questionNumber}: ${q.answer}`).join("\n"),
-                  aiSteps: questions.flatMap((q: any) => q.steps || []),
-                  aiExplanation: data.result.explanation || "",
-                  messages: [],
-                });
+                if (data.result.type === "chat" || !data.result.questions) {
+                  // Plain text response
+                  setResult({
+                    id: data.submission?.id || 0,
+                    content: "Image problem",
+                    status: "ai_graded",
+                    questions: [],
+                    aiSolution: data.result.message || fullText,
+                    aiSteps: [],
+                    aiExplanation: "",
+                    messages: [],
+                  });
+                } else {
+                  const questions = data.result.questions || [];
+                  setResult({
+                    id: data.submission?.id || 0,
+                    content: "Image problem",
+                    status: "ai_graded",
+                    questions,
+                    aiSolution: questions.map((q: any) => `Q${q.questionNumber}: ${q.answer}`).join("\n"),
+                    aiSteps: questions.flatMap((q: any) => q.steps || []),
+                    aiExplanation: data.result.explanation || "",
+                    messages: [],
+                  });
+                }
                 setStreamingText("");
               }
               if (data.error) {
