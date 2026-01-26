@@ -188,7 +188,7 @@ async function solveFromImage(base64Image: string, mimeType: string): Promise<So
   try {
     // Use GPT-5.2 for powerful problem solving with images and documents
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-5-nano",
       messages: [
         {
           role: "user",
@@ -404,7 +404,7 @@ Rules: JSON only. $...$ for inline math. "math" field: no $ signs. 2-3 steps per
     
     // Use GPT-4o-mini for fast responses
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-5-nano",
       max_tokens: 1500,
       messages,
     });
@@ -855,7 +855,7 @@ export async function registerRoutes(
       }
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: "gpt-5-nano",
         max_completion_tokens: 4096,
         messages: [
           {
@@ -909,7 +909,7 @@ Output ONLY valid JSON.`
       }
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: "gpt-5-nano",
         max_completion_tokens: 8192,
         messages: [
           {
@@ -991,7 +991,7 @@ Now the student has a follow-up question. Answer it clearly and helpfully to dee
       }));
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: "gpt-5-nano",
         max_completion_tokens: 1024,
         messages: [
           { role: "system", content: systemContext },
@@ -1345,7 +1345,7 @@ RULES:
 Output ONLY valid JSON.`;
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: "gpt-5-nano",
         max_completion_tokens: 16384,
         messages: [
           { role: "system", content: systemPrompt },
