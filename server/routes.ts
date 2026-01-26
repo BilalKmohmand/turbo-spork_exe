@@ -910,40 +910,34 @@ RULES:
         }
       }
 
-      // Stream from GPT-4o for better vision (mini has issues with images)
+      // Use GPT-4o-mini for SPEED with clear formatting instructions
       const stream = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: `Look at this image carefully and solve ALL math problems you see.
+                text: `Solve ALL problems in this image.
 
-FORMAT EACH ANSWER LIKE THIS:
+Example format:
 
-**Question 1:** [copy the exact problem from the image]
+**Q1:** Find volume of pyramid with base 9cm² and height 4cm
 
-**Step 1:** [explanation]
-Formula: $V = \\frac{1}{3} \\times B \\times h$
+Step 1: Use pyramid volume formula
+$V = \\frac{1}{3} \\times B \\times h$
 
-**Step 2:** [substitute values]
+Step 2: Substitute values
 $V = \\frac{1}{3} \\times 9 \\times 4 = 12$
 
-**Answer:** $12 \\text{ cm}^3$
+**Answer:** $12 \\, \\text{cm}^3$
 
 ---
 
-**Question 2:** [next problem]
-[continue same format]
+**Q2:** [next problem]...
 
-RULES:
-- Use $...$ around ALL math (fractions, variables, units)
-- Write fractions as \\frac{num}{denom}
-- Units: \\text{ cm}^3 for cubic cm
-- Solve EVERY question in the image
-- Be thorough with steps`,
+CRITICAL: Put $ around ALL math. Use \\frac{a}{b} for fractions. Solve every question.`,
               },
               {
                 type: "image_url",
@@ -952,7 +946,7 @@ RULES:
             ],
           },
         ],
-        max_tokens: 6000,
+        max_tokens: 4000,
         stream: true,
       });
 
