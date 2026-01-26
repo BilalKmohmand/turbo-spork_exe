@@ -21,66 +21,67 @@ export function MathDisplay({ children, block = false }: MathDisplayProps) {
 export function renderMathText(text: string): JSX.Element[] {
   if (!text) return [<span key={0}></span>];
   
-  // Normalize all LaTeX delimiters to $ format
-  let normalizedText = text
-    // Remove broken patterns like "1$" at line start
-    .replace(/^\d+\$/gm, '')
-    // Convert \[...\] to $$...$$ (block math)
-    .replace(/\\\[/g, '$$')
-    .replace(/\\\]/g, '$$')
-    // Convert \(...\) to $...$ (inline math)
-    .replace(/\\\(/g, '$')
-    .replace(/\\\)/g, '$')
-    // Fix double dollars that got too many
-    .replace(/\${3,}/g, '$$');
-  
   const parts: JSX.Element[] = [];
-  // Match $$...$$ (block) or $...$ (inline)
-  const regex = /\$\$([\s\S]*?)\$\$|\$([^$]+?)\$/g;
-  let lastIndex = 0;
-  let match;
   let key = 0;
-
-  while ((match = regex.exec(normalizedText)) !== null) {
-    if (match.index > lastIndex) {
-      const textBefore = normalizedText.slice(lastIndex, match.index);
-      const lines = textBefore.split('\n');
-      lines.forEach((line, i) => {
-        if (line.trim()) parts.push(<span key={key++}>{line}</span>);
-        if (i < lines.length - 1) parts.push(<br key={key++} />);
-      });
-    }
-
-    const mathContent = match[1] || match[2];
-    if (mathContent && mathContent.trim()) {
+  
+  // Process line by line for better control
+  const lines = text.split('\n');
+  
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i];
+    
+    // Check for block math \[...\]
+    const blockMatch = line.match(/^\s*\\\[([\s\S]*?)\\\]\s*$/);
+    if (blockMatch) {
       try {
-        if (match[1]) {
-          // Block math
-          parts.push(
-            <span key={key++} className="block my-2 text-center overflow-x-auto">
-              <BlockMath math={mathContent.trim()} />
-            </span>
-          );
-        } else {
-          // Inline math
-          parts.push(<InlineMath key={key++} math={mathContent.trim()} />);
-        }
+        parts.push(
+          <div key={key++} className="my-2 text-center overflow-x-auto">
+            <BlockMath math={blockMatch[1].trim()} />
+          </div>
+        );
       } catch {
-        // If KaTeX fails, show as code
-        parts.push(<code key={key++} className="bg-muted px-1 rounded">{mathContent}</code>);
+        parts.push(<code key={key++}>{blockMatch[1]}</code>);
       }
+      continue;
     }
-
-    lastIndex = regex.lastIndex;
-  }
-
-  if (lastIndex < normalizedText.length) {
-    const remaining = normalizedText.slice(lastIndex);
-    const lines = remaining.split('\n');
-    lines.forEach((line, i) => {
-      if (line.trim()) parts.push(<span key={key++}>{line}</span>);
-      if (i < lines.length - 1) parts.push(<br key={key++} />);
-    });
+    
+    // Process inline math: \(...\) and $...$
+    let lastIdx = 0;
+    const lineElements: JSX.Element[] = [];
+    
+    // Regex for \(...\) or $...$
+    const inlineRegex = /\\\(([^)]+?)\\\)|\$([^$\n]+?)\$/g;
+    let match;
+    
+    while ((match = inlineRegex.exec(line)) !== null) {
+      // Text before math
+      if (match.index > lastIdx) {
+        lineElements.push(<span key={key++}>{line.slice(lastIdx, match.index)}</span>);
+      }
+      
+      const mathContent = match[1] || match[2];
+      if (mathContent) {
+        try {
+          lineElements.push(<InlineMath key={key++} math={mathContent.trim()} />);
+        } catch {
+          lineElements.push(<code key={key++}>{mathContent}</code>);
+        }
+      }
+      lastIdx = inlineRegex.lastIndex;
+    }
+    
+    // Remaining text
+    if (lastIdx < line.length) {
+      lineElements.push(<span key={key++}>{line.slice(lastIdx)}</span>);
+    }
+    
+    if (lineElements.length > 0) {
+      parts.push(<div key={key++}>{lineElements}</div>);
+    } else if (line.trim()) {
+      parts.push(<div key={key++}>{line}</div>);
+    } else {
+      parts.push(<div key={key++} className="h-2" />);
+    }
   }
 
   return parts.length > 0 ? parts : [<span key={0}>{text}</span>];
