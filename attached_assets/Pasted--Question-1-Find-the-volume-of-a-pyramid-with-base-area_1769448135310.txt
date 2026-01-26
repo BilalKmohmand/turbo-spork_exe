@@ -1,0 +1,74 @@
+### **Question 1**  
+Find the volume of a pyramid with base area $10 \, \text{in}^2$ and height $16 \, \text{in}$.  
+Formula: $V = \frac{1}{3} \cdot B \cdot h$  
+Substituting:  
+\[
+V = \frac{1}{3} \cdot 10 \cdot 16 = \frac{160}{3} \approx 53.33 \, \text{in}^3
+\]  
+**Answer:** $\frac{160}{3} \, \text{in}^3$ or approximately $53.33 \, \text{in}^3$.  
+
+---
+
+### **Question 2**  
+Find the volume of a pyramid with base area $21 \cdot 9 \, \text{yd}^2$ and height $5 \, \text{yd}$.  
+Calculate the base area first:  
+\[
+B = 21 \cdot 9 = 189 \, \text{yd}^2
+\]  
+Substitute into the formula:  
+\[
+V = \frac{1}{3} \cdot B \cdot h = \frac{1}{3} \cdot 189 \cdot 5 = \frac{945}{3} = 315 \, \text{yd}^3
+\]  
+**Answer:** $315 \, \text{yd}^3$.  
+
+---
+
+### **Question 3**  
+Find the volume of a pyramid with base area $14 \cdot 14 \, \text{ft}^2$ and height $25 \, \text{ft}$.  
+Calculate the base area first:  
+\[
+B = 14 \cdot 14 = 196 \, \text{ft}^2
+\]  
+Substitute into the formula:  
+\[
+V = \frac{1}{3} \cdot B \cdot h = \frac{1}{3} \cdot 196 \cdot 25 = \frac{4900}{3} \approx 1633.33 \, \text{ft}^3
+\]  
+**Answer:** $\frac{4900}{3} \, \text{ft}^3$ or approximately $1633.33 \, \text{ft}^3$.  
+
+---
+
+### **Question 4**  
+Find the volume of a pyramid with base area $10 \cdot 7.5 \, \text{mm}^2$ and height $12 \, \text{mm}$.  
+Calculate the base area first:  
+\[
+B = 10 \cdot 7.5 = 75 \, \text{mm}^2
+\]  
+Substitute into the formula:  
+\[
+V = \frac{1}{3} \cdot B \cdot h = \frac{1}{3} \cdot 75 \cdot 12 = \frac{900}{3} = 300 \, \text{mm}^3
+\]  
+**Answer:** $300 \, \text{mm}^3$.  
+
+---
+
+### **Question 5**  
+Find the volume of a pyramid with base area $22.1 \, \text{m}^2$ and height $19 \, \text{m}$.  
+Substitute into the formula:  
+\[
+V = \frac{1}{3} \cdot B \cdot h = \frac{1}{3} \cdot 22.1 \cdot 19 = \frac{419.9}{3} \approx 139.97 \, \text{m}^3
+\]  
+**Answer:** $\frac{419.9}{3} \, \text{m}^3$ or approximately $139.97 \, \text{m}^3$.  
+
+---
+
+### **Question 6**  
+Find the volume of a pyramid with base area $10 \cdot 10 \, \text{cm}^2$ and height $16 \, \text{cm}$.  
+Calculate the base area first:  
+\[
+B = 10 \cdot 10 = 100 \, \text{cm}^2
+\]  
+Substitute into the formula:  
+\[
+V = \frac{1}{3} \cdot B \cdot h = \frac{1}{3} \cdot 100 \cdot 16 = \frac{1600}{3} \approx 533.33 \, \text{cm}^3
+\]  
+**Answer:** $\frac{1600}{3} \, \text{cm}^3$ or approximately $533.33 \, \text{cm}^3$.  
