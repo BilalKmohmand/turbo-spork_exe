@@ -389,11 +389,12 @@ export default function Solver() {
     const isWord = file.type === "application/msword" || 
                    file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
                    file.name.endsWith(".doc") || file.name.endsWith(".docx");
+    const isText = file.type === "text/plain" || file.name.toLowerCase().endsWith(".txt");
     
-    if (!isImage && !isPDF && !isWord) {
+    if (!isImage && !isPDF && !isWord && !isText) {
       toast({
         title: "Invalid file",
-        description: "Please upload an image (JPG, PNG, GIF, WebP, BMP, TIFF, HEIC), PDF, or Word document",
+        description: "Please upload an image, PDF, Word document, or text file",
         variant: "destructive",
       });
       return;
@@ -421,7 +422,19 @@ export default function Solver() {
       let base64: string;
       let mimeType: string;
       
-      if (isPDF) {
+      if (isText) {
+        // For text files, read as text and solve directly
+        const text = await file.text();
+        if (text.trim()) {
+          setIsUploading(false);
+          setUploadProgress(0);
+          setLastProblem({ type: "text", content: text.trim() });
+          solveWithStreaming(text.trim());
+          return;
+        } else {
+          throw new Error("Text file is empty");
+        }
+      } else if (isPDF) {
         // For PDFs, read as base64 directly
         const arrayBuffer = await file.arrayBuffer();
         const bytes = new Uint8Array(arrayBuffer);
@@ -650,7 +663,7 @@ export default function Solver() {
         ref={fileInputRef}
         onChange={handleFileSelect}
         className="hidden"
-        accept="image/*,.jpg,.jpeg,.png,.gif,.webp,.bmp,.tiff,.heic,.heif,.pdf,application/pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        accept="image/*,.jpg,.jpeg,.png,.gif,.webp,.bmp,.tiff,.heic,.heif,.pdf,application/pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.txt,text/plain"
         data-testid="input-file"
       />
       <input
