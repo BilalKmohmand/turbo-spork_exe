@@ -1070,7 +1070,14 @@ ${questionsContext || submission.aiSolution}
 
 Explanation: ${submission.aiExplanation || "See the solutions above."}
 
-The student is now asking a follow-up question. Answer it clearly, referring to the specific problems if needed. Be helpful and educational.`;
+The student is now asking a follow-up question. Answer clearly and helpfully.
+
+FORMATTING RULES:
+- Use $...$ for inline math (e.g., $V = \\frac{1}{3}Bh$)
+- Use plain text for explanations
+- Do NOT use markdown code blocks or ### headers
+- Keep it conversational and easy to read
+- Number your steps like: Step 1:, Step 2:, etc.`;
 
       const chatMessages = messages.map(m => ({ 
         role: m.role, 

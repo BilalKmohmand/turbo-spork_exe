@@ -372,14 +372,23 @@ export default function Solver() {
   const handleFollowUp = async () => {
     if (!followUpQuestion.trim() || !result?.id) return;
 
+    const userQuestion = followUpQuestion.trim();
+    
+    // Show user message immediately
+    setResult(prev => prev ? { 
+      ...prev, 
+      messages: [...(prev.messages || []), { role: "user" as const, content: userQuestion }] 
+    } : prev);
+    setFollowUpQuestion("");
+    scrollToBottom();
+    
     setIsAskingFollowUp(true);
     try {
       const response = await apiRequest("POST", `/api/submissions/${result.id}/followup`, {
-        question: followUpQuestion.trim(),
+        question: userQuestion,
       });
       const data = await response.json();
       setResult(prev => prev ? { ...prev, messages: data.messages } : prev);
-      setFollowUpQuestion("");
       scrollToBottom();
     } catch {
       toast({
@@ -387,6 +396,11 @@ export default function Solver() {
         description: "Failed to ask follow-up question. Please try again.",
         variant: "destructive",
       });
+      // Remove the user message on error
+      setResult(prev => prev ? { 
+        ...prev, 
+        messages: (prev.messages || []).filter((_, i) => i !== (prev.messages?.length || 1) - 1) 
+      } : prev);
     } finally {
       setIsAskingFollowUp(false);
     }
