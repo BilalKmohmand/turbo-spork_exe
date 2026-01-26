@@ -483,8 +483,10 @@ export default function Solver() {
     scrollToBottom();
     
     try {
-      // If we have a saved ID, use the API endpoint
-      if (result.id) {
+      // Check if we have a real database ID (small numbers from serial primary key)
+      const hasRealDatabaseId = result.id && !isNaN(Number(result.id)) && Number(result.id) < 1000000;
+      
+      if (hasRealDatabaseId) {
         const response = await apiRequest("POST", `/api/submissions/${result.id}/followup`, {
           question: userQuestion,
         });
