@@ -1003,15 +1003,67 @@ RULES:
           
           console.log("Word content extracted - text length:", extractedText.length, "images:", embeddedImages.length);
           
-          // If there are embedded images, process them with vision API
+          // If there are embedded images, process them all with vision API
           if (embeddedImages.length > 0) {
-            console.log("Processing Word document with embedded images...");
+            console.log(`Processing Word document with ${embeddedImages.length} embedded images...`);
             
-            // Use the first/main image for vision processing
-            const mainImage = embeddedImages[0];
-            imageBase64 = mainImage.base64;
-            imageMimeType = mainImage.contentType;
-            // Continue to image processing below
+            // Build content array with all images for GPT-4o
+            const imageContents = embeddedImages.map((img, idx) => ({
+              type: "image_url" as const,
+              image_url: { url: `data:${img.contentType};base64,${img.base64}`, detail: "high" as const }
+            }));
+            
+            // Use GPT-4o to process all images at once
+            const stream = await openai.chat.completions.create({
+              model: "gpt-4o",
+              messages: [
+                {
+                  role: "user",
+                  content: [
+                    {
+                      type: "text",
+                      text: `READ ALL ${embeddedImages.length} IMAGES CAREFULLY. Solve every math problem you see with the ACTUAL numbers from each image.
+
+${extractedText ? `Document text context: ${extractedText.substring(0, 500)}` : ""}
+
+Format each answer EXACTLY like this (no markdown, no ### or **):
+
+Question 1
+[State the problem]
+
+[Step title]
+[Explanation and calculation]
+
+Answer: [final answer]
+
+Question 2
+[next problem...]
+
+RULES:
+- NO markdown (no #, *, ---)
+- Read ACTUAL numbers from ALL images
+- Use × for multiplication, ² for squared, ³ for cubed
+- Solve ALL problems from ALL images
+- Plain text only, professional and clean`,
+                    },
+                    ...imageContents
+                  ],
+                },
+              ],
+              stream: true,
+              max_tokens: 4000,
+            });
+
+            for await (const chunk of stream) {
+              const token = chunk.choices[0]?.delta?.content || "";
+              if (token) {
+                res.write(`data: ${JSON.stringify({ token })}\n\n`);
+              }
+            }
+
+            res.write(`data: ${JSON.stringify({ done: true, result: { id: "", content: "Word document", status: "ai_graded" } })}\n\n`);
+            res.end();
+            return;
           } else if (extractedText) {
             // Text only - redirect to text solving
             res.write(`data: ${JSON.stringify({ redirect: "text", problem: extractedText })}\n\n`);
