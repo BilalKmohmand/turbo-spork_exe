@@ -749,16 +749,34 @@ export async function registerRoutes(
       res.flushHeaders();
 
       // Check if this is a graph request
-      const graphPatterns = /\b(graph|plot|draw|sketch)\b.*\b(y\s*=|f\(x\)|function|equation|line|parabola|curve)\b/i;
-      const graphMatch = problem.match(graphPatterns);
+      const graphPatterns = /\b(graph|plot|draw|sketch)\b/i;
+      const hasGraphKeyword = graphPatterns.test(problem);
+      const hasExpression = /y\s*=|sin|cos|tan|log|x\^|x\s*\^|\bx\b/i.test(problem);
       
-      if (graphMatch) {
-        // Extract the expression to graph
-        const exprMatch = problem.match(/(?:y\s*=\s*|f\(x\)\s*=\s*)?([x\d\s\+\-\*\/\^\(\)sincostandeflogln]+)/i);
-        let expression = exprMatch ? exprMatch[1].trim() : "x^2";
+      if (hasGraphKeyword && hasExpression) {
+        // Extract the expression - look for y = ... or common functions
+        let expression = "x^2"; // default
         
-        // Common function conversions
-        expression = expression.replace(/\^/g, "^").replace(/×/g, "*");
+        // Try to match y = expression
+        const yEqualsMatch = problem.match(/y\s*=\s*([^\s,]+(?:\s*[\+\-\*\/\^]\s*[^\s,]+)*)/i);
+        if (yEqualsMatch) {
+          expression = yEqualsMatch[1].trim();
+        } else {
+          // Try to match function names like sin(x), cos(x), etc.
+          const funcMatch = problem.match(/\b(sin|cos|tan|log|ln|sqrt)\s*\(\s*x\s*\)/i);
+          if (funcMatch) {
+            expression = funcMatch[0];
+          } else {
+            // Try polynomial like x^2 + 3x
+            const polyMatch = problem.match(/x\s*\^\s*\d+(?:\s*[\+\-]\s*\d*x?(?:\s*\^\s*\d+)?)+/i);
+            if (polyMatch) {
+              expression = polyMatch[0];
+            }
+          }
+        }
+        
+        // Clean up the expression
+        expression = expression.replace(/×/g, "*").replace(/÷/g, "/");
         
         // Stream the explanation
         const stream = await openai.chat.completions.create({
