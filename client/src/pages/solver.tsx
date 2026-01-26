@@ -32,7 +32,8 @@ interface SubmissionResult {
   aiSolution?: string;
   aiSteps?: StepObject[];
   aiExplanation?: string;
-  problemType?: "math" | "science" | "other";
+  problemType?: "math" | "science" | "other" | "chat";
+  isChat?: boolean;
   graphSpec?: GraphSpec;
   messages?: Message[];
   questions?: QuestionObject[];
@@ -534,7 +535,13 @@ export default function Solver() {
                   <Sparkles className="w-4 h-4 text-white" />
                 </div>
                 <div className="flex-1 space-y-4 overflow-visible">
-                  {/* AI Response Bubble */}
+                  {/* Chat Response - Simple Message */}
+                  {result.isChat ? (
+                    <div className="bg-muted rounded-2xl rounded-tl-md p-4">
+                      <p className="text-foreground leading-relaxed">{result.aiSolution}</p>
+                    </div>
+                  ) : (
+                  /* AI Response Bubble - Problem Solutions */
                   <div className="bg-muted rounded-2xl rounded-tl-md p-5 space-y-6">
                     {/* Feedback buttons */}
                     <div className="flex items-center gap-0.5 border-b pb-3">
@@ -677,6 +684,7 @@ export default function Solver() {
                       </>
                     )}
                   </div>
+                  )}
                 </div>
               </div>
             )}

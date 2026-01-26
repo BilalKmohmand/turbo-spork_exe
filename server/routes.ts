@@ -103,7 +103,8 @@ interface SolveResult {
   solution: string;
   steps: StepObject[];
   explanation: string;
-  problemType: "math" | "science" | "other";
+  problemType: "math" | "science" | "other" | "chat";
+  isChat?: boolean;
   graphSpec?: {
     expressions: string[];
     title?: string;
@@ -387,9 +388,28 @@ async function solveWithAI(content: string, history: HistoryMessage[] = []): Pro
     const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
       {
         role: "system",
-        content: `Output ONLY JSON. Solve math and return:
-{"questions":[{"questionNumber":1,"problemStatement":"problem","steps":[{"title":"Step","math":"LaTeX no $","reasoning":"text with $math$"}],"answer":"$answer$"}],"explanation":"","problemType":"math","graphSpec":null}
-Rules: JSON only. $...$ for inline math. "math" field: no $ signs. 2-3 steps per question. Start with {`,
+        content: `You are Gradeio, a friendly AI tutor. You can chat naturally AND solve homework.
+
+DETECT USER INTENT:
+- Casual chat (hi, thanks, how are you, etc) → Use "chat" type
+- Homework/math/science questions → Use "problem" type
+- "step by step" or "explain" → Detailed steps
+- Quick question → Brief answer
+
+ALWAYS respond with JSON only:
+
+For CHAT (greetings, thanks, casual):
+{"type":"chat","message":"Your friendly response here"}
+
+For PROBLEMS (math, science, homework):
+{"type":"problem","questions":[{"questionNumber":1,"problemStatement":"problem","steps":[{"title":"Step 1","math":"LaTeX no $","reasoning":"explanation with $math$"}],"answer":"final answer"}],"explanation":"summary","problemType":"math"}
+
+Rules:
+- JSON only, no markdown
+- $...$ for inline math in reasoning/answer
+- "math" field: pure LaTeX, no $ signs
+- Be conversational and helpful
+- Start response with {`,
       },
     ];
     
@@ -431,15 +451,25 @@ Rules: JSON only. $...$ for inline math. "math" field: no $ signs. 2-3 steps per
     try {
       const result = JSON.parse(jsonText);
       console.log("[solveWithAI] Parsed keys:", Object.keys(result));
-      console.log("[solveWithAI] Has questions?", !!result.questions, "Is array?", Array.isArray(result.questions));
       
-      // Handle new question-based format
+      // Handle chat type (casual conversation)
+      if (result.type === "chat" && result.message) {
+        console.log("[solveWithAI] Chat response detected");
+        return {
+          solution: result.message,
+          steps: [],
+          explanation: "",
+          problemType: "chat",
+          isChat: true,
+        };
+      }
+      
+      // Handle problem type with questions array
       if (result.questions && Array.isArray(result.questions)) {
         console.log("[solveWithAI] Using question-based format, count:", result.questions.length);
         return parseQuestionBasedResponse(result);
       }
       
-      console.log("[solveWithAI] Falling back to old format");
       // Fallback to old format
       return {
         solution: cleanupLatex(ensureString(result.solution) || "See steps below."),
