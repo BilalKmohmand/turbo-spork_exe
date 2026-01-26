@@ -742,37 +742,73 @@ export async function registerRoutes(
       res.setHeader("Connection", "keep-alive");
       res.flushHeaders();
 
-      // Build messages with system prompt
-      const messages: any[] = [
-        {
-          role: "system",
-          content: `You are Gradeio, a friendly AI tutor. You can chat naturally AND solve homework.
+      // Check if this is casual chat
+      const chatPatterns = /^(hi|hello|hey|thanks|thank you|how are you|what's up|yo|sup|good morning|good evening|bye|goodbye|ok|okay|cool|nice|great|awesome|perfect|got it|understood|help me|can you help)/i;
+      const isChat = chatPatterns.test(problem.trim());
 
-DETECT USER INTENT:
-- Casual chat (hi, thanks, how are you, etc) → Use "chat" type
-- Homework/math/science questions → Use "problem" type
+      if (isChat) {
+        // Stream casual chat response
+        const stream = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          max_tokens: 500,
+          messages: [
+            { role: "system", content: "You are Gradeio, a friendly AI homework tutor. Be warm, helpful, and brief." },
+            { role: "user", content: problem.trim() }
+          ],
+          stream: true,
+        });
 
-ALWAYS respond with JSON only:
-
-For CHAT: {"type":"chat","message":"Your friendly response here"}
-
-For PROBLEMS: {"type":"problem","questions":[{"questionNumber":1,"problemStatement":"problem","steps":[{"title":"Step 1","math":"LaTeX no $","reasoning":"explanation with $math$"}],"answer":"final answer"}],"explanation":"summary","problemType":"math"}
-
-Rules: JSON only, $...$ for inline math, "math" field: pure LaTeX no $. Start with {`,
-        },
-      ];
-      
-      const recentHistory = history.slice(-6);
-      for (const msg of recentHistory) {
-        messages.push({ role: msg.role, content: msg.content });
+        let fullText = "";
+        for await (const chunk of stream) {
+          const content = chunk.choices[0]?.delta?.content || "";
+          if (content) {
+            fullText += content;
+            res.write(`data: ${JSON.stringify({ token: content })}\n\n`);
+          }
+        }
+        res.write(`data: ${JSON.stringify({ done: true, result: { type: "chat", message: fullText, isChat: true } })}\n\n`);
+        res.end();
+        return;
       }
-      messages.push({ role: "user", content: problem.trim() });
 
-      // Stream the response
+      // For homework problems - stream readable solution
       const stream = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         max_tokens: 8000,
-        messages,
+        messages: [
+          {
+            role: "system",
+            content: `You are Gradeio, an expert math/science tutor. Solve problems clearly.
+
+FORMAT YOUR RESPONSE LIKE THIS (stream-friendly):
+
+**Question 1:** [restate the problem]
+
+**Step 1: [title]**
+[explanation with $math$ for formulas]
+
+**Step 2: [title]**
+[continue...]
+
+**Answer:** $final answer$
+
+---
+
+**Question 2:** [if multiple questions]
+[continue same format...]
+
+---
+
+**Summary:** Brief explanation of concepts used.
+
+RULES:
+- Use $...$ for ALL math expressions
+- Number every question and step
+- Be thorough but clear
+- Solve ALL questions if there are multiple`,
+          },
+          { role: "user", content: problem.trim() }
+        ],
         stream: true,
       });
 
@@ -785,19 +821,8 @@ Rules: JSON only, $...$ for inline math, "math" field: pure LaTeX no $. Start wi
         }
       }
 
-      // Parse and send final result
-      try {
-        const jsonMatch = fullText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const result = JSON.parse(jsonMatch[0]);
-          res.write(`data: ${JSON.stringify({ done: true, result })}\n\n`);
-        } else {
-          res.write(`data: ${JSON.stringify({ done: true, result: { type: "chat", message: fullText } })}\n\n`);
-        }
-      } catch {
-        res.write(`data: ${JSON.stringify({ done: true, result: { type: "chat", message: fullText } })}\n\n`);
-      }
-      
+      // Send final result with parsed structure for storage
+      res.write(`data: ${JSON.stringify({ done: true, result: { type: "problem", rawText: fullText, aiSolution: fullText } })}\n\n`);
       res.end();
     } catch (error: any) {
       console.error("Stream error:", error?.message);

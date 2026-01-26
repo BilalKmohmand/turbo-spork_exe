@@ -220,10 +220,10 @@ export default function Solver() {
     },
   });
 
-  // Streaming function for images
+  // Streaming function for images - shows progress, not raw JSON
   const solveImageWithStreaming = async (base64: string, mimeType: string) => {
     setIsStreaming(true);
-    setStreamingText("");
+    setStreamingText("Analyzing your image...");
     setIsUploading(false);
     
     try {
@@ -235,7 +235,7 @@ export default function Solver() {
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
-      let fullText = "";
+      let tokenCount = 0;
 
       if (reader) {
         while (true) {
@@ -251,16 +251,21 @@ export default function Solver() {
                 const data = JSON.parse(line.slice(6));
                 
                 if (data.redirect === "text" && data.problem) {
-                  // PDF with text - use text streaming
                   setIsStreaming(false);
                   solveWithStreaming(data.problem);
                   return;
                 }
                 
                 if (data.token) {
-                  fullText += data.token;
-                  setStreamingText(fullText);
-                  scrollToBottom();
+                  tokenCount++;
+                  // Show progress updates
+                  if (tokenCount < 50) {
+                    setStreamingText("Reading problems from image...");
+                  } else if (tokenCount < 200) {
+                    setStreamingText("Solving problems step by step...");
+                  } else {
+                    setStreamingText("Generating detailed solutions...");
+                  }
                 }
                 
                 if (data.done && data.result) {
@@ -675,9 +680,9 @@ export default function Solver() {
                 </div>
                 <div className="flex-1 bg-muted rounded-2xl rounded-tl-md p-4">
                   {streamingText ? (
-                    <div className="text-foreground whitespace-pre-wrap font-mono text-sm">
-                      {streamingText}
-                      <span className="animate-pulse">▊</span>
+                    <div className="text-foreground whitespace-pre-wrap text-sm leading-relaxed">
+                      {renderMathText(streamingText)}
+                      <span className="inline-block w-2 h-4 bg-violet-500 animate-pulse ml-0.5 align-middle">&#8203;</span>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2 text-muted-foreground">
