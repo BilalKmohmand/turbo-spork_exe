@@ -187,9 +187,9 @@ function parseSteps(steps: any): StepObject[] {
 
 async function solveFromImage(base64Image: string, mimeType: string): Promise<SolveResult> {
   try {
-    // Use GPT-5.2 for powerful problem solving with images and documents
+    // Use GPT-4o for best vision capabilities
     const response = await openai.chat.completions.create({
-      model: "gpt-5-nano",
+      model: "gpt-4o",
       messages: [
         {
           role: "user",
@@ -724,6 +724,85 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Image submission error:", error?.message || error);
       res.status(500).json({ error: error?.message || "Failed to process image" });
+    }
+  });
+
+  // Streaming endpoint for real-time token output
+  app.post("/api/solve-text-stream", async (req, res) => {
+    try {
+      const { problem, history = [] } = req.body;
+      
+      if (!problem || typeof problem !== "string" || !problem.trim()) {
+        return res.status(400).json({ error: "Please enter a problem to solve" });
+      }
+
+      // Set up SSE headers
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.flushHeaders();
+
+      // Build messages with system prompt
+      const messages: any[] = [
+        {
+          role: "system",
+          content: `You are Gradeio, a friendly AI tutor. You can chat naturally AND solve homework.
+
+DETECT USER INTENT:
+- Casual chat (hi, thanks, how are you, etc) → Use "chat" type
+- Homework/math/science questions → Use "problem" type
+
+ALWAYS respond with JSON only:
+
+For CHAT: {"type":"chat","message":"Your friendly response here"}
+
+For PROBLEMS: {"type":"problem","questions":[{"questionNumber":1,"problemStatement":"problem","steps":[{"title":"Step 1","math":"LaTeX no $","reasoning":"explanation with $math$"}],"answer":"final answer"}],"explanation":"summary","problemType":"math"}
+
+Rules: JSON only, $...$ for inline math, "math" field: pure LaTeX no $. Start with {`,
+        },
+      ];
+      
+      const recentHistory = history.slice(-6);
+      for (const msg of recentHistory) {
+        messages.push({ role: msg.role, content: msg.content });
+      }
+      messages.push({ role: "user", content: problem.trim() });
+
+      // Stream the response
+      const stream = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        max_tokens: 8000,
+        messages,
+        stream: true,
+      });
+
+      let fullText = "";
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content || "";
+        if (content) {
+          fullText += content;
+          res.write(`data: ${JSON.stringify({ token: content })}\n\n`);
+        }
+      }
+
+      // Parse and send final result
+      try {
+        const jsonMatch = fullText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const result = JSON.parse(jsonMatch[0]);
+          res.write(`data: ${JSON.stringify({ done: true, result })}\n\n`);
+        } else {
+          res.write(`data: ${JSON.stringify({ done: true, result: { type: "chat", message: fullText } })}\n\n`);
+        }
+      } catch {
+        res.write(`data: ${JSON.stringify({ done: true, result: { type: "chat", message: fullText } })}\n\n`);
+      }
+      
+      res.end();
+    } catch (error: any) {
+      console.error("Stream error:", error?.message);
+      res.write(`data: ${JSON.stringify({ error: error?.message || "Failed to solve" })}\n\n`);
+      res.end();
     }
   });
 

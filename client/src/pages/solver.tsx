@@ -55,6 +55,8 @@ export default function Solver() {
   const [submittedProblem, setSubmittedProblem] = useState<string>("");
   const [lastProblem, setLastProblem] = useState<{ type: "text" | "image"; content: string; mimeType?: string }>({ type: "text", content: "" });
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+  const [streamingText, setStreamingText] = useState("");
+  const [isStreaming, setIsStreaming] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -106,6 +108,88 @@ export default function Solver() {
         behavior: "smooth"
       });
     }, 100);
+  };
+
+  const solveWithStreaming = async (problem: string) => {
+    setIsStreaming(true);
+    setStreamingText("");
+    
+    try {
+      const response = await fetch("/api/solve-text-stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ problem, history: chatHistory }),
+      });
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let fullText = "";
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          const chunk = decoder.decode(value);
+          const lines = chunk.split("\n").filter(line => line.startsWith("data: "));
+          
+          for (const line of lines) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (data.token) {
+                fullText += data.token;
+                setStreamingText(fullText);
+                scrollToBottom();
+              }
+              if (data.done && data.result) {
+                // Parse final result
+                const r = data.result;
+                if (r.type === "chat") {
+                  setResult({
+                    id: Date.now().toString(),
+                    content: problem,
+                    status: "completed",
+                    aiSolution: r.message,
+                    isChat: true,
+                    problemType: "chat",
+                  });
+                  setChatHistory(prev => [...prev, 
+                    { role: "user", content: problem },
+                    { role: "assistant", content: r.message }
+                  ]);
+                } else if (r.questions) {
+                  const solution = r.questions.map((q: any) => `**Question ${q.questionNumber}**\n${q.answer}`).join("\n\n");
+                  setResult({
+                    id: Date.now().toString(),
+                    content: problem,
+                    status: "completed",
+                    aiSolution: solution,
+                    questions: r.questions,
+                    problemType: r.problemType || "math",
+                  });
+                  setChatHistory(prev => [...prev, 
+                    { role: "user", content: problem },
+                    { role: "assistant", content: solution }
+                  ]);
+                }
+              }
+              if (data.error) {
+                throw new Error(data.error);
+              }
+            } catch {}
+          }
+        }
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to solve problem.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsStreaming(false);
+      setStreamingText("");
+    }
   };
 
   const textMutation = useMutation({
@@ -324,8 +408,9 @@ export default function Solver() {
       const problem = textProblem.trim();
       setSubmittedProblem(problem);
       setPreviewUrl(null);
+      setResult(null);
       setLastProblem({ type: "text", content: problem });
-      textMutation.mutate(problem);
+      solveWithStreaming(problem);
       setTextProblem("");
     }
   };
@@ -341,7 +426,7 @@ export default function Solver() {
     }
   };
 
-  const isLoading = submitMutation.isPending || textMutation.isPending || isUploading;
+  const isLoading = submitMutation.isPending || textMutation.isPending || isUploading || isStreaming;
   const hasConversation = result || isLoading || submittedProblem || previewUrl;
 
   return (
@@ -513,10 +598,17 @@ export default function Solver() {
                   <Sparkles className="w-4 h-4 text-white" />
                 </div>
                 <div className="flex-1 bg-muted rounded-2xl rounded-tl-md p-4">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span className="text-sm">Solving your problem...</span>
-                  </div>
+                  {streamingText ? (
+                    <div className="text-foreground whitespace-pre-wrap font-mono text-sm">
+                      {streamingText}
+                      <span className="animate-pulse">▊</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-sm">Solving your problem...</span>
+                    </div>
+                  )}
                   {uploadProgress > 0 && uploadProgress < 100 && (
                     <div className="mt-3 h-1.5 bg-background rounded-full overflow-hidden max-w-xs">
                       <div 
