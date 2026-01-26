@@ -29,13 +29,47 @@ export function renderMathText(text: string): JSX.Element[] {
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i];
     
-    // Skip empty lines
+    // Skip empty lines - add spacing
     if (!line.trim()) {
-      parts.push(<div key={key++} className="h-2" />);
+      parts.push(<div key={key++} className="h-3" />);
       continue;
     }
     
-    // Handle markdown headers
+    // Question headers (e.g., "Question 1" or "Question 1:")
+    const questionMatch = line.match(/^Question\s+(\d+):?$/i);
+    if (questionMatch) {
+      parts.push(
+        <h2 key={key++} className="text-xl font-bold text-primary mt-6 mb-2 pb-2 border-b border-primary/20">
+          Question {questionMatch[1]}
+        </h2>
+      );
+      continue;
+    }
+    
+    // Step headers (e.g., "Calculate the Area of the Base (B)")
+    const stepMatch = line.match(/^(Calculate|Identify|Find|Determine|Apply|Use|Solve|Compute|Substitute|Simplify|Convert|Step \d+)[^.]*(\([A-Za-z]\))?$/i);
+    if (stepMatch) {
+      parts.push(
+        <h3 key={key++} className="text-base font-semibold text-foreground mt-4 mb-1">
+          {line}
+        </h3>
+      );
+      continue;
+    }
+    
+    // Answer line
+    const answerMatch = line.match(/^Answer:?\s*(.*)$/i);
+    if (answerMatch) {
+      parts.push(
+        <div key={key++} className="mt-3 p-3 bg-primary/10 rounded-lg border-l-4 border-primary">
+          <span className="font-bold text-primary">Answer: </span>
+          <span className="font-semibold">{answerMatch[1]}</span>
+        </div>
+      );
+      continue;
+    }
+    
+    // Handle markdown headers (fallback)
     const h3Match = line.match(/^###\s*\*?\*?(.+?)\*?\*?\s*:?\s*$/);
     if (h3Match) {
       parts.push(<h3 key={key++} className="text-lg font-bold text-primary mt-4 mb-2">{h3Match[1].replace(/\*\*/g, '')}</h3>);
@@ -77,7 +111,6 @@ export function renderMathText(text: string): JSX.Element[] {
       }
       
       if (match[1] || match[2]) {
-        // Math content
         const mathContent = match[1] || match[2];
         try {
           lineElements.push(<InlineMath key={key++} math={mathContent.trim()} />);
@@ -85,7 +118,6 @@ export function renderMathText(text: string): JSX.Element[] {
           lineElements.push(<code key={key++}>{mathContent}</code>);
         }
       } else if (match[3]) {
-        // Bold content
         lineElements.push(<strong key={key++} className="font-semibold">{match[3]}</strong>);
       }
       lastIdx = mixedRegex.lastIndex;
@@ -96,9 +128,9 @@ export function renderMathText(text: string): JSX.Element[] {
     }
     
     if (lineElements.length > 0) {
-      parts.push(<div key={key++} className="leading-relaxed">{lineElements}</div>);
+      parts.push(<div key={key++} className="leading-relaxed text-muted-foreground">{lineElements}</div>);
     } else {
-      parts.push(<div key={key++} className="leading-relaxed">{line}</div>);
+      parts.push(<div key={key++} className="leading-relaxed text-muted-foreground">{line}</div>);
     }
   }
 

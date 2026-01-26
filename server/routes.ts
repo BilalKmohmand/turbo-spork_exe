@@ -903,25 +903,33 @@ RULES:
             content: [
               {
                 type: "text",
-                text: `LOOK AT THIS IMAGE CAREFULLY. Read every problem and solve it.
+                text: `READ THIS IMAGE CAREFULLY. Solve every math problem you see with the ACTUAL numbers from the image.
 
-DO NOT give generic explanations. DO NOT say "I cannot see". READ THE ACTUAL NUMBERS from the image.
+Format each answer EXACTLY like this (no markdown, no ### or **):
 
-For each problem you see, write:
+Question 1
+Find the volume of the pyramid with base 10 in by 11 in and height 16 in.
 
-**Problem 1:** [exact problem from image with numbers]
-$V = \\frac{1}{3} \\times [base] \\times [height] = [answer]$
-**Answer:** $[number] \\text{ units}^3$
+Calculate the Area of the Base (B)
+The area of the rectangular base is 110 square inches. The base is a rectangle with length 11 in and width 10 in. The area is B = 11 in × 10 in = 110 in².
 
-**Problem 2:** [next one]
-...
+Identify the Height (h)
+The height of the pyramid is 16 inches.
 
-CRITICAL:
-- Read the ACTUAL dimensions from the image
-- Solve with REAL numbers, not variables
-- $...$ around all math
-- $\\frac{a}{b}$ for fractions
-- Solve ALL problems (usually 6)`,
+Calculate the Volume (V)
+The volume is approximately 586.7 cubic inches. Using V = (1/3) × B × h, we get V = (1/3) × 110 in² × 16 in = 1760/3 in³ ≈ 586.67 in³.
+
+Answer: 586.67 in³
+
+Question 2
+[next problem...]
+
+RULES:
+- NO markdown (no #, *, ---)
+- Read ACTUAL numbers from the image
+- Use × for multiplication, ² for squared, ³ for cubed
+- Solve ALL problems (usually 6)
+- Plain text only, professional and clean`,
               },
               {
                 type: "image_url",
