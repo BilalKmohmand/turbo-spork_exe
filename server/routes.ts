@@ -862,34 +862,33 @@ RULES:
       let imageBase64 = image;
       let imageMimeType = mimeType;
 
-      // Handle PDF - always convert to image for best results
+      // Handle PDF - convert to high-quality image
       if (isPDF) {
         try {
           const pdfBuffer = Buffer.from(image, "base64");
-          console.log("Converting PDF to image for vision processing...");
+          console.log("Converting PDF to high-quality image...");
           
-          // Always convert PDF to image - more reliable than text extraction
           const { fromBuffer } = await import("pdf2pic");
           const convert = fromBuffer(pdfBuffer, {
-            density: 150,  // Higher quality
+            density: 200,  // High quality for clear text
             saveFilename: "page",
             savePath: "/tmp",
             format: "png",
-            width: 1200,   // Larger for better OCR
-            height: 1600
+            width: 1600,   // Large enough to read small text
+            height: 2000
           });
           const pageOutput = await convert(1, { responseType: "base64" });
           
           if (pageOutput?.base64) {
-            console.log("PDF converted to image successfully");
+            console.log("PDF converted successfully, size:", pageOutput.base64.length);
             imageBase64 = pageOutput.base64;
             imageMimeType = "image/png";
           } else {
-            throw new Error("PDF conversion failed - no output");
+            throw new Error("PDF conversion failed");
           }
         } catch (pdfErr: any) {
-          console.error("PDF conversion error:", pdfErr?.message);
-          res.write(`data: ${JSON.stringify({ error: "Could not process PDF. Try uploading as an image instead." })}\n\n`);
+          console.error("PDF error:", pdfErr?.message);
+          res.write(`data: ${JSON.stringify({ error: "Could not process PDF. Try taking a screenshot instead." })}\n\n`);
           res.end();
           return;
         }
@@ -904,27 +903,29 @@ RULES:
             content: [
               {
                 type: "text",
-                text: `Solve ALL math problems in this image. Use this EXACT format:
+                text: `LOOK AT THIS IMAGE CAREFULLY. Read every problem and solve it.
 
-**Question 1:** [problem statement]
-Formula: $V = \\frac{1}{3} \\times B \\times h$
-Calculation: $V = \\frac{1}{3} \\times 10 \\times 16 = \\frac{160}{3} = 53.33$
-**Answer:** $53.33 \\text{ in}^3$
+DO NOT give generic explanations. DO NOT say "I cannot see". READ THE ACTUAL NUMBERS from the image.
 
-**Question 2:** [next problem]
-...continue same format...
+For each problem you see, write:
 
-RULES:
-1. Use $...$ for ALL math - no exceptions
-2. Fractions: $\\frac{a}{b}$ not a/b
-3. Multiplication: $\\times$ not × or *
-4. Units in math: $\\text{ cm}^3$
-5. One line per calculation step
-6. Solve EVERY question`,
+**Problem 1:** [exact problem from image with numbers]
+$V = \\frac{1}{3} \\times [base] \\times [height] = [answer]$
+**Answer:** $[number] \\text{ units}^3$
+
+**Problem 2:** [next one]
+...
+
+CRITICAL:
+- Read the ACTUAL dimensions from the image
+- Solve with REAL numbers, not variables
+- $...$ around all math
+- $\\frac{a}{b}$ for fractions
+- Solve ALL problems (usually 6)`,
               },
               {
                 type: "image_url",
-                image_url: { url: `data:${imageMimeType};base64,${imageBase64}` },
+                image_url: { url: `data:${imageMimeType};base64,${imageBase64}`, detail: "high" },
               },
             ],
           },
