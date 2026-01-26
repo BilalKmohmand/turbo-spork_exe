@@ -910,33 +910,49 @@ RULES:
         }
       }
 
-      // Stream from GPT-4o-mini for speed (good enough for most problems)
+      // Stream from GPT-4o for better vision (mini has issues with images)
       const stream = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: "gpt-4o",
         messages: [
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: `Solve ALL problems in this image. Format:
+                text: `Look at this image carefully and solve ALL math problems you see.
 
-**Q1:** [problem]
-**Step 1:** explanation with $math$
-**Answer:** $result$
+FORMAT EACH ANSWER LIKE THIS:
 
-(Continue for each question)
+**Question 1:** [copy the exact problem from the image]
 
-Use $...$ for math. Be concise but thorough.`,
+**Step 1:** [explanation]
+Formula: $V = \\frac{1}{3} \\times B \\times h$
+
+**Step 2:** [substitute values]
+$V = \\frac{1}{3} \\times 9 \\times 4 = 12$
+
+**Answer:** $12 \\text{ cm}^3$
+
+---
+
+**Question 2:** [next problem]
+[continue same format]
+
+RULES:
+- Use $...$ around ALL math (fractions, variables, units)
+- Write fractions as \\frac{num}{denom}
+- Units: \\text{ cm}^3 for cubic cm
+- Solve EVERY question in the image
+- Be thorough with steps`,
               },
               {
                 type: "image_url",
-                image_url: { url: `data:${imageMimeType};base64,${imageBase64}`, detail: "low" },
+                image_url: { url: `data:${imageMimeType};base64,${imageBase64}` },
               },
             ],
           },
         ],
-        max_tokens: 4000,
+        max_tokens: 6000,
         stream: true,
       });
 
