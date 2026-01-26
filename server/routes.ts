@@ -376,24 +376,37 @@ function parseQuestionBasedResponse(result: any): SolveResult {
   };
 }
 
-async function solveWithAI(content: string): Promise<SolveResult> {
+interface HistoryMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+async function solveWithAI(content: string, history: HistoryMessage[] = []): Promise<SolveResult> {
   try {
+    // Build conversation messages with history for context
+    const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
+      {
+        role: "system",
+        content: `Output ONLY JSON. Solve math and return:
+{"questions":[{"questionNumber":1,"problemStatement":"problem","steps":[{"title":"Step","math":"LaTeX no $","reasoning":"text with $math$"}],"answer":"$answer$"}],"explanation":"","problemType":"math","graphSpec":null}
+Rules: JSON only. $...$ for inline math. "math" field: no $ signs. 2-3 steps per question. Start with {`,
+      },
+    ];
+    
+    // Add recent history for context (last 6 messages max to stay fast)
+    const recentHistory = history.slice(-6);
+    for (const msg of recentHistory) {
+      messages.push({ role: msg.role, content: msg.content });
+    }
+    
+    // Add current question
+    messages.push({ role: "user", content: content });
+    
     // Use GPT-5.2 - the highest-end ChatGPT model for superior math solving
     const response = await openai.chat.completions.create({
       model: "gpt-5.2",
       max_completion_tokens: 2048,
-      messages: [
-        {
-          role: "system",
-          content: `Output ONLY JSON. Solve math and return:
-{"questions":[{"questionNumber":1,"problemStatement":"problem","steps":[{"title":"Step","math":"LaTeX no $","reasoning":"text with $math$"}],"answer":"$answer$"}],"explanation":"","problemType":"math","graphSpec":null}
-Rules: JSON only. $...$ for inline math. "math" field: no $ signs. 2-3 steps per question. Start with {`,
-        },
-        {
-          role: "user",
-          content: content,
-        },
-      ],
+      messages,
     });
 
     let text = response.choices[0]?.message?.content || "";
@@ -714,13 +727,13 @@ export async function registerRoutes(
 
   app.post("/api/solve-text", async (req, res) => {
     try {
-      const { problem } = req.body;
+      const { problem, history = [] } = req.body;
       
       if (!problem || typeof problem !== "string" || !problem.trim()) {
         return res.status(400).json({ error: "Please enter a problem to solve" });
       }
 
-      const aiResult = await solveWithAI(problem.trim());
+      const aiResult = await solveWithAI(problem.trim(), history);
       
       const submission = await storage.createSubmission({
         title: "Text Problem",

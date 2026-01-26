@@ -38,6 +38,11 @@ interface SubmissionResult {
   questions?: QuestionObject[];
 }
 
+interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
 export default function Solver() {
   const [result, setResult] = useState<SubmissionResult | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -48,6 +53,7 @@ export default function Solver() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [submittedProblem, setSubmittedProblem] = useState<string>("");
   const [lastProblem, setLastProblem] = useState<{ type: "text" | "image"; content: string; mimeType?: string }>({ type: "text", content: "" });
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -103,7 +109,7 @@ export default function Solver() {
 
   const textMutation = useMutation({
     mutationFn: async (problem: string) => {
-      const response = await apiRequest("POST", "/api/solve-text", { problem });
+      const response = await apiRequest("POST", "/api/solve-text", { problem, history: chatHistory });
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || "Failed to solve");
@@ -112,6 +118,12 @@ export default function Solver() {
     },
     onSuccess: (data) => {
       setResult(data);
+      // Save to chat history
+      const aiResponse = data.aiSolution || data.questions?.map((q: any) => `Q${q.questionNumber}: ${q.answer}`).join(", ") || "Solution provided";
+      setChatHistory(prev => [...prev, 
+        { role: "user", content: submittedProblem },
+        { role: "assistant", content: aiResponse }
+      ]);
       scrollToBottom();
     },
     onError: (error: Error) => {
@@ -303,6 +315,7 @@ export default function Solver() {
     setUploadProgress(0);
     setSubmittedProblem("");
     setIsUploading(false);
+    setChatHistory([]);
   };
 
   const handleTextSubmit = () => {
