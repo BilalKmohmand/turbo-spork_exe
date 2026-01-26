@@ -346,7 +346,7 @@ export default function Solver() {
 
   return (
     <div 
-      className="flex flex-col h-full bg-background"
+      className="flex flex-col h-screen bg-background"
       onDragOver={handleDrag}
       onDrop={handleDrop}
     >
@@ -391,7 +391,7 @@ export default function Solver() {
 
       <div 
         ref={chatContainerRef}
-        className="flex-1 overflow-y-auto"
+        className="flex-1 overflow-y-auto relative"
       >
         {!hasConversation && (
           <div className="flex items-center justify-center min-h-full px-3 sm:px-4 py-8">
@@ -459,7 +459,7 @@ export default function Solver() {
         )}
 
         {hasConversation && (
-          <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+          <div className="max-w-3xl mx-auto px-4 py-6 pb-4 space-y-6">
             {/* Previous Chat History */}
             {chatHistory.map((msg, index) => (
               <div key={index} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}>
