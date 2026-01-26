@@ -1,0 +1,593 @@
+Gradeio
+Pricing
+Sign Out
+PDF uploaded for analysis
+
+
+
+
+
+Question 1  
+Find the volume of the pyramid with base 10 in by 11 in and height 16 in.  
+Calculate the Area of the Base (B)  
+The area of the rectangular base is 110 square inches.  
+B = 10 in × 11 in = 110 in²  
+Identify the Height (h)  
+The height of the pyramid is 16 inches.  
+Calculate the Volume (V)  
+V = (1/3) × B × h  
+V = (1/3) × 110 in² × 16 in = 1760/3 in³ ≈ 586.67 in³  
+Answer: 586.67 in³  
+Question 2  
+Find the volume of the pyramid with base 21 yd by 5 yd and height 9 yd.  
+Calculate the Area of the Base (B)  
+The area of the rectangular base is 105 square yards.  
+B = 21 yd × 5 yd = 105 yd²  
+Identify the Height (h)  
+The height of the pyramid is 9 yards.  
+Calculate the Volume (V)  
+V = (1/3) × B × h  
+V = (1/3) × 105 yd² × 9 yd = 315 yd³  
+Answer: 315 yd³  
+Question 3  
+Find the volume of the pyramid with a square base 14 ft by 14 ft and height 25 ft.  
+Calculate the Area of the Base (B)  
+The area of the square base is 196 square feet.  
+B = 14 ft × 14 ft = 196 ft²  
+Identify the Height (h)  
+The height of the pyramid is 25 feet.  
+Calculate the Volume (V)  
+V = (1/3) × B × h  
+V = (1/3) × 196 ft² × 25 ft ≈ 1633.33 ft³  
+Answer: 1633.33 ft³  
+Question 4  
+Find the volume of the pyramid with base 12 mm by 10 mm and height 7.5 mm.  
+Calculate the Area of the Base (B)  
+The area of the rectangular base is 120 square millimeters.  
+B = 12 mm × 10 mm = 120 mm²  
+Identify the Height (h)  
+The height of the pyramid is 7.5 millimeters.  
+Calculate the Volume (V)  
+V = (1/3) × B × h  
+V = (1/3) × 120 mm² × 7.5 mm = 300 mm³  
+Answer: 300 mm³  
+Question 5  
+Find the volume of the pyramid with a triangular base, base width 22.1 m and height of the base 19 m. The height of the pyramid is 14 m.  
+Calculate the Area of the Base (B)  
+The area of the triangular base is 209.45 square meters.  
+B = (1/2) × base width × height of the triangle  
+B = (1/2) × 22.1 m × 19 m = 209.45 m²  
+Identify the Height (h)  
+The height of the pyramid is 14 meters.  
+Calculate the Volume (V)  
+V = (1/3) × B × h  
+V = (1/3) × 209.45 m² × 14 m ≈ 976.43 m³  
+Answer: 976.43 m³  
+Question 6  
+Find the volume of the pyramid with a square base 10 cm by 10 cm and height 16 cm.  
+Calculate the Area of the Base (B)  
+The area of the square base is 100 square centimeters.  
+B = 10 cm × 10 cm = 100 cm²  
+Identify the Height (h)  
+The height of the pyramid is 16 centimeters.  
+Calculate the Volume (V)  
+V = (1/3) × B × h  
+V = (1/3) × 100 cm² × 16 cm = 533.33 cm³  
+Answer: 533.33 cm³  
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+explain me question 6 step by step
+Question 6  
+Find the volume of the pyramid with a square base 10 cm by 10 cm and height 16 cm.  
+Step 1: Calculate the Area of the Base (B)  
+To find the volume of a pyramid, we first need to determine the area of its base. Since the base is a square, we can use the formula for the area of a square:  
+\[ 
+B = \text{side} \times \text{side} 
+\]  
+In this case, both sides are 10 cm. Therefore:  
+\[ 
+B = 10 \, \text{cm} \times 10 \, \text{cm} = 100 \, \text{cm}^2 
+\]  
+This gives us the area of the base.
+Step 2: Identify the Height (h)  
+The height of the pyramid is given as 16 cm. This is the vertical distance from the base to the apex (top point) of the pyramid.
+Step 3: Calculate the Volume (V)  
+The formula for the volume of a pyramid is:  
+\[ 
+V = \frac{1}{3} \times B \times h 
+\]  
+Now, we substitute the values we have found:  
+- Base area 
+B
+=
+100
+ 
+cm
+2
+B=100cm 
+2
+   
+- Height 
+h
+=
+16
+ 
+cm
+h=16cm
+Now compute the volume:  
+\[ 
+V = \frac{1}{3} \times 100 \, \text{cm}^2 \times 16 \, \text{cm} 
+\]  
+Calculate the multiplication first:  
+\[ 
+100 \, \text{cm}^2 \times 16 \, \text{cm} = 1600 \, \text{cm}^3 
+\]  
+Now divide by 3 to find the volume:  
+\[ 
+V = \frac{1600 \, \text{cm}^3}{3} \approx 533.33 \, \text{cm}^3 
+\]
+Answer: 533.33 cm³  
+This is how we find the volume of the pyramid step by step.
+New Problem
+
+Ask a follow-up question...
+
+AI can make mistakes. Always verify important answers.
+

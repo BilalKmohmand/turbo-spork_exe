@@ -455,19 +455,20 @@ export default function Solver() {
   }, []);
 
   const handleFollowUp = async () => {
-    if (!followUpQuestion.trim() || !result) return;
+    if (!followUpQuestion.trim() || !result || isAskingFollowUp) return;
 
     const userQuestion = followUpQuestion.trim();
-    
-    // Show user message immediately
-    setResult(prev => prev ? { 
-      ...prev, 
-      messages: [...(prev.messages || []), { role: "user" as const, content: userQuestion }] 
-    } : prev);
     setFollowUpQuestion("");
+    setIsAskingFollowUp(true);
+    
+    // Get existing messages before adding new ones
+    const existingMessages = result.messages || [];
+    
+    // Add user message immediately
+    const messagesWithUser = [...existingMessages, { role: "user" as const, content: userQuestion }];
+    setResult(prev => prev ? { ...prev, messages: messagesWithUser } : prev);
     scrollToBottom();
     
-    setIsAskingFollowUp(true);
     try {
       // If we have a saved ID, use the API endpoint
       if (result.id) {
@@ -479,9 +480,7 @@ export default function Solver() {
       } else {
         // For image results without ID, use text streaming with context
         const context = result.rawText || result.aiSolution || "";
-        const fullQuestion = `Based on this previous solution:\n\n${context}\n\nUser question: ${userQuestion}`;
         
-        // Stream the follow-up response
         const response = await fetch("/api/solve-text-stream", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -512,11 +511,11 @@ export default function Solver() {
                   const data = JSON.parse(line.slice(6));
                   if (data.token) {
                     aiResponse += data.token;
+                    // Update with streaming response - keep user message, update AI response
                     setResult(prev => prev ? {
                       ...prev,
                       messages: [
-                        ...(prev.messages || []).slice(0, -1).filter(m => m.role === "user"),
-                        { role: "user" as const, content: userQuestion },
+                        ...messagesWithUser,
                         { role: "assistant" as const, content: aiResponse }
                       ]
                     } : prev);
@@ -529,14 +528,15 @@ export default function Solver() {
         }
         
         // Set final messages
-        setResult(prev => prev ? {
-          ...prev,
-          messages: [
-            ...(prev.messages || []).filter(m => m.role === "user").slice(0, -1),
-            { role: "user" as const, content: userQuestion },
-            { role: "assistant" as const, content: aiResponse }
-          ]
-        } : prev);
+        if (aiResponse) {
+          setResult(prev => prev ? {
+            ...prev,
+            messages: [
+              ...messagesWithUser,
+              { role: "assistant" as const, content: aiResponse }
+            ]
+          } : prev);
+        }
       }
       scrollToBottom();
     } catch {
@@ -546,10 +546,7 @@ export default function Solver() {
         variant: "destructive",
       });
       // Remove the user message on error
-      setResult(prev => prev ? { 
-        ...prev, 
-        messages: (prev.messages || []).filter((_, i) => i !== (prev.messages?.length || 1) - 1) 
-      } : prev);
+      setResult(prev => prev ? { ...prev, messages: existingMessages } : prev);
     } finally {
       setIsAskingFollowUp(false);
     }
@@ -956,7 +953,7 @@ export default function Solver() {
                 {result.messages.map((msg, index) => (
                   <div 
                     key={index}
-                    className={`flex ${msg.role === "user" ? "justify-end" : "gap-3"}`}
+                    className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}
                   >
                     {msg.role === "assistant" && (
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center flex-shrink-0">
@@ -965,13 +962,22 @@ export default function Solver() {
                     )}
                     <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${
                       msg.role === "user" 
-                        ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-br-md" 
+                        ? "bg-gradient-to-r from-violet-600 to-indigo-600 rounded-tr-md" 
                         : "bg-muted rounded-tl-md"
                     }`}>
-                      <div className="text-sm whitespace-pre-wrap">
-                        {renderMathText(msg.content)}
-                      </div>
+                      {msg.role === "user" ? (
+                        <p className="text-sm text-white whitespace-pre-wrap">{msg.content}</p>
+                      ) : (
+                        <div className="text-sm whitespace-pre-wrap">
+                          {renderMathText(msg.content)}
+                        </div>
+                      )}
                     </div>
+                    {msg.role === "user" && (
+                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                        <User className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

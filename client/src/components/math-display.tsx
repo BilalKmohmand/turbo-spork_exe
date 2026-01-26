@@ -128,9 +128,9 @@ export function renderMathText(text: string): JSX.Element[] {
     }
     
     if (lineElements.length > 0) {
-      parts.push(<div key={key++} className="leading-relaxed text-muted-foreground">{lineElements}</div>);
+      parts.push(<div key={key++} className="leading-relaxed">{lineElements}</div>);
     } else {
-      parts.push(<div key={key++} className="leading-relaxed text-muted-foreground">{line}</div>);
+      parts.push(<div key={key++} className="leading-relaxed">{line}</div>);
     }
   }
 
