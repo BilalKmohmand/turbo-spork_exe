@@ -1053,18 +1053,24 @@ Output ONLY valid JSON.`
         (Array.isArray(submission.messages) ? submission.messages : []) as Array<{role: "user" | "assistant", content: string}>;
       messages.push({ role: "user", content: question });
 
-      const systemContext = `You are a helpful tutor. The student previously submitted this problem:
-      
-${submission.content}
+      // Build full context from aiSteps (which contains all question data)
+      let questionsContext = "";
+      if (Array.isArray(submission.aiSteps) && submission.aiSteps.length > 0) {
+        questionsContext = submission.aiSteps.map((step: any) => {
+          if (step.title && step.reasoning) {
+            return `${step.title}: ${step.reasoning}${step.math ? ` (Formula: ${step.math})` : ""}`;
+          }
+          return "";
+        }).filter(Boolean).join("\n");
+      }
 
-And you provided this solution:
-${submission.aiSolution}
+      const systemContext = `You are Gradeio, a helpful AI tutor. You just solved these problems for the student:
 
-Steps: ${Array.isArray(submission.aiSteps) ? submission.aiSteps.map((s: any) => s.reasoning || s).join("\n") : ""}
+${questionsContext || submission.aiSolution}
 
-Explanation: ${submission.aiExplanation}
+Explanation: ${submission.aiExplanation || "See the solutions above."}
 
-Now the student has a follow-up question. Answer it clearly and helpfully to deepen their understanding.`;
+The student is now asking a follow-up question. Answer it clearly, referring to the specific problems if needed. Be helpful and educational.`;
 
       const chatMessages = messages.map(m => ({ 
         role: m.role, 
@@ -1072,8 +1078,8 @@ Now the student has a follow-up question. Answer it clearly and helpfully to dee
       }));
 
       const response = await openai.chat.completions.create({
-        model: "gpt-5-nano",
-        max_completion_tokens: 1024,
+        model: "gpt-4o-mini",
+        max_tokens: 4000,
         messages: [
           { role: "system", content: systemContext },
           ...chatMessages,

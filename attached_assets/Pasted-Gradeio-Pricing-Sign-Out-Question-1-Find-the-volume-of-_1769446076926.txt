@@ -1,0 +1,497 @@
+Gradeio
+Pricing
+Sign Out
+
+
+
+
+Question 1
+Find the volume of a pyramid with base dimensions of 10 in by 11 in and height of 14 in.
+
+1
+Calculate the area of the base
+The area of the base of the pyramid is found by multiplying its length and width: 
+B
+=
+10
+⋅
+11
+B=10⋅11.
+
+B
+=
+10
+⋅
+11
+B=10⋅11
+2
+Substitute values into volume formula
+The formula for the volume of a pyramid is 
+V
+=
+1
+3
+B
+h
+V= 
+3
+1
+​
+ Bh, where 
+B
+B is the area of the base and 
+h
+h is the height.
+
+V
+=
+1
+3
+⋅
+110
+⋅
+14
+V= 
+3
+1
+​
+ ⋅110⋅14
+3
+Simplify the calculation
+Simplify by multiplying the base area by the height and dividing by 3.
+
+V
+=
+1
+3
+⋅
+1540
+=
+513.33
+V= 
+3
+1
+​
+ ⋅1540=513.33
+4
+Answer
+513.33
+ 
+in
+3
+513.33 in 
+3
+ 
+
+Question 2
+Find the volume of a pyramid with base dimensions of 5 yd by 21 yd and height of 9 yd.
+
+1
+Calculate the area of the base
+The area of the base is obtained by multiplying the length and width: 
+B
+=
+5
+⋅
+21
+B=5⋅21.
+
+B
+=
+5
+⋅
+21
+B=5⋅21
+2
+Substitute values into volume formula
+Use the formula 
+V
+=
+1
+3
+B
+h
+V= 
+3
+1
+​
+ Bh, substituting 
+B
+B and 
+h
+h.
+
+V
+=
+1
+3
+⋅
+105
+⋅
+9
+V= 
+3
+1
+​
+ ⋅105⋅9
+3
+Simplify the calculation
+Multiply the base area by the height and divide by 3 to find the volume.
+
+V
+=
+1
+3
+⋅
+945
+=
+315
+V= 
+3
+1
+​
+ ⋅945=315
+4
+Answer
+315
+ 
+yd
+3
+315 yd 
+3
+ 
+
+Question 3
+Find the volume of a pyramid with base dimensions of 14 ft by 14 ft and height of 25 ft.
+
+1
+Calculate the area of the base
+The area of the base is computed as 
+B
+=
+14
+⋅
+14
+B=14⋅14.
+
+B
+=
+14
+⋅
+14
+B=14⋅14
+2
+Substitute values into volume formula
+Substitute 
+B
+B and 
+h
+h into 
+V
+=
+1
+3
+B
+h
+V= 
+3
+1
+​
+ Bh.
+
+V
+=
+1
+3
+⋅
+196
+⋅
+25
+V= 
+3
+1
+​
+ ⋅196⋅25
+3
+Simplify the calculation
+Simplify the computation by dividing 
+4900
+4900 by 3.
+
+V
+=
+1
+3
+⋅
+4900
+=
+1633.33
+V= 
+3
+1
+​
+ ⋅4900=1633.33
+4
+Answer
+1633.33
+ 
+ft
+3
+1633.33 ft 
+3
+ 
+
+Question 4
+Find the volume of a pyramid with base dimensions of 10 mm by 7.5 mm and height of 12 mm.
+
+1
+Calculate the area of the base
+The base area is calculated as 
+B
+=
+10
+⋅
+7.5
+B=10⋅7.5.
+
+B
+=
+10
+⋅
+7.5
+B=10⋅7.5
+2
+Substitute values into volume formula
+Substitute the base area and height into the formula 
+V
+=
+1
+3
+B
+h
+V= 
+3
+1
+​
+ Bh.
+
+V
+=
+1
+3
+⋅
+75
+⋅
+12
+V= 
+3
+1
+​
+ ⋅75⋅12
+3
+Simplify the calculation
+Multiply 
+75
+75 by 
+12
+12 and divide by 
+3
+3.
+
+V
+=
+1
+3
+⋅
+900
+=
+300
+V= 
+3
+1
+​
+ ⋅900=300
+4
+Answer
+300
+ 
+mm
+3
+300 mm 
+3
+ 
+
+Question 5
+Find the volume of a pyramid with base dimensions of 14 m by 19 m and height of 22.1 m.
+
+1
+Calculate the area of the base
+The area of the base is 
+B
+=
+14
+⋅
+19
+B=14⋅19.
+
+B
+=
+14
+⋅
+19
+B=14⋅19
+2
+Substitute values into volume formula
+Use 
+V
+=
+1
+3
+B
+h
+V= 
+3
+1
+​
+ Bh to substitute the calculated base area and height.
+
+V
+=
+1
+3
+⋅
+266
+⋅
+22.1
+V= 
+3
+1
+​
+ ⋅266⋅22.1
+3
+Simplify the calculation
+Simplify the computation by dividing 
+5888.6
+5888.6 by 
+3
+3.
+
+V
+=
+1
+3
+⋅
+5888.6
+=
+1962.87
+V= 
+3
+1
+​
+ ⋅5888.6=1962.87
+4
+Answer
+1962.87
+ 
+m
+3
+1962.87 m 
+3
+ 
+
+Question 6
+Find the volume of a pyramid with base dimensions of 10 cm by 10 cm and height of 16 cm.
+
+1
+Calculate the area of the base
+The base area is calculated as 
+B
+=
+10
+⋅
+10
+B=10⋅10.
+
+B
+=
+10
+⋅
+10
+B=10⋅10
+2
+Substitute values into volume formula
+The formula 
+V
+=
+1
+3
+B
+h
+V= 
+3
+1
+​
+ Bh is used with 
+B
+=
+100
+B=100 and 
+h
+=
+16
+h=16.
+
+V
+=
+1
+3
+⋅
+100
+⋅
+16
+V= 
+3
+1
+​
+ ⋅100⋅16
+3
+Simplify the calculation
+Multiply 
+100
+100 by 
+16
+16 and divide by 
+3
+3.
+
+V
+=
+1
+3
+⋅
+1600
+=
+533.33
+V= 
+3
+1
+​
+ ⋅1600=533.33
+4
+Answer
+533.33
+ 
+cm
+3
+533.33 cm 
+3
+ 
+
+can you explain me step by step
+I couldn't process that question. Please try again.
+New Problem
+
+Ask a follow-up question...
+
+AI can make mistakes. Always verify important answers.
+
