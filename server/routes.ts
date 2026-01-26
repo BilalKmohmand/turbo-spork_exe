@@ -974,28 +974,54 @@ RULES:
         }
       }
 
-      // Handle Word documents - extract text and solve
+      // Handle Word documents - extract text and images
       if (isWord) {
         try {
           const mammoth = await import("mammoth");
           const wordBuffer = Buffer.from(image, "base64");
-          console.log("Extracting text from Word document...");
+          console.log("Extracting content from Word document...");
           
-          const result = await mammoth.extractRawText({ buffer: wordBuffer });
-          const extractedText = result.value.trim();
+          // Extract images from the Word document
+          const embeddedImages: { base64: string; contentType: string }[] = [];
           
-          if (!extractedText) {
-            res.write(`data: ${JSON.stringify({ error: "Could not extract text from document. The file may be empty or corrupted." })}\n\n`);
+          const options = {
+            buffer: wordBuffer,
+            convertImage: mammoth.images.imgElement(async (imageData: any) => {
+              const imgBuffer = await imageData.read();
+              const base64Img = imgBuffer.toString("base64");
+              const contentType = imageData.contentType || "image/png";
+              embeddedImages.push({ base64: base64Img, contentType });
+              return { src: `data:${contentType};base64,${base64Img}` };
+            })
+          };
+          
+          const result = await mammoth.convertToHtml(options as any);
+          
+          // Also get plain text
+          const textResult = await mammoth.extractRawText({ buffer: wordBuffer });
+          const extractedText = textResult.value.trim();
+          
+          console.log("Word content extracted - text length:", extractedText.length, "images:", embeddedImages.length);
+          
+          // If there are embedded images, process them with vision API
+          if (embeddedImages.length > 0) {
+            console.log("Processing Word document with embedded images...");
+            
+            // Use the first/main image for vision processing
+            const mainImage = embeddedImages[0];
+            imageBase64 = mainImage.base64;
+            imageMimeType = mainImage.contentType;
+            // Continue to image processing below
+          } else if (extractedText) {
+            // Text only - redirect to text solving
+            res.write(`data: ${JSON.stringify({ redirect: "text", problem: extractedText })}\n\n`);
+            res.end();
+            return;
+          } else {
+            res.write(`data: ${JSON.stringify({ error: "Could not extract content from document. The file may be empty." })}\n\n`);
             res.end();
             return;
           }
-          
-          console.log("Word text extracted, length:", extractedText.length);
-          
-          // Redirect to text solving with the extracted content
-          res.write(`data: ${JSON.stringify({ redirect: "text", problem: extractedText })}\n\n`);
-          res.end();
-          return;
         } catch (wordErr: any) {
           console.error("Word error:", wordErr?.message);
           res.write(`data: ${JSON.stringify({ error: "Could not process Word document. Please copy and paste the text instead." })}\n\n`);
