@@ -459,7 +459,30 @@ export default function Solver() {
 
         {hasConversation && (
           <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-            {/* User's Message Bubble */}
+            {/* Previous Chat History */}
+            {chatHistory.map((msg, index) => (
+              <div key={index} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}>
+                {msg.role === "assistant" && (
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center flex-shrink-0">
+                    <Sparkles className="w-4 h-4 text-white" />
+                  </div>
+                )}
+                <div className={`max-w-[85%] rounded-2xl p-4 ${
+                  msg.role === "user" 
+                    ? "bg-violet-600 text-white rounded-tr-md" 
+                    : "bg-muted rounded-tl-md"
+                }`}>
+                  <p className="whitespace-pre-wrap leading-relaxed text-sm">{msg.content}</p>
+                </div>
+                {msg.role === "user" && (
+                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                    <User className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {/* Current User's Message Bubble */}
             {(submittedProblem || previewUrl) && (
               <div className="flex gap-3 justify-end" data-testid="user-problem-section">
                 <div className="max-w-[85%] space-y-3">
