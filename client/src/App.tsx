@@ -14,6 +14,7 @@ import Auth from "@/pages/auth";
 import StudentDashboard from "@/pages/student-dashboard";
 import TeacherDashboard from "@/pages/teacher-dashboard";
 import Knowledge from "@/pages/knowledge";
+import LectureNotes from "@/pages/lecture-notes";
 import { Button } from "@/components/ui/button";
 import { 
   Sparkles, 
@@ -22,7 +23,8 @@ import {
   FileEdit,
   Menu,
   X,
-  Home
+  Home,
+  Mic
 } from "lucide-react";
 import { Link } from "wouter";
 import { useState, useEffect } from "react";
@@ -41,6 +43,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     { href: "/solver", label: "Homework Help", icon: Calculator },
     { href: "/quiz", label: "Quiz Maker", icon: FileText },
     { href: "/essay", label: "Essay Writer", icon: FileEdit },
+    { href: "/notes", label: "Lecture Notes", icon: Mic },
   ];
 
   return (
@@ -153,6 +156,7 @@ function Router() {
       <Route path="/student" component={StudentDashboard} />
       <Route path="/teacher" component={TeacherDashboard} />
       <Route path="/knowledge" component={Knowledge} />
+      <Route path="/notes" component={LectureNotes} />
       <Route>
         <div className="flex items-center justify-center h-full">
           <div className="text-center">

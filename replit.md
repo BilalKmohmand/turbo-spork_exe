@@ -60,6 +60,7 @@ Preferred communication style: Simple, everyday language.
 - `/solver` - Direct homework solver (ChatGPT-style UI)
 - `/quiz` - Quiz generator from text
 - `/essay` - Essay writer tool
+- `/notes` - AI lecture notes from audio recordings
 - `/pricing` - Subscription pricing page
 - `/knowledge` - Knowledge base management for RAG (teachers only)
 
@@ -78,6 +79,8 @@ Preferred communication style: Simple, everyday language.
 - `POST /api/solve-image` - Solve image problem with AI
 - `POST /api/generate-quiz` - Generate quiz from text
 - `POST /api/generate-essay` - Generate essay
+- `POST /api/transcribe` - Transcribe audio to text (multer file upload)
+- `POST /api/generate-notes` - Generate AI study notes from transcript (streaming)
 - `POST /api/knowledge/upload` - Upload single knowledge chunk (teacher only)
 - `POST /api/knowledge/bulk-upload` - Bulk upload and chunk content (teacher only)
 - `POST /api/knowledge/search` - Search knowledge base with vector similarity

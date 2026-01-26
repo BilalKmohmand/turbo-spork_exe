@@ -5,6 +5,7 @@ import { submitWorkSchema, evaluateSchema, registerSchema, loginSchema, uploadKn
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import bcrypt from "bcryptjs";
+import multer from "multer";
 import { generateEmbedding, generateEmbeddings } from "./rag/embeddings";
 import { chunkMathContent, detectTopic, detectDifficulty } from "./rag/chunker";
 import { retrieveRelevantChunks, formatContextForAI, getKnowledgeStats } from "./rag/retrieval";
@@ -1845,6 +1846,112 @@ Output ONLY valid JSON.`;
     } catch (error: any) {
       console.error("RAG solve error:", error);
       res.status(500).json({ error: error?.message || "Failed to solve with RAG" });
+    }
+  });
+
+  // Multer configuration for audio uploads
+  const audioUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 25 * 1024 * 1024 }, // 25MB limit
+  });
+
+  // Audio transcription endpoint
+  app.post("/api/transcribe", audioUpload.single("audio"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No audio file provided" });
+      }
+
+      // Validate mimetype
+      const allowedMimeTypes = ["audio/webm", "audio/mp4", "audio/mpeg", "audio/wav", "audio/ogg", "audio/m4a"];
+      const mimeType = req.file.mimetype || "audio/webm";
+      if (!allowedMimeTypes.some(t => mimeType.includes(t.split("/")[1]))) {
+        console.warn("Unusual audio mimetype:", mimeType);
+      }
+
+      console.log("Transcribing audio, size:", req.file.size, "type:", mimeType);
+
+      // Use Blob for Node.js compatibility (File may not be available)
+      const audioBlob = new Blob([req.file.buffer], { type: mimeType });
+      
+      // Create a File-like object that OpenAI SDK accepts
+      const audioFile = Object.assign(audioBlob, {
+        name: "audio.webm",
+        lastModified: Date.now(),
+      });
+
+      const transcription = await openai.audio.transcriptions.create({
+        file: audioFile as any,
+        model: "gpt-4o-mini-transcribe",
+        language: "en",
+      });
+
+      console.log("Transcription complete, length:", transcription.text.length);
+
+      res.json({ text: transcription.text });
+    } catch (error: any) {
+      console.error("Transcription error:", error);
+      res.status(500).json({ error: error?.message || "Transcription failed" });
+    }
+  });
+
+  // Generate notes from transcript - streaming
+  app.post("/api/generate-notes", async (req, res) => {
+    try {
+      const { transcript } = req.body;
+
+      if (!transcript || typeof transcript !== "string") {
+        return res.status(400).json({ error: "Transcript is required" });
+      }
+
+      console.log("Generating notes from transcript, length:", transcript.length);
+
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.flushHeaders();
+
+      const stream = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert note-taker and study guide creator. Transform lecture transcripts into well-organized, comprehensive study notes.
+
+Your notes should include:
+1. MAIN TOPICS - Clear headings for major concepts covered
+2. KEY POINTS - Bullet points summarizing important information
+3. DEFINITIONS - Any terms or concepts defined in the lecture
+4. EXAMPLES - Important examples mentioned
+5. FORMULAS/EQUATIONS - Any mathematical formulas (if applicable)
+6. SUMMARY - A brief summary at the end
+
+Format the notes in a clean, readable way that students can use for studying.
+Use clear section headers and organize information logically.
+Do NOT use markdown formatting - use plain text with clear structure.`,
+          },
+          {
+            role: "user",
+            content: `Please create comprehensive study notes from this lecture transcript:\n\n${transcript}`,
+          },
+        ],
+        stream: true,
+        max_tokens: 2000,
+      });
+
+      for await (const chunk of stream) {
+        const token = chunk.choices[0]?.delta?.content || "";
+        if (token) {
+          res.write(`data: ${JSON.stringify({ token })}\n\n`);
+        }
+      }
+
+      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+      res.end();
+    } catch (error: any) {
+      console.error("Note generation error:", error);
+      res.write(`data: ${JSON.stringify({ error: error?.message || "Failed to generate notes" })}\n\n`);
+      res.end();
     }
   });
 
