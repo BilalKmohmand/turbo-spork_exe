@@ -801,13 +801,21 @@ Rules: Solve ALL questions, use $...$ for inline math, "math" field is pure LaTe
             return;
           }
           
-          // PDF is scanned - convert to image
+          // PDF is scanned - convert to image (fast settings)
+          res.write(`data: ${JSON.stringify({ token: "Processing scanned PDF..." })}\n\n`);
           const { fromBuffer } = await import("pdf2pic");
-          const convert = fromBuffer(pdfBuffer, { density: 100, saveFilename: "page", savePath: "/tmp", format: "png", width: 800, height: 1000 });
+          const convert = fromBuffer(pdfBuffer, { 
+            density: 72,  // Lower = faster
+            saveFilename: "page", 
+            savePath: "/tmp", 
+            format: "jpeg",  // JPEG is faster than PNG
+            width: 600,   // Smaller = faster
+            height: 800 
+          });
           const pageOutput = await convert(1, { responseType: "base64" });
           if (pageOutput?.base64) {
             imageBase64 = pageOutput.base64;
-            imageMimeType = "image/png";
+            imageMimeType = "image/jpeg";
           }
         } catch (e: any) {
           res.write(`data: ${JSON.stringify({ error: "Failed to process PDF" })}\n\n`);
@@ -816,7 +824,7 @@ Rules: Solve ALL questions, use $...$ for inline math, "math" field is pure LaTe
         }
       }
 
-      // Stream image solving with GPT-4o Vision
+      // Stream image solving with GPT-4o-mini (faster)
       const messages: any[] = [
         {
           role: "user",
@@ -829,14 +837,14 @@ Rules: Solve ALL questions, use $...$ for inline math, "math" field: pure LaTeX.
             },
             {
               type: "image_url",
-              image_url: { url: `data:${imageMimeType};base64,${imageBase64}` },
+              image_url: { url: `data:${imageMimeType};base64,${imageBase64}`, detail: "low" },
             },
           ],
         },
       ];
 
       const stream = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         max_tokens: 8000,
         messages,
         stream: true,
