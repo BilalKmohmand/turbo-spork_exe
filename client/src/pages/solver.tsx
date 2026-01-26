@@ -171,6 +171,19 @@ export default function Solver() {
                     { role: "user", content: problem },
                     { role: "assistant", content: r.message }
                   ]);
+                } else if (r.type === "problem" || r.aiSolution) {
+                  // Handle regular math problems
+                  setResult({
+                    id: Date.now().toString(),
+                    content: problem,
+                    status: "completed",
+                    aiSolution: r.aiSolution || r.rawText,
+                    problemType: "math",
+                  });
+                  setChatHistory(prev => [...prev, 
+                    { role: "user", content: problem },
+                    { role: "assistant", content: r.aiSolution || r.rawText }
+                  ]);
                 } else if (r.questions) {
                   const solution = r.questions.map((q: any) => `**Question ${q.questionNumber}**\n${q.answer}`).join("\n\n");
                   setResult({
