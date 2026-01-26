@@ -251,7 +251,7 @@ Output ONLY valid JSON.`,
           ],
         },
       ],
-      max_completion_tokens: 4096,
+      max_completion_tokens: 8000,
     });
 
     let text = response.choices[0]?.message?.content || "";
@@ -422,10 +422,10 @@ Rules:
     // Add current question
     messages.push({ role: "user", content: content });
     
-    // Use GPT-4o-mini for fast responses
+    // Use GPT-5-nano for fast responses with higher token limit
     const response = await openai.chat.completions.create({
       model: "gpt-5-nano",
-      max_tokens: 1500,
+      max_tokens: 8000,
       messages,
     });
 
