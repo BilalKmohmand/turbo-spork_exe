@@ -904,25 +904,23 @@ RULES:
             content: [
               {
                 type: "text",
-                text: `Read and solve every math problem in this image.
+                text: `Solve ALL math problems in this image. Use this EXACT format:
 
-Write your answer in plain text with LaTeX math inside dollar signs.
+**Question 1:** [problem statement]
+Formula: $V = \\frac{1}{3} \\times B \\times h$
+Calculation: $V = \\frac{1}{3} \\times 10 \\times 16 = \\frac{160}{3} = 53.33$
+**Answer:** $53.33 \\text{ in}^3$
 
-Example:
-**Question 1:** Find the volume of a pyramid with base 9 sq cm and height 4 cm.
-The volume formula is $V = \\frac{1}{3} \\cdot B \\cdot h$.
-Substituting: $V = \\frac{1}{3} \\cdot 9 \\cdot 4 = 12$ cubic cm.
-**Answer:** $12 \\text{ cm}^3$
+**Question 2:** [next problem]
+...continue same format...
 
----
-
-**Question 2:** [next]...
-
-IMPORTANT:
-- Use $ for math, NOT unicode symbols
-- Write fractions as \\frac{a}{b}
-- Write multiplication as \\cdot
-- Solve ALL problems in the image`,
+RULES:
+1. Use $...$ for ALL math - no exceptions
+2. Fractions: $\\frac{a}{b}$ not a/b
+3. Multiplication: $\\times$ not × or *
+4. Units in math: $\\text{ cm}^3$
+5. One line per calculation step
+6. Solve EVERY question`,
               },
               {
                 type: "image_url",

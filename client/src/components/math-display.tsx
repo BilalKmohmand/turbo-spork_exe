@@ -21,19 +21,22 @@ export function MathDisplay({ children, block = false }: MathDisplayProps) {
 export function renderMathText(text: string): JSX.Element[] {
   if (!text) return [<span key={0}></span>];
   
-  // First, normalize all LaTeX delimiters to $ format
+  // Normalize all LaTeX delimiters to $ format
   let normalizedText = text
-    // Convert \[...\] to $$...$$
-    .replace(/\\\[([\s\S]*?)\\\]/g, '$$$$1$$')
-    // Convert \(...\) to $...$
-    .replace(/\\\(([\s\S]*?)\\\)/g, '$$$1$$')
-    // Convert display math environments
-    .replace(/\\begin\{equation\}([\s\S]*?)\\end\{equation\}/g, '$$$$1$$')
-    .replace(/\\begin\{align\}([\s\S]*?)\\end\{align\}/g, '$$$$1$$');
+    // Remove broken patterns like "1$" at line start
+    .replace(/^\d+\$/gm, '')
+    // Convert \[...\] to $$...$$ (block math)
+    .replace(/\\\[/g, '$$')
+    .replace(/\\\]/g, '$$')
+    // Convert \(...\) to $...$ (inline math)
+    .replace(/\\\(/g, '$')
+    .replace(/\\\)/g, '$')
+    // Fix double dollars that got too many
+    .replace(/\${3,}/g, '$$');
   
   const parts: JSX.Element[] = [];
-  // Match $$...$$ (block) or $...$ (inline), handling multiline
-  const regex = /\$\$([\s\S]*?)\$\$|\$([^$\n]+?)\$/g;
+  // Match $$...$$ (block) or $...$ (inline)
+  const regex = /\$\$([\s\S]*?)\$\$|\$([^$]+?)\$/g;
   let lastIndex = 0;
   let match;
   let key = 0;
@@ -41,21 +44,20 @@ export function renderMathText(text: string): JSX.Element[] {
   while ((match = regex.exec(normalizedText)) !== null) {
     if (match.index > lastIndex) {
       const textBefore = normalizedText.slice(lastIndex, match.index);
-      // Split by newlines and render as separate spans
       const lines = textBefore.split('\n');
       lines.forEach((line, i) => {
-        if (line) parts.push(<span key={key++}>{line}</span>);
+        if (line.trim()) parts.push(<span key={key++}>{line}</span>);
         if (i < lines.length - 1) parts.push(<br key={key++} />);
       });
     }
 
     const mathContent = match[1] || match[2];
-    if (mathContent) {
+    if (mathContent && mathContent.trim()) {
       try {
         if (match[1]) {
           // Block math
           parts.push(
-            <span key={key++} className="block my-3 text-center overflow-x-auto">
+            <span key={key++} className="block my-2 text-center overflow-x-auto">
               <BlockMath math={mathContent.trim()} />
             </span>
           );
@@ -63,9 +65,9 @@ export function renderMathText(text: string): JSX.Element[] {
           // Inline math
           parts.push(<InlineMath key={key++} math={mathContent.trim()} />);
         }
-      } catch (e) {
-        // If KaTeX fails, show the raw text
-        parts.push(<code key={key++} className="text-red-500">{mathContent}</code>);
+      } catch {
+        // If KaTeX fails, show as code
+        parts.push(<code key={key++} className="bg-muted px-1 rounded">{mathContent}</code>);
       }
     }
 
@@ -76,7 +78,7 @@ export function renderMathText(text: string): JSX.Element[] {
     const remaining = normalizedText.slice(lastIndex);
     const lines = remaining.split('\n');
     lines.forEach((line, i) => {
-      if (line) parts.push(<span key={key++}>{line}</span>);
+      if (line.trim()) parts.push(<span key={key++}>{line}</span>);
       if (i < lines.length - 1) parts.push(<br key={key++} />);
     });
   }
