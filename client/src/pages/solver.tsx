@@ -220,23 +220,85 @@ export default function Solver() {
     },
   });
 
+  // Streaming function for images
+  const solveImageWithStreaming = async (base64: string, mimeType: string) => {
+    setIsStreaming(true);
+    setStreamingText("");
+    setIsUploading(false);
+    
+    try {
+      const response = await fetch("/api/solve-image-stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: base64, mimeType }),
+      });
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let fullText = "";
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          const chunk = decoder.decode(value);
+          const lines = chunk.split("\n");
+          
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                
+                if (data.redirect === "text" && data.problem) {
+                  // PDF with text - use text streaming
+                  setIsStreaming(false);
+                  solveWithStreaming(data.problem);
+                  return;
+                }
+                
+                if (data.token) {
+                  fullText += data.token;
+                  setStreamingText(fullText);
+                  scrollToBottom();
+                }
+                
+                if (data.done && data.result) {
+                  setResult(data.result);
+                  setStreamingText("");
+                }
+                
+                if (data.error) {
+                  throw new Error(data.error);
+                }
+              } catch (e) {
+                if (e instanceof Error && e.message !== "Unexpected end of JSON input") {
+                  console.error("Parse error:", e);
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to process image",
+        variant: "destructive",
+      });
+    } finally {
+      setIsStreaming(false);
+    }
+  };
+
   const submitMutation = useMutation({
     mutationFn: async ({ base64, mimeType }: { base64: string; mimeType: string }) => {
-      const response = await apiRequest("POST", "/api/solve-image", {
-        image: base64,
-        mimeType,
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to solve");
-      }
-      return response.json();
+      // Use streaming instead
+      solveImageWithStreaming(base64, mimeType);
+      return null;
     },
-    onSuccess: async (data) => {
-      setResult(data);
-      setIsUploading(false);
+    onSuccess: async () => {
       setUploadProgress(100);
-      scrollToBottom();
     },
     onError: (error: Error) => {
       setIsUploading(false);

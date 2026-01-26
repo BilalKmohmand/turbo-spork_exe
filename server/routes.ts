@@ -806,6 +806,147 @@ Rules: JSON only, $...$ for inline math, "math" field: pure LaTeX no $. Start wi
     }
   });
 
+  // Streaming endpoint for image/PDF solving
+  app.post("/api/solve-image-stream", async (req, res) => {
+    try {
+      const { image, mimeType } = req.body;
+      
+      if (!image || !mimeType) {
+        return res.status(400).json({ error: "Image and mimeType are required" });
+      }
+
+      const isImage = mimeType.startsWith("image/");
+      const isPDF = mimeType === "application/pdf";
+      
+      if (!isImage && !isPDF) {
+        return res.status(400).json({ error: "Invalid file type" });
+      }
+
+      // Set up SSE headers
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.flushHeaders();
+
+      let imageBase64 = image;
+      let imageMimeType = mimeType;
+
+      // Handle PDF conversion
+      if (isPDF) {
+        try {
+          const pdfBuffer = Buffer.from(image, "base64");
+          const uint8Array = new Uint8Array(pdfBuffer);
+          const PDFParseClass = await getPDFParse();
+          const parser = new PDFParseClass(uint8Array);
+          const pdfResult = await parser.getText();
+          const extractedText = pdfResult.text?.trim().replace(/\n*-- \d+ of \d+ --\n*/g, '').trim();
+          
+          if (extractedText && extractedText.length >= 10) {
+            // Text-based PDF - use text streaming instead
+            res.write(`data: ${JSON.stringify({ redirect: "text", problem: extractedText })}\n\n`);
+            res.end();
+            return;
+          }
+          
+          // Convert PDF to image
+          const { fromBuffer } = await import("pdf2pic");
+          const convert = fromBuffer(pdfBuffer, {
+            density: 100,
+            saveFilename: "page",
+            savePath: "/tmp",
+            format: "png",
+            width: 800,
+            height: 1000
+          });
+          const pageOutput = await convert(1, { responseType: "base64" });
+          
+          if (pageOutput?.base64) {
+            imageBase64 = pageOutput.base64;
+            imageMimeType = "image/png";
+          } else {
+            throw new Error("PDF conversion failed");
+          }
+        } catch (pdfErr: any) {
+          res.write(`data: ${JSON.stringify({ error: "Could not process PDF" })}\n\n`);
+          res.end();
+          return;
+        }
+      }
+
+      // Stream from GPT-4o vision
+      const stream = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `CRITICAL: Solve EVERY problem in this image. Count all questions first.
+
+Return ONLY JSON:
+{"questions":[{"questionNumber":1,"problemStatement":"problem","steps":[{"title":"Step 1","math":"LaTeX no $","reasoning":"with $math$"}],"answer":"$answer$"}],"explanation":"summary","problemType":"math"}
+
+Rules: JSON only, $...$ for inline math, "math" field pure LaTeX. Start with {`,
+              },
+              {
+                type: "image_url",
+                image_url: { url: `data:${imageMimeType};base64,${imageBase64}` },
+              },
+            ],
+          },
+        ],
+        max_completion_tokens: 8000,
+        stream: true,
+      });
+
+      let fullText = "";
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content || "";
+        if (content) {
+          fullText += content;
+          res.write(`data: ${JSON.stringify({ token: content })}\n\n`);
+        }
+      }
+
+      // Parse and save
+      try {
+        const jsonMatch = fullText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const result = JSON.parse(jsonMatch[0]);
+          
+          const submission = await storage.createSubmission({
+            title: "Image Problem",
+            studentName: "Student",
+            content: "Image problem",
+          });
+          
+          const steps = result.questions?.flatMap((q: any) => 
+            (q.steps || []).map((s: any) => ({ ...s, title: `Question ${q.questionNumber}: ${s.title}` }))
+          ) || [];
+          
+          await storage.updateSubmission(submission.id, {
+            status: "ai_graded",
+            aiSolution: result.questions?.map((q: any) => `Q${q.questionNumber}: ${q.answer}`).join("\n") || "",
+            aiSteps: steps,
+            aiExplanation: result.explanation || "",
+            problemType: result.problemType || "general",
+          });
+
+          res.write(`data: ${JSON.stringify({ done: true, result: { ...result, id: submission.id } })}\n\n`);
+        }
+      } catch {
+        res.write(`data: ${JSON.stringify({ done: true, result: { type: "chat", message: fullText } })}\n\n`);
+      }
+      
+      res.end();
+    } catch (error: any) {
+      console.error("Image stream error:", error?.message);
+      res.write(`data: ${JSON.stringify({ error: error?.message || "Failed to process image" })}\n\n`);
+      res.end();
+    }
+  });
+
   app.post("/api/solve-text", async (req, res) => {
     try {
       const { problem, history = [] } = req.body;
