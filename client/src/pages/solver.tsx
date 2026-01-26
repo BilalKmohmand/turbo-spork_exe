@@ -48,6 +48,7 @@ export default function Solver() {
   const [result, setResult] = useState<SubmissionResult | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewType, setPreviewType] = useState<"image" | "pdf" | null>(null);
   const [followUpQuestion, setFollowUpQuestion] = useState("");
   const [isAskingFollowUp, setIsAskingFollowUp] = useState(false);
   const [textProblem, setTextProblem] = useState("");
@@ -309,6 +310,7 @@ export default function Solver() {
     // Show file preview immediately
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
+    setPreviewType(isPDF ? "pdf" : "image");
     setResult(null);
     setSubmittedProblem("");
     scrollToBottom();
@@ -476,6 +478,7 @@ export default function Solver() {
   const handleReset = () => {
     setResult(null);
     setPreviewUrl(null);
+    setPreviewType(null);
     setFollowUpQuestion("");
     setTextProblem("");
     setUploadProgress(0);
@@ -489,6 +492,7 @@ export default function Solver() {
       const problem = textProblem.trim();
       setSubmittedProblem(problem);
       setPreviewUrl(null);
+      setPreviewType(null);
       setResult(null);
       setLastProblem({ type: "text", content: problem });
       solveWithStreaming(problem);
@@ -653,13 +657,22 @@ export default function Solver() {
             {(submittedProblem || previewUrl) && (
               <div className="flex gap-3 justify-end" data-testid="user-problem-section">
                 <div className="max-w-[85%] space-y-3">
-                  {previewUrl && (
+                  {previewUrl && previewType === "image" && (
                     <img 
                       src={previewUrl} 
                       alt="Uploaded problem" 
                       className="max-h-64 rounded-lg border ml-auto"
                       data-testid="img-preview"
                     />
+                  )}
+                  {previewUrl && previewType === "pdf" && (
+                    <div className="ml-auto rounded-lg border overflow-hidden bg-muted" data-testid="pdf-preview">
+                      <iframe 
+                        src={previewUrl}
+                        className="w-72 h-96"
+                        title="PDF Preview"
+                      />
+                    </div>
                   )}
                   {submittedProblem && (
                     <div className="bg-violet-600 text-white rounded-2xl rounded-tr-md p-4">
