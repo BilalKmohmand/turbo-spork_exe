@@ -385,11 +385,14 @@ export default function Solver() {
   const processFile = async (file: File) => {
     const isImage = file.type.startsWith("image/");
     const isPDF = file.type === "application/pdf";
+    const isWord = file.type === "application/msword" || 
+                   file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+                   file.name.endsWith(".doc") || file.name.endsWith(".docx");
     
-    if (!isImage && !isPDF) {
+    if (!isImage && !isPDF && !isWord) {
       toast({
         title: "Invalid file",
-        description: "Please upload an image (JPG, PNG) or PDF file",
+        description: "Please upload an image (JPG, PNG), PDF, or Word document",
         variant: "destructive",
       });
       return;
@@ -427,6 +430,16 @@ export default function Solver() {
         }
         base64 = btoa(binary);
         mimeType = "application/pdf";
+      } else if (isWord) {
+        // For Word documents, read as base64
+        const arrayBuffer = await file.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+        let binary = '';
+        for (let i = 0; i < bytes.length; i++) {
+          binary += String.fromCharCode(bytes[i]);
+        }
+        base64 = btoa(binary);
+        mimeType = file.type || "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
       } else {
         // For images, compress and convert
         const result = await compressImage(file);
@@ -636,7 +649,7 @@ export default function Solver() {
         ref={fileInputRef}
         onChange={handleFileSelect}
         className="hidden"
-        accept="image/*,.pdf,application/pdf"
+        accept="image/*,.pdf,application/pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         data-testid="input-file"
       />
       <input

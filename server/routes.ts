@@ -926,8 +926,10 @@ RULES:
 
       const isImage = mimeType.startsWith("image/");
       const isPDF = mimeType === "application/pdf";
+      const isWord = mimeType === "application/msword" || 
+                     mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
       
-      if (!isImage && !isPDF) {
+      if (!isImage && !isPDF && !isWord) {
         return res.status(400).json({ error: "Invalid file type" });
       }
 
@@ -967,6 +969,36 @@ RULES:
         } catch (pdfErr: any) {
           console.error("PDF error:", pdfErr?.message);
           res.write(`data: ${JSON.stringify({ error: "Could not process PDF. Try taking a screenshot instead." })}\n\n`);
+          res.end();
+          return;
+        }
+      }
+
+      // Handle Word documents - extract text and solve
+      if (isWord) {
+        try {
+          const mammoth = await import("mammoth");
+          const wordBuffer = Buffer.from(image, "base64");
+          console.log("Extracting text from Word document...");
+          
+          const result = await mammoth.extractRawText({ buffer: wordBuffer });
+          const extractedText = result.value.trim();
+          
+          if (!extractedText) {
+            res.write(`data: ${JSON.stringify({ error: "Could not extract text from document. The file may be empty or corrupted." })}\n\n`);
+            res.end();
+            return;
+          }
+          
+          console.log("Word text extracted, length:", extractedText.length);
+          
+          // Redirect to text solving with the extracted content
+          res.write(`data: ${JSON.stringify({ redirect: "text", problem: extractedText })}\n\n`);
+          res.end();
+          return;
+        } catch (wordErr: any) {
+          console.error("Word error:", wordErr?.message);
+          res.write(`data: ${JSON.stringify({ error: "Could not process Word document. Please copy and paste the text instead." })}\n\n`);
           res.end();
           return;
         }
