@@ -5,6 +5,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/lib/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { ErrorBoundary } from "@/components/error-boundary";
+import { SEOHead } from "@/components/seo-head";
 import Landing from "@/pages/landing";
 import Solver from "@/pages/solver";
 import Quiz from "@/pages/quiz";
@@ -177,20 +179,23 @@ function App() {
   const isStandalonePage = standalonePages.includes(location);
 
   return (
-    <ThemeProvider defaultTheme="light" storageKey="gradeio-theme">
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          {isStandalonePage ? (
-            <Router />
-          ) : (
-            <AppLayout>
+    <ErrorBoundary>
+      <ThemeProvider defaultTheme="light" storageKey="gradeio-theme">
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <SEOHead />
+            {isStandalonePage ? (
               <Router />
-            </AppLayout>
-          )}
-          <Toaster />
-        </TooltipProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
+            ) : (
+              <AppLayout>
+                <Router />
+              </AppLayout>
+            )}
+            <Toaster />
+          </TooltipProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 

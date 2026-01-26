@@ -5,8 +5,59 @@ import { createServer } from "http";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { pool } from "./db";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 
 const app = express();
+
+// Security headers with helmet
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable CSP for development flexibility
+  crossOriginEmbedderPolicy: false,
+}));
+
+// General API rate limiter
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 500, // 500 requests per 15 minutes
+  message: { error: "Too many requests, please try again later" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Stricter rate limiter for AI endpoints (expensive operations)
+const aiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 20, // 20 AI requests per minute
+  message: { error: "Too many AI requests, please slow down" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Auth rate limiter (prevent brute force)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 login attempts per 15 minutes
+  message: { error: "Too many login attempts, please try again later" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply general rate limiting to all API routes
+app.use("/api", generalLimiter);
+
+// Apply stricter rate limiting to AI endpoints
+app.use("/api/solve-text", aiLimiter);
+app.use("/api/solve-image", aiLimiter);
+app.use("/api/solve-with-rag", aiLimiter);
+app.use("/api/generate-quiz", aiLimiter);
+app.use("/api/generate-essay", aiLimiter);
+app.use("/api/generate-notes", aiLimiter);
+app.use("/api/transcribe", aiLimiter);
+
+// Apply auth rate limiting
+app.use("/api/auth/login", authLimiter);
+app.use("/api/auth/register", authLimiter);
 const httpServer = createServer(app);
 
 // Session configuration with PostgreSQL store
@@ -61,22 +112,11 @@ export function log(message: string, source = "express") {
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
 
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
+      const logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       log(logLine);
     }
   });
