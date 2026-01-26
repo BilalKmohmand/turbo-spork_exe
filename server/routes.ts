@@ -910,34 +910,34 @@ RULES:
         }
       }
 
-      // Use GPT-4o-mini for SPEED with clear formatting instructions
+      // Use GPT-4o for accurate image reading
       const stream = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: "gpt-4o",
         messages: [
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: `Solve ALL problems in this image.
+                text: `Read and solve every math problem in this image.
 
-Example format:
+Write your answer in plain text with LaTeX math inside dollar signs.
 
-**Q1:** Find volume of pyramid with base 9cm² and height 4cm
-
-Step 1: Use pyramid volume formula
-$V = \\frac{1}{3} \\times B \\times h$
-
-Step 2: Substitute values
-$V = \\frac{1}{3} \\times 9 \\times 4 = 12$
-
-**Answer:** $12 \\, \\text{cm}^3$
+Example:
+**Question 1:** Find the volume of a pyramid with base 9 sq cm and height 4 cm.
+The volume formula is $V = \\frac{1}{3} \\cdot B \\cdot h$.
+Substituting: $V = \\frac{1}{3} \\cdot 9 \\cdot 4 = 12$ cubic cm.
+**Answer:** $12 \\text{ cm}^3$
 
 ---
 
-**Q2:** [next problem]...
+**Question 2:** [next]...
 
-CRITICAL: Put $ around ALL math. Use \\frac{a}{b} for fractions. Solve every question.`,
+IMPORTANT:
+- Use $ for math, NOT unicode symbols
+- Write fractions as \\frac{a}{b}
+- Write multiplication as \\cdot
+- Solve ALL problems in the image`,
               },
               {
                 type: "image_url",
@@ -946,7 +946,7 @@ CRITICAL: Put $ around ALL math. Use \\frac{a}{b} for fractions. Solve every que
             ],
           },
         ],
-        max_tokens: 4000,
+        max_tokens: 5000,
         stream: true,
       });
 
