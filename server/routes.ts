@@ -652,7 +652,13 @@ export async function registerRoutes(
           const pdfResult = await parser.getText();
           const extractedText = pdfResult.text?.trim().replace(/\n*-- \d+ of \d+ --\n*/g, '').trim();
           
-          if (!extractedText || extractedText.length < 10) {
+          // Only use text if it's actually meaningful content
+          const hasRealContent = extractedText && 
+            extractedText.length >= 100 && 
+            /[a-zA-Z]{3,}/.test(extractedText) && 
+            !/^\s*\d+\s*$/.test(extractedText);
+            
+          if (!hasRealContent) {
             // PDF is scanned/image-based - convert to image and use GPT Vision
             console.log("PDF has minimal text, converting to image for Vision processing");
             
@@ -866,7 +872,13 @@ RULES:
           const pdfResult = await parser.getText();
           const extractedText = pdfResult.text?.trim().replace(/\n*-- \d+ of \d+ --\n*/g, '').trim();
           
-          if (extractedText && extractedText.length >= 10) {
+          // Only use text if it's actually meaningful (long enough + has real content)
+          const hasRealContent = extractedText && 
+            extractedText.length >= 100 && 
+            /[a-zA-Z]{3,}/.test(extractedText) && // Has actual words
+            !/^\s*\d+\s*$/.test(extractedText); // Not just page numbers
+            
+          if (hasRealContent) {
             // Text-based PDF - use text streaming instead
             res.write(`data: ${JSON.stringify({ redirect: "text", problem: extractedText })}\n\n`);
             res.end();
