@@ -862,49 +862,34 @@ RULES:
       let imageBase64 = image;
       let imageMimeType = mimeType;
 
-      // Handle PDF conversion
+      // Handle PDF - always convert to image for best results
       if (isPDF) {
         try {
           const pdfBuffer = Buffer.from(image, "base64");
-          const uint8Array = new Uint8Array(pdfBuffer);
-          const PDFParseClass = await getPDFParse();
-          const parser = new PDFParseClass(uint8Array);
-          const pdfResult = await parser.getText();
-          const extractedText = pdfResult.text?.trim().replace(/\n*-- \d+ of \d+ --\n*/g, '').trim();
+          console.log("Converting PDF to image for vision processing...");
           
-          // Only use text if it's actually meaningful (long enough + has real content)
-          const hasRealContent = extractedText && 
-            extractedText.length >= 100 && 
-            /[a-zA-Z]{3,}/.test(extractedText) && // Has actual words
-            !/^\s*\d+\s*$/.test(extractedText); // Not just page numbers
-            
-          if (hasRealContent) {
-            // Text-based PDF - use text streaming instead
-            res.write(`data: ${JSON.stringify({ redirect: "text", problem: extractedText })}\n\n`);
-            res.end();
-            return;
-          }
-          
-          // Convert PDF to image
+          // Always convert PDF to image - more reliable than text extraction
           const { fromBuffer } = await import("pdf2pic");
           const convert = fromBuffer(pdfBuffer, {
-            density: 100,
+            density: 150,  // Higher quality
             saveFilename: "page",
             savePath: "/tmp",
             format: "png",
-            width: 800,
-            height: 1000
+            width: 1200,   // Larger for better OCR
+            height: 1600
           });
           const pageOutput = await convert(1, { responseType: "base64" });
           
           if (pageOutput?.base64) {
+            console.log("PDF converted to image successfully");
             imageBase64 = pageOutput.base64;
             imageMimeType = "image/png";
           } else {
-            throw new Error("PDF conversion failed");
+            throw new Error("PDF conversion failed - no output");
           }
         } catch (pdfErr: any) {
-          res.write(`data: ${JSON.stringify({ error: "Could not process PDF" })}\n\n`);
+          console.error("PDF conversion error:", pdfErr?.message);
+          res.write(`data: ${JSON.stringify({ error: "Could not process PDF. Try uploading as an image instead." })}\n\n`);
           res.end();
           return;
         }
