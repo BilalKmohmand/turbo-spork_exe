@@ -225,6 +225,8 @@ export default function Solver() {
   const solveImageWithStreaming = async (base64: string, mimeType: string) => {
     setIsStreaming(true);
     setStreamingText("");
+    setResult(null);
+    setSubmittedProblem("PDF uploaded for analysis");
     setIsUploading(false);
     
     try {
