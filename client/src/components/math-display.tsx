@@ -24,11 +24,29 @@ export function renderMathText(text: string): JSX.Element[] {
   const parts: JSX.Element[] = [];
   let key = 0;
   
-  // Process line by line for better control
   const lines = text.split('\n');
   
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i];
+    
+    // Skip empty lines
+    if (!line.trim()) {
+      parts.push(<div key={key++} className="h-2" />);
+      continue;
+    }
+    
+    // Handle markdown headers
+    const h3Match = line.match(/^###\s*\*?\*?(.+?)\*?\*?\s*:?\s*$/);
+    if (h3Match) {
+      parts.push(<h3 key={key++} className="text-lg font-bold text-primary mt-4 mb-2">{h3Match[1].replace(/\*\*/g, '')}</h3>);
+      continue;
+    }
+    
+    // Handle --- dividers
+    if (line.trim() === '---') {
+      parts.push(<hr key={key++} className="my-4 border-border" />);
+      continue;
+    }
     
     // Check for block math \[...\]
     const blockMatch = line.match(/^\s*\\\[([\s\S]*?)\\\]\s*$/);
@@ -45,42 +63,42 @@ export function renderMathText(text: string): JSX.Element[] {
       continue;
     }
     
-    // Process inline math: \(...\) and $...$
-    let lastIdx = 0;
+    // Process inline content: math and bold
     const lineElements: JSX.Element[] = [];
+    let lastIdx = 0;
     
-    // Regex for \(...\) or $...$
-    const inlineRegex = /\\\(([^)]+?)\\\)|\$([^$\n]+?)\$/g;
+    // Regex for math \(...\), $...$, and bold **...**
+    const mixedRegex = /\\\(([^)]+?)\\\)|\$([^$\n]+?)\$|\*\*([^*]+?)\*\*/g;
     let match;
     
-    while ((match = inlineRegex.exec(line)) !== null) {
-      // Text before math
+    while ((match = mixedRegex.exec(line)) !== null) {
       if (match.index > lastIdx) {
         lineElements.push(<span key={key++}>{line.slice(lastIdx, match.index)}</span>);
       }
       
-      const mathContent = match[1] || match[2];
-      if (mathContent) {
+      if (match[1] || match[2]) {
+        // Math content
+        const mathContent = match[1] || match[2];
         try {
           lineElements.push(<InlineMath key={key++} math={mathContent.trim()} />);
         } catch {
           lineElements.push(<code key={key++}>{mathContent}</code>);
         }
+      } else if (match[3]) {
+        // Bold content
+        lineElements.push(<strong key={key++} className="font-semibold">{match[3]}</strong>);
       }
-      lastIdx = inlineRegex.lastIndex;
+      lastIdx = mixedRegex.lastIndex;
     }
     
-    // Remaining text
     if (lastIdx < line.length) {
       lineElements.push(<span key={key++}>{line.slice(lastIdx)}</span>);
     }
     
     if (lineElements.length > 0) {
-      parts.push(<div key={key++}>{lineElements}</div>);
-    } else if (line.trim()) {
-      parts.push(<div key={key++}>{line}</div>);
+      parts.push(<div key={key++} className="leading-relaxed">{lineElements}</div>);
     } else {
-      parts.push(<div key={key++} className="h-2" />);
+      parts.push(<div key={key++} className="leading-relaxed">{line}</div>);
     }
   }
 

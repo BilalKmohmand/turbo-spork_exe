@@ -1,0 +1,65 @@
+New question
+
+Unlimited
+1769445637856-pyramid 1.pdf
+PDF
+Question 1
+Find the volume of the pyramid with a rectangular base of 10 in by 11 in and a height of 16 in.
+
+Calculate the Area of the Base (B)
+The area of the rectangular base is 110 square inches. The base is a rectangle with length 11 in and width 10 in. The area of a rectangle is calculated by multiplying its length and width. Therefore, B = 11 in * 10 in = 110 in².
+Identify the Height (h)
+The height of the pyramid is 16 inches. The height (h) is the perpendicular distance from the apex to the base, which is given as 16 in.
+Calculate the Volume (V)
+The volume of the pyramid is approximately 586.7 cubic inches. The volume of a pyramid is calculated using the formula V = (1/3) * B * h. Substituting the values, we get V = (1/3) * 110 in² * 16 in = 1760/3 in³, which is approximately 586.67 in³.
+Answer
+Question 2
+Find the volume of the pyramid with a rectangular base of 21 yd by 9 yd and a height of 5 yd.
+
+Calculate the Area of the Base (B)
+The area of the rectangular base is 189 square yards. The base is a rectangle with length 21 yd and width 9 yd. The area is calculated as B = 21 yd * 9 yd = 189 yd².
+Identify the Height (h)
+The height of the pyramid is 5 yards. The height (h) is given as 5 yd.
+Calculate the Volume (V)
+The volume of the pyramid is 315 cubic yards. Using the formula V = (1/3) * B * h, we substitute the values: V = (1/3) * 189 yd² * 5 yd = 63 * 5 yd³ = 315 yd³.
+Answer
+Question 3
+Find the volume of the pyramid with a square base of 14 ft by 14 ft and a height of 25 ft.
+
+Calculate the Area of the Base (B)
+The area of the square base is 196 square feet. The base is a square with side lengths of 14 ft. The area is calculated as B = 14 ft * 14 ft = 196 ft².
+Identify the Height (h)
+The height of the pyramid is 25 feet. The height (h) is given as 25 ft.
+Calculate the Volume (V)
+The volume of the pyramid is approximately 1633.3 cubic feet. Using the formula V = (1/3) * B * h, we get V = (1/3) * 196 ft² * 25 ft = 4900/3 ft³, which is approximately 1633.33 ft³.
+Answer
+Question 4
+Find the volume of the pyramid with a triangular base (base 12 mm, height 7.5 mm) and a pyramid height of 10 mm.
+
+Calculate the Area of the Base (B)
+The area of the triangular base is 45 square millimeters. The base of the pyramid is a triangle with a base of 12 mm and a height of 7.5 mm. The area of a triangle is (1/2) * base * height. So, B = (1/2) * 12 mm * 7.5 mm = 45 mm².
+Identify the Height of the Pyramid (h)
+The height of the pyramid is 10 millimeters. The height (h) of the pyramid is given as 10 mm.
+Calculate the Volume (V)
+The volume of the pyramid is 150 cubic millimeters. Using the formula V = (1/3) * B * h, we get V = (1/3) * 45 mm² * 10 mm = 15 * 10 mm³ = 150 mm³.
+Answer
+Question 5
+Find the volume of the pyramid with a triangular base (base 22.1 m, height 14 m) and a pyramid height of 19 m.
+
+Calculate the Area of the Base (B)
+The area of the triangular base is 154.7 square meters. The base of the pyramid is a triangle with a base of 22.1 m and a height of 14 m. The area is B = (1/2) * 22.1 m * 14 m = 154.7 m².
+Identify the Height of the Pyramid (h)
+The height of the pyramid is 19 meters. The height (h) of the pyramid is given as 19 m.
+Calculate the Volume (V)
+The volume of the pyramid is approximately 979.4 cubic meters. Using the formula V = (1/3) * B * h, we get V = (1/3) * 154.7 m² * 19 m = 2939.3/3 m³, which is approximately 979.77 m³.
+Answer
+Question 6
+Find the volume of the pyramid with a square base of 10 cm by 10 cm and a height of 16 cm.
+
+Calculate the Area of the Base (B)
+The area of the square base is 100 square centimeters. The base is a square with side lengths of 10 cm. The area is calculated as B = 10 cm * 10 cm = 100 cm².
+Identify the Height (h)
+The height of the pyramid is 16 centimeters. The height (h) of the pyramid is given as 16 cm.
+Calculate the Volume (V)
+The volume of the pyramid is approximately 533.3 cubic centimeters. Using the formula V = (1/3) * B * h, we get V = (1/3) * 100 cm² * 16 cm = 1600/3 cm³, which is approximately 533.33 cm³.
+Answer
