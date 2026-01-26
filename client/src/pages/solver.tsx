@@ -306,14 +306,13 @@ export default function Solver() {
       return;
     }
 
-    // Show file preview immediately
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
-    setResult(null);
-    setSubmittedProblem("");
-    scrollToBottom();
-
     setIsUploading(true);
+    setResult(null);
+    setUploadProgress(10);
+    setSubmittedProblem("");
+
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(isPDF ? null : url);
     setUploadProgress(30);
 
     try {
@@ -321,6 +320,7 @@ export default function Solver() {
       let mimeType: string;
       
       if (isPDF) {
+        // For PDFs, read as base64 directly
         const arrayBuffer = await file.arrayBuffer();
         const bytes = new Uint8Array(arrayBuffer);
         let binary = '';
@@ -330,6 +330,7 @@ export default function Solver() {
         base64 = btoa(binary);
         mimeType = "application/pdf";
       } else {
+        // For images, compress and convert
         const result = await compressImage(file);
         base64 = result.base64;
         mimeType = result.mimeType;
@@ -337,10 +338,7 @@ export default function Solver() {
       
       setUploadProgress(50);
       setLastProblem({ type: "image", content: base64, mimeType });
-      setIsUploading(false);
-      
-      // Use streaming for image/PDF solving
-      await solveImageWithStreaming(base64, mimeType);
+      submitMutation.mutate({ base64, mimeType });
     } catch {
       setIsUploading(false);
       setUploadProgress(0);
@@ -349,87 +347,6 @@ export default function Solver() {
         description: "Failed to process file. Please try again.",
         variant: "destructive",
       });
-    }
-  };
-  
-  const solveImageWithStreaming = async (base64: string, mimeType: string) => {
-    setIsStreaming(true);
-    setStreamingText("");
-    
-    try {
-      const response = await fetch("/api/solve-image-stream", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: base64, mimeType }),
-      });
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let fullText = "";
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          
-          const chunk = decoder.decode(value);
-          const lines = chunk.split("\n").filter(line => line.startsWith("data: "));
-          
-          for (const line of lines) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              if (data.token) {
-                fullText += data.token;
-                setStreamingText(fullText);
-                scrollToBottom();
-              }
-              if (data.done && data.result) {
-                if (data.result.type === "chat" || !data.result.questions) {
-                  // Plain text response
-                  setResult({
-                    id: data.submission?.id || 0,
-                    content: "Image problem",
-                    status: "ai_graded",
-                    questions: [],
-                    aiSolution: data.result.message || fullText,
-                    aiSteps: [],
-                    aiExplanation: "",
-                    messages: [],
-                  });
-                } else {
-                  const questions = data.result.questions || [];
-                  setResult({
-                    id: data.submission?.id || 0,
-                    content: "Image problem",
-                    status: "ai_graded",
-                    questions,
-                    aiSolution: questions.map((q: any) => `Q${q.questionNumber}: ${q.answer}`).join("\n"),
-                    aiSteps: questions.flatMap((q: any) => q.steps || []),
-                    aiExplanation: data.result.explanation || "",
-                    messages: [],
-                  });
-                }
-                setStreamingText("");
-              }
-              if (data.error) {
-                throw new Error(data.error);
-              }
-            } catch (e) {
-              if (e instanceof SyntaxError) continue;
-              throw e;
-            }
-          }
-        }
-      }
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error?.message || "Failed to solve. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsStreaming(false);
-      scrollToBottom();
     }
   };
 
