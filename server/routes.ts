@@ -898,30 +898,33 @@ RULES:
         }
       }
 
-      // Stream from GPT-4o vision
+      // Stream from GPT-4o-mini for speed (good enough for most problems)
       const stream = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: `CRITICAL: Solve EVERY problem in this image. Count all questions first.
+                text: `Solve ALL problems in this image. Format:
 
-Return ONLY JSON:
-{"questions":[{"questionNumber":1,"problemStatement":"problem","steps":[{"title":"Step 1","math":"LaTeX no $","reasoning":"with $math$"}],"answer":"$answer$"}],"explanation":"summary","problemType":"math"}
+**Q1:** [problem]
+**Step 1:** explanation with $math$
+**Answer:** $result$
 
-Rules: JSON only, $...$ for inline math, "math" field pure LaTeX. Start with {`,
+(Continue for each question)
+
+Use $...$ for math. Be concise but thorough.`,
               },
               {
                 type: "image_url",
-                image_url: { url: `data:${imageMimeType};base64,${imageBase64}` },
+                image_url: { url: `data:${imageMimeType};base64,${imageBase64}`, detail: "low" },
               },
             ],
           },
         ],
-        max_completion_tokens: 8000,
+        max_tokens: 4000,
         stream: true,
       });
 

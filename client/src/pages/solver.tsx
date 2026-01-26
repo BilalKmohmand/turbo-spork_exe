@@ -37,6 +37,7 @@ interface SubmissionResult {
   graphSpec?: GraphSpec;
   messages?: Message[];
   questions?: QuestionObject[];
+  rawText?: string;
 }
 
 interface ChatMessage {
@@ -220,10 +221,10 @@ export default function Solver() {
     },
   });
 
-  // Streaming function for images - shows progress, not raw JSON
+  // Streaming function for images - shows actual AI response token by token
   const solveImageWithStreaming = async (base64: string, mimeType: string) => {
     setIsStreaming(true);
-    setStreamingText("Analyzing your image...");
+    setStreamingText("");
     setIsUploading(false);
     
     try {
@@ -235,7 +236,7 @@ export default function Solver() {
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
-      let tokenCount = 0;
+      let fullText = "";
 
       if (reader) {
         while (true) {
@@ -257,29 +258,22 @@ export default function Solver() {
                 }
                 
                 if (data.token) {
-                  tokenCount++;
-                  // Show progress updates
-                  if (tokenCount < 50) {
-                    setStreamingText("Reading problems from image...");
-                  } else if (tokenCount < 200) {
-                    setStreamingText("Solving problems step by step...");
-                  } else {
-                    setStreamingText("Generating detailed solutions...");
-                  }
+                  fullText += data.token;
+                  setStreamingText(fullText);
+                  scrollToBottom();
                 }
                 
                 if (data.done && data.result) {
-                  setResult(data.result);
+                  // Keep showing the streamed text as the final result
+                  setResult({ ...data.result, aiSolution: fullText, rawText: fullText });
                   setStreamingText("");
                 }
                 
                 if (data.error) {
                   throw new Error(data.error);
                 }
-              } catch (e) {
-                if (e instanceof Error && e.message !== "Unexpected end of JSON input") {
-                  console.error("Parse error:", e);
-                }
+              } catch {
+                // Ignore parse errors during streaming
               }
             }
           }
@@ -323,7 +317,8 @@ export default function Solver() {
       const img = new Image();
       
       img.onload = () => {
-        const maxDim = 1600;
+        // Smaller size = faster upload & AI processing
+        const maxDim = 1000;
         let width = img.width;
         let height = img.height;
         
@@ -341,7 +336,8 @@ export default function Solver() {
         canvas.height = height;
         ctx?.drawImage(img, 0, 0, width, height);
         
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+        // Lower quality = smaller file = faster
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
         const base64 = dataUrl.split(",")[1];
         resolve({ base64, mimeType: "image/jpeg" });
       };
@@ -736,8 +732,15 @@ export default function Solver() {
                       <GraphPanel graphSpec={result.graphSpec} />
                     )}
 
-                    {/* Solvely-style Question-by-Question Display */}
-                    {result.questions && Array.isArray(result.questions) && result.questions.length > 0 ? (
+                    {/* Streamed Text Display (new format) */}
+                    {result.rawText ? (
+                      <div className="prose prose-sm dark:prose-invert max-w-none" data-testid="streamed-solution">
+                        <div className="text-foreground leading-relaxed whitespace-pre-wrap">
+                          {renderMathText(result.rawText)}
+                        </div>
+                      </div>
+                    ) : result.questions && Array.isArray(result.questions) && result.questions.length > 0 ? (
+                      /* Solvely-style Question-by-Question Display */
                       <div className="space-y-8">
                         {result.questions.map((question) => (
                           <div key={question.questionNumber} className="space-y-4" data-testid={`question-${question.questionNumber}`}>
