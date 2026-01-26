@@ -1,0 +1,101 @@
+Gradeio
+Pricing
+Sign Out
+PDF uploaded for analysis
+
+
+
+
+
+Question 1  
+Find the volume of the pyramid with base 10 in by 11 in and height 16 in.  
+Calculate the Area of the Base (B)  
+The area of the rectangular base is 110 square inches. The base is a rectangle with length 11 in and width 10 in. The area is B = 11 in × 10 in = 110 in².  
+Identify the Height (h)  
+The height of the pyramid is 16 inches.  
+Calculate the Volume (V)  
+The volume is approximately 586.67 cubic inches. Using V = (1/3) × B × h, we get V = (1/3) × 110 in² × 16 in = 1760/3 in³ ≈ 586.67 in³.  
+Answer: 586.67 in³  
+Question 2  
+Find the volume of the pyramid with base 21 yd by 9 yd and height 5 yd.  
+Calculate the Area of the Base (B)  
+The area of the rectangular base is 189 square yards. The base is a rectangle with length 21 yd and width 9 yd. The area is B = 21 yd × 9 yd = 189 yd².  
+Identify the Height (h)  
+The height of the pyramid is 5 yards.  
+Calculate the Volume (V)  
+The volume is 315 cubic yards. Using V = (1/3) × B × h, we get V = (1/3) × 189 yd² × 5 yd = 945/3 yd³ = 315 yd³.  
+Answer: 315 yd³  
+Question 3  
+Find the volume of the pyramid with base 14 ft by 14 ft and height 25 ft.  
+Calculate the Area of the Base (B)  
+The area of the square base is 196 square feet. The base is a square with side length 14 ft. The area is B = 14 ft × 14 ft = 196 ft².  
+Identify the Height (h)  
+The height of the pyramid is 25 feet.  
+Calculate the Volume (V)  
+The volume is approximately 1,633.33 cubic feet. Using V = (1/3) × B × h, we get V = (1/3) × 196 ft² × 25 ft = 4900/3 ft³ ≈ 1633.33 ft³.  
+Answer: 1633.33 ft³  
+Question 4  
+Find the volume of the pyramid with base 12 mm² and height 7.5 mm.  
+Calculate the Area of the Base (B)  
+The area of the triangular base is already given as 12 square millimeters.  
+Identify the Height (h)  
+The height of the pyramid is 7.5 millimeters.  
+Calculate the Volume (V)  
+The volume is 30 cubic millimeters. Using V = (1/3) × B × h, we get V = (1/3) × 12 mm² × 7.5 mm = 30 mm³.  
+Answer: 30 mm³  
+Question 5  
+Find the volume of the pyramid with base 22.1 m² and height 19 m.  
+The area of the base is already given as 22.1 square meters.  
+Identify the Height (h)  
+The height of the pyramid is 19 meters.  
+Calculate the Volume (V)  
+The volume is approximately 139.27 cubic meters. Using V = (1/3) × B × h, we get V = (1/3) × 22.1 m² × 19 m = 419.9/3 m³ ≈ 139.27 m³.  
+Answer: 139.27 m³  
+Question 6  
+Find the volume of the pyramid with base 10 cm by 10 cm and height 16 cm.  
+Calculate the Area of the Base (B)  
+The area of the square base is 100 square centimeters. The base is a square with side length 10 cm. The area is B = 10 cm × 10 cm = 100 cm².  
+Identify the Height (h)  
+The height of the pyramid is 16 centimeters.  
+Calculate the Volume (V)  
+The volume is approximately 533.33 cubic centimeters. Using V = (1/3) × B × h, we get V = (1/3) × 100 cm² × 16 cm = 1600/3 cm³ ≈ 533.33 cm³.  
+Answer: 533.33 cm³  
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+can you explain me question 1 step. by step
+Sure! However, it seems there was no specific question provided. Please share the details of Question 1 that you would like me to explain step by step.
+New Problem
+
+Ask a follow-up question...
+
+AI can make mistakes. Always verify important answers.
+

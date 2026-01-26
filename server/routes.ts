@@ -777,44 +777,49 @@ export async function registerRoutes(
         return;
       }
 
+      // Build messages with history for context
+      const systemMessage = {
+        role: "system" as const,
+        content: `You are Gradeio, an expert math/science tutor. Solve problems clearly.
+
+FORMAT YOUR RESPONSE LIKE THIS:
+
+Question 1
+[restate the problem]
+
+Step 1: [title]
+[explanation]
+
+Step 2: [title]
+[continue...]
+
+Answer: [final answer]
+
+RULES:
+- Be thorough but clear
+- If user asks about a previous solution, refer to it directly
+- Explain step by step when asked`,
+      };
+      
+      // Include history if provided
+      const conversationMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [systemMessage];
+      
+      if (history && Array.isArray(history) && history.length > 0) {
+        for (const msg of history) {
+          if (msg.role === "assistant" || msg.role === "user") {
+            conversationMessages.push({ role: msg.role, content: msg.content });
+          }
+        }
+      }
+      
+      // Add current problem
+      conversationMessages.push({ role: "user", content: problem.trim() });
+      
       // For homework problems - stream readable solution
       const stream = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         max_tokens: 8000,
-        messages: [
-          {
-            role: "system",
-            content: `You are Gradeio, an expert math/science tutor. Solve problems clearly.
-
-FORMAT YOUR RESPONSE LIKE THIS (stream-friendly):
-
-**Question 1:** [restate the problem]
-
-**Step 1: [title]**
-[explanation with $math$ for formulas]
-
-**Step 2: [title]**
-[continue...]
-
-**Answer:** $final answer$
-
----
-
-**Question 2:** [if multiple questions]
-[continue same format...]
-
----
-
-**Summary:** Brief explanation of concepts used.
-
-RULES:
-- Use $...$ for ALL math expressions
-- Number every question and step
-- Be thorough but clear
-- Solve ALL questions if there are multiple`,
-          },
-          { role: "user", content: problem.trim() }
-        ],
+        messages: conversationMessages,
         stream: true,
       });
 
