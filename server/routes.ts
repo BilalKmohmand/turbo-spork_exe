@@ -727,6 +727,168 @@ export async function registerRoutes(
     }
   });
 
+  // Streaming endpoint for image/PDF solving
+  app.post("/api/solve-image-stream", async (req, res) => {
+    try {
+      const { image, mimeType } = req.body;
+      
+      if (!image || !mimeType) {
+        return res.status(400).json({ error: "Image and mimeType are required" });
+      }
+
+      const isImage = mimeType.startsWith("image/");
+      const isPDF = mimeType === "application/pdf";
+      
+      if (!isImage && !isPDF) {
+        return res.status(400).json({ error: "Invalid file type" });
+      }
+
+      // Set up SSE headers
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.flushHeaders();
+
+      let imageBase64 = image;
+      let imageMimeType = mimeType;
+
+      // Handle PDF - extract text or convert to image
+      if (isPDF) {
+        try {
+          const pdfBuffer = Buffer.from(image, "base64");
+          const uint8Array = new Uint8Array(pdfBuffer);
+          const PDFParseClass = await getPDFParse();
+          const parser = new PDFParseClass(uint8Array);
+          const pdfResult = await parser.getText();
+          const extractedText = pdfResult.text?.trim().replace(/\n*-- \d+ of \d+ --\n*/g, '').trim();
+          
+          if (extractedText && extractedText.length >= 10) {
+            // PDF has text - use text streaming endpoint logic
+            const messages: any[] = [
+              {
+                role: "system",
+                content: `You are Gradeio, solving all problems from this document. Respond with JSON:
+{"type":"problem","questions":[{"questionNumber":1,"problemStatement":"problem","steps":[{"title":"Step 1","math":"LaTeX no $","reasoning":"explanation"}],"answer":"answer"}],"explanation":"summary"}
+Rules: Solve ALL questions, use $...$ for inline math, "math" field is pure LaTeX. Start with {`,
+              },
+              { role: "user", content: extractedText }
+            ];
+
+            const stream = await openai.chat.completions.create({
+              model: "gpt-4o-mini",
+              max_tokens: 8000,
+              messages,
+              stream: true,
+            });
+
+            let fullText = "";
+            for await (const chunk of stream) {
+              const content = chunk.choices[0]?.delta?.content || "";
+              if (content) {
+                fullText += content;
+                res.write(`data: ${JSON.stringify({ token: content })}\n\n`);
+              }
+            }
+
+            try {
+              const jsonMatch = fullText.match(/\{[\s\S]*\}/);
+              if (jsonMatch) {
+                const result = JSON.parse(jsonMatch[0]);
+                res.write(`data: ${JSON.stringify({ done: true, result })}\n\n`);
+              }
+            } catch {}
+            res.end();
+            return;
+          }
+          
+          // PDF is scanned - convert to image
+          const { fromBuffer } = await import("pdf2pic");
+          const convert = fromBuffer(pdfBuffer, { density: 100, saveFilename: "page", savePath: "/tmp", format: "png", width: 800, height: 1000 });
+          const pageOutput = await convert(1, { responseType: "base64" });
+          if (pageOutput?.base64) {
+            imageBase64 = pageOutput.base64;
+            imageMimeType = "image/png";
+          }
+        } catch (e: any) {
+          res.write(`data: ${JSON.stringify({ error: "Failed to process PDF" })}\n\n`);
+          res.end();
+          return;
+        }
+      }
+
+      // Stream image solving with GPT-4o Vision
+      const messages: any[] = [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: `You are Gradeio. Solve ALL math/homework problems in this image. Respond with JSON:
+{"type":"problem","questions":[{"questionNumber":1,"problemStatement":"problem","steps":[{"title":"Step 1","math":"LaTeX no $","reasoning":"explanation"}],"answer":"answer"}],"explanation":"summary"}
+Rules: Solve ALL questions, use $...$ for inline math, "math" field: pure LaTeX. Start with {`,
+            },
+            {
+              type: "image_url",
+              image_url: { url: `data:${imageMimeType};base64,${imageBase64}` },
+            },
+          ],
+        },
+      ];
+
+      const stream = await openai.chat.completions.create({
+        model: "gpt-4o",
+        max_tokens: 8000,
+        messages,
+        stream: true,
+      });
+
+      let fullText = "";
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content || "";
+        if (content) {
+          fullText += content;
+          res.write(`data: ${JSON.stringify({ token: content })}\n\n`);
+        }
+      }
+
+      // Parse and send final result
+      try {
+        const jsonMatch = fullText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const result = JSON.parse(jsonMatch[0]);
+          
+          // Save to database
+          const submission = await storage.createSubmission({
+            title: "Image Problem",
+            studentName: "Student",
+            content: "Image problem",
+          });
+          
+          const questions = result.questions || [];
+          const steps = questions.flatMap((q: any) => q.steps || []);
+          const solution = questions.map((q: any) => `Q${q.questionNumber}: ${q.answer}`).join("\n");
+          
+          await storage.updateSubmission(submission.id, {
+            status: "ai_graded",
+            aiSolution: solution,
+            aiSteps: steps,
+            aiExplanation: result.explanation || "",
+            problemType: result.problemType || "math",
+          });
+          
+          const updated = await storage.getSubmission(submission.id);
+          res.write(`data: ${JSON.stringify({ done: true, result, submission: updated })}\n\n`);
+        }
+      } catch {}
+      
+      res.end();
+    } catch (error: any) {
+      console.error("Image stream error:", error?.message);
+      res.write(`data: ${JSON.stringify({ error: error?.message || "Failed" })}\n\n`);
+      res.end();
+    }
+  });
+
   // Streaming endpoint for real-time token output
   app.post("/api/solve-text-stream", async (req, res) => {
     try {
