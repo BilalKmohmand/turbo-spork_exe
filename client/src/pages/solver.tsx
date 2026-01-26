@@ -455,7 +455,7 @@ export default function Solver() {
   }, []);
 
   const handleFollowUp = async () => {
-    if (!followUpQuestion.trim() || !result?.id) return;
+    if (!followUpQuestion.trim() || !result) return;
 
     const userQuestion = followUpQuestion.trim();
     
@@ -469,11 +469,75 @@ export default function Solver() {
     
     setIsAskingFollowUp(true);
     try {
-      const response = await apiRequest("POST", `/api/submissions/${result.id}/followup`, {
-        question: userQuestion,
-      });
-      const data = await response.json();
-      setResult(prev => prev ? { ...prev, messages: data.messages } : prev);
+      // If we have a saved ID, use the API endpoint
+      if (result.id) {
+        const response = await apiRequest("POST", `/api/submissions/${result.id}/followup`, {
+          question: userQuestion,
+        });
+        const data = await response.json();
+        setResult(prev => prev ? { ...prev, messages: data.messages } : prev);
+      } else {
+        // For image results without ID, use text streaming with context
+        const context = result.rawText || result.aiSolution || "";
+        const fullQuestion = `Based on this previous solution:\n\n${context}\n\nUser question: ${userQuestion}`;
+        
+        // Stream the follow-up response
+        const response = await fetch("/api/solve-text-stream", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            problem: userQuestion,
+            history: [
+              { role: "assistant", content: context },
+              { role: "user", content: userQuestion }
+            ]
+          }),
+        });
+        
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+        let aiResponse = "";
+        
+        if (reader) {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            const chunk = decoder.decode(value);
+            const lines = chunk.split("\n");
+            
+            for (const line of lines) {
+              if (line.startsWith("data: ")) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+                  if (data.token) {
+                    aiResponse += data.token;
+                    setResult(prev => prev ? {
+                      ...prev,
+                      messages: [
+                        ...(prev.messages || []).slice(0, -1).filter(m => m.role === "user"),
+                        { role: "user" as const, content: userQuestion },
+                        { role: "assistant" as const, content: aiResponse }
+                      ]
+                    } : prev);
+                    scrollToBottom();
+                  }
+                } catch {}
+              }
+            }
+          }
+        }
+        
+        // Set final messages
+        setResult(prev => prev ? {
+          ...prev,
+          messages: [
+            ...(prev.messages || []).filter(m => m.role === "user").slice(0, -1),
+            { role: "user" as const, content: userQuestion },
+            { role: "assistant" as const, content: aiResponse }
+          ]
+        } : prev);
+      }
       scrollToBottom();
     } catch {
       toast({
