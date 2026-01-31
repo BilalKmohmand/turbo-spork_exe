@@ -1522,7 +1522,7 @@ Output ONLY valid JSON.`
 
   app.post("/api/generate-essay", async (req, res) => {
     try {
-      const { topic, type, wordCount, notes } = req.body;
+      const { topic, essayType, wordCount, additionalNotes } = req.body;
       
       if (!topic || typeof topic !== "string" || !topic.trim()) {
         return res.status(400).json({ error: "Please provide an essay topic" });
@@ -1544,7 +1544,7 @@ Respond with ONLY a JSON object:
   "wordCount": 500
 }
 
-Essay type: ${type || "argumentative"}
+Essay type: ${essayType || "argumentative"}
 Target word count: approximately ${wordCount || 500} words
 
 Write a well-structured, coherent essay with:
@@ -1553,7 +1553,7 @@ Write a well-structured, coherent essay with:
 - Strong conclusion
 - Proper transitions between paragraphs
 
-${notes ? `Additional notes/requirements: ${notes}` : ""}
+${additionalNotes ? `Additional notes/requirements: ${additionalNotes}` : ""}
 
 Output ONLY valid JSON.`
           },
