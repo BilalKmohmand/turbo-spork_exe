@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 
 import SolverContent from "@/components/dashboard/solver-content";
 import NotesContent from "@/components/dashboard/notes-content";
@@ -48,6 +49,7 @@ const menuItems = [
 
 export default function Dashboard() {
   const { user, isLoading, logout } = useAuth(true);
+  const { toast } = useToast();
   const [activeSection, setActiveSection] = useState("solver");
 
   if (isLoading) {
@@ -143,13 +145,21 @@ export default function Dashboard() {
               <SidebarGroupContent>
                 <SidebarMenu>
                   <SidebarMenuItem>
-                    <SidebarMenuButton className="w-full justify-start gap-3 h-10 px-3 rounded-lg hover:bg-muted">
+                    <SidebarMenuButton 
+                      className="w-full justify-start gap-3 h-10 px-3 rounded-lg hover:bg-muted"
+                      onClick={() => toast({ title: "Help Center", description: "Help documentation coming soon!" })}
+                      data-testid="button-help"
+                    >
                       <HelpCircle className="w-4 h-4" />
                       <span className="font-medium text-sm">Help Center</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton className="w-full justify-start gap-3 h-10 px-3 rounded-lg hover:bg-muted">
+                    <SidebarMenuButton 
+                      className="w-full justify-start gap-3 h-10 px-3 rounded-lg hover:bg-muted"
+                      onClick={() => toast({ title: "Settings", description: "Settings page coming soon!" })}
+                      data-testid="button-settings"
+                    >
                       <Settings className="w-4 h-4" />
                       <span className="font-medium text-sm">Settings</span>
                     </SidebarMenuButton>

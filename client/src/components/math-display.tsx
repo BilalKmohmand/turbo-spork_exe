@@ -7,15 +7,31 @@ interface MathDisplayProps {
   block?: boolean;
 }
 
+function SafeInlineMath({ math }: { math: string }) {
+  try {
+    return <InlineMath math={math} />;
+  } catch (e) {
+    return <code className="px-1 py-0.5 bg-muted rounded text-sm">{math}</code>;
+  }
+}
+
+function SafeBlockMath({ math }: { math: string }) {
+  try {
+    return <BlockMath math={math} />;
+  } catch (e) {
+    return <pre className="p-2 bg-muted rounded text-sm overflow-x-auto">{math}</pre>;
+  }
+}
+
 export function MathDisplay({ children, block = false }: MathDisplayProps) {
   if (block) {
     return (
       <div className="my-4 overflow-x-auto">
-        <BlockMath math={children} />
+        <SafeBlockMath math={children} />
       </div>
     );
   }
-  return <InlineMath math={children} />;
+  return <SafeInlineMath math={children} />;
 }
 
 export function renderMathText(text: string): JSX.Element[] {
@@ -85,15 +101,11 @@ export function renderMathText(text: string): JSX.Element[] {
     // Check for block math \[...\]
     const blockMatch = line.match(/^\s*\\\[([\s\S]*?)\\\]\s*$/);
     if (blockMatch) {
-      try {
-        parts.push(
-          <div key={key++} className="my-2 text-center overflow-x-auto">
-            <BlockMath math={blockMatch[1].trim()} />
-          </div>
-        );
-      } catch {
-        parts.push(<code key={key++}>{blockMatch[1]}</code>);
-      }
+      parts.push(
+        <div key={key++} className="my-2 text-center overflow-x-auto">
+          <SafeBlockMath math={blockMatch[1].trim()} />
+        </div>
+      );
       continue;
     }
     
@@ -112,11 +124,7 @@ export function renderMathText(text: string): JSX.Element[] {
       
       if (match[1] || match[2]) {
         const mathContent = match[1] || match[2];
-        try {
-          lineElements.push(<InlineMath key={key++} math={mathContent.trim()} />);
-        } catch {
-          lineElements.push(<code key={key++}>{mathContent}</code>);
-        }
+        lineElements.push(<SafeInlineMath key={key++} math={mathContent.trim()} />);
       } else if (match[3]) {
         lineElements.push(<strong key={key++} className="font-semibold">{match[3]}</strong>);
       }
@@ -149,7 +157,7 @@ export function SolutionStep({ step, index }: { step: StepObject; index: number 
       
       {step.math && (
         <div className="ml-9 py-3 text-center overflow-x-auto">
-          <BlockMath math={step.math} />
+          <SafeBlockMath math={step.math} />
         </div>
       )}
       
