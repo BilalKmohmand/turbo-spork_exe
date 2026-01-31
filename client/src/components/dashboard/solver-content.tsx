@@ -330,7 +330,7 @@ export default function SolverContent() {
               type="file"
               ref={fileInputRef}
               className="hidden"
-              accept="image/*,.pdf,.doc,.docx,.txt"
+              accept="*/*"
               onChange={handleFileUpload}
             />
             <Button

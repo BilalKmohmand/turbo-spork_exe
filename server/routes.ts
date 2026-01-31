@@ -941,10 +941,14 @@ RULES:
       const isPDF = mimeType === "application/pdf";
       const isWord = mimeType === "application/msword" || 
                      mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+      const isText = mimeType.startsWith("text/") || 
+                     ["application/json", "application/xml", "application/javascript",
+                      "application/x-python", "application/x-sh"].includes(mimeType);
+      const isSpreadsheet = mimeType === "application/vnd.ms-excel" ||
+                            mimeType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+                            mimeType === "text/csv";
       
-      if (!isImage && !isPDF && !isWord) {
-        return res.status(400).json({ error: "Invalid file type. Supported: JPG, PNG, GIF, WebP, BMP, TIFF, HEIC, PDF, Word" });
-      }
+      // Accept all common file types
 
       // Set up SSE headers
       res.setHeader("Content-Type", "text/event-stream");
@@ -1095,6 +1099,124 @@ RULES:
         }
       }
 
+      // Handle text-based files (txt, json, csv, code files, etc.)
+      if (isText || isSpreadsheet) {
+        try {
+          const textBuffer = Buffer.from(image, "base64");
+          const textContent = textBuffer.toString("utf-8");
+          console.log("Processing text file, length:", textContent.length);
+          
+          // Stream response for text content
+          const stream = await openai.chat.completions.create({
+            model: "gpt-5-nano",
+            messages: [
+              {
+                role: "user",
+                content: `Analyze and help with this ${isSpreadsheet ? "spreadsheet/data" : "text"} content:
+
+${textContent.substring(0, 15000)}
+
+${textContent.length > 15000 ? "(Content truncated...)" : ""}
+
+Please:
+1. Summarize the content
+2. Answer any questions if present
+3. Solve any problems or tasks mentioned
+4. Provide helpful insights or analysis`,
+              },
+            ],
+            max_completion_tokens: 4000,
+            stream: true,
+          });
+
+          let fullText = "";
+          for await (const chunk of stream) {
+            const content = chunk.choices[0]?.delta?.content || "";
+            if (content) {
+              fullText += content;
+              res.write(`data: ${JSON.stringify({ token: content })}\n\n`);
+            }
+          }
+
+          res.write(`data: ${JSON.stringify({ done: true, result: { aiSolution: fullText } })}\n\n`);
+          res.end();
+          return;
+        } catch (textErr: any) {
+          console.error("Text file error:", textErr?.message);
+          res.write(`data: ${JSON.stringify({ error: "Could not process text file." })}\n\n`);
+          res.end();
+          return;
+        }
+      }
+
+      // For unsupported binary file types, try to extract as text or return helpful error
+      if (!isImage && !isPDF && !isWord) {
+        try {
+          const fileBuffer = Buffer.from(image, "base64");
+          // Try to decode as UTF-8 text
+          const textContent = fileBuffer.toString("utf-8");
+          
+          // Guard against empty content
+          if (!textContent || textContent.length === 0) {
+            res.write(`data: ${JSON.stringify({ error: "The file appears to be empty. Please upload a file with content." })}\n\n`);
+            res.end();
+            return;
+          }
+          
+          // Check if it looks like valid text (has printable characters)
+          const printableChars = (textContent.match(/[\x20-\x7E\n\r\t]/g) || []).length;
+          const printableRatio = printableChars / textContent.length;
+          
+          if (printableRatio > 0.8 && textContent.length > 10) {
+            console.log("Processing unknown file as text, length:", textContent.length);
+            
+            const stream = await openai.chat.completions.create({
+              model: "gpt-5-nano",
+              messages: [
+                {
+                  role: "user",
+                  content: `Analyze and help with this content:
+
+${textContent.substring(0, 15000)}
+
+${textContent.length > 15000 ? "(Content truncated...)" : ""}
+
+Please:
+1. Summarize the content
+2. Answer any questions if present
+3. Solve any problems or tasks mentioned
+4. Provide helpful insights or analysis`,
+                },
+              ],
+              max_completion_tokens: 4000,
+              stream: true,
+            });
+
+            let fullText = "";
+            for await (const chunk of stream) {
+              const content = chunk.choices[0]?.delta?.content || "";
+              if (content) {
+                fullText += content;
+                res.write(`data: ${JSON.stringify({ token: content })}\n\n`);
+              }
+            }
+
+            res.write(`data: ${JSON.stringify({ done: true, result: { aiSolution: fullText } })}\n\n`);
+            res.end();
+            return;
+          } else {
+            res.write(`data: ${JSON.stringify({ error: "This file type cannot be processed. Please upload an image, PDF, Word document, or text file." })}\n\n`);
+            res.end();
+            return;
+          }
+        } catch (unknownErr: any) {
+          console.error("Unknown file error:", unknownErr?.message);
+          res.write(`data: ${JSON.stringify({ error: "Could not process this file. Please try a different format." })}\n\n`);
+          res.end();
+          return;
+        }
+      }
+
       // Use GPT-4o for accurate image reading
       const stream = await openai.chat.completions.create({
         model: "gpt-4o",
@@ -1106,7 +1228,7 @@ RULES:
                 type: "text",
                 text: `READ THIS IMAGE CAREFULLY. Solve every math problem you see with the ACTUAL numbers from the image.
 
-Format each answer EXACTLY like this (no markdown, no ### or **):
+Format each answer EXACTLY like this (no markdown, no **):
 
 Question 1
 Find the volume of the pyramid with base 10 in by 11 in and height 16 in.
