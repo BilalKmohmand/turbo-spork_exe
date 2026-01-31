@@ -9,15 +9,13 @@ interface MathDisplayProps {
 
 function renderKatex(math: string, displayMode: boolean): string {
   try {
-    return katex.renderToString(math, {
+    const cleanMath = math.replace(/<br\s*\/?>/gi, " ").trim();
+    return katex.renderToString(cleanMath, {
       displayMode,
       throwOnError: false,
       errorColor: "#cc0000",
       strict: false,
       trust: true,
-      macros: {
-        "\\f": "#1f(#2)"
-      }
     });
   } catch (e) {
     return `<code class="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-sm font-mono">${math}</code>`;
@@ -54,25 +52,45 @@ export function renderMathText(text: string): JSX.Element {
   );
 }
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 function processTextWithMath(text: string): string {
+  const mathPlaceholders: string[] = [];
+  let placeholderIndex = 0;
+  
   let result = text;
   
-  result = result.replace(/\n/g, "<br/>");
-  
   result = result.replace(/\\\[([\s\S]*?)\\\]/g, (_, math) => {
-    return `<div class="my-3 text-center overflow-x-auto">${renderKatex(math.trim(), true)}</div>`;
-  });
-  
-  result = result.replace(/\\\(([\s\S]*?)\\\)/g, (_, math) => {
-    return renderKatex(math.trim(), false);
+    const rendered = `<div class="my-3 text-center overflow-x-auto">${renderKatex(math.trim(), true)}</div>`;
+    const placeholder = `@@MATH_BLOCK_${placeholderIndex++}@@`;
+    mathPlaceholders.push(rendered);
+    return placeholder;
   });
   
   result = result.replace(/\$\$([^$]+?)\$\$/g, (_, math) => {
-    return `<div class="my-3 text-center overflow-x-auto">${renderKatex(math.trim(), true)}</div>`;
+    const rendered = `<div class="my-3 text-center overflow-x-auto">${renderKatex(math.trim(), true)}</div>`;
+    const placeholder = `@@MATH_BLOCK_${placeholderIndex++}@@`;
+    mathPlaceholders.push(rendered);
+    return placeholder;
+  });
+  
+  result = result.replace(/\\\(([^)]+?)\\\)/g, (_, math) => {
+    const rendered = renderKatex(math.trim(), false);
+    const placeholder = `@@MATH_INLINE_${placeholderIndex++}@@`;
+    mathPlaceholders.push(rendered);
+    return placeholder;
   });
   
   result = result.replace(/\$([^$\n]+?)\$/g, (_, math) => {
-    return renderKatex(math.trim(), false);
+    const rendered = renderKatex(math.trim(), false);
+    const placeholder = `@@MATH_INLINE_${placeholderIndex++}@@`;
+    mathPlaceholders.push(rendered);
+    return placeholder;
   });
   
   result = result.replace(/\*\*([^*]+?)\*\*/g, '<strong class="font-semibold">$1</strong>');
@@ -83,13 +101,14 @@ function processTextWithMath(text: string): string {
   
   result = result.replace(/^---$/gm, '<hr class="my-4 border-border"/>');
   
-  result = result.replace(/^(Answer:?\s*)(.*)$/gim, 
-    '<div class="mt-3 p-3 bg-violet-50 dark:bg-violet-950/30 rounded-lg border-l-4 border-violet-600"><span class="font-bold text-violet-600">Answer: </span><span class="font-semibold">$2</span></div>'
-  );
+  result = result.replace(/\n\n+/g, '</p><p class="mt-3">');
+  result = result.replace(/\n/g, '<br/>');
+  result = `<p>${result}</p>`;
   
-  result = result.replace(/^(Step \d+[:.])(.*)$/gim, 
-    '<div class="mt-3"><span class="font-semibold text-violet-600">$1</span>$2</div>'
-  );
+  for (let i = 0; i < mathPlaceholders.length; i++) {
+    result = result.replace(new RegExp(`@@MATH_BLOCK_${i}@@`, 'g'), mathPlaceholders[i] || '');
+    result = result.replace(new RegExp(`@@MATH_INLINE_${i}@@`, 'g'), mathPlaceholders[i] || '');
+  }
   
   return result;
 }
