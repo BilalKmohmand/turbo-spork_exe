@@ -398,7 +398,7 @@ Rules:
     // Use GPT-5-nano for fast responses with higher token limit
     const response = await openai.chat.completions.create({
       model: "gpt-5-nano",
-      max_tokens: 8000,
+      max_completion_tokens: 8000,
       messages,
     });
 
@@ -782,7 +782,7 @@ export async function registerRoutes(
         // Stream the explanation
         const stream = await openai.chat.completions.create({
           model: "gpt-4o-mini",
-          max_tokens: 1000,
+          max_completion_tokens: 1000,
           messages: [
             { role: "system", content: "You are a math tutor. Briefly explain the graph being shown. Describe its key features (intercepts, asymptotes, domain, range) in plain text. Don't use LaTeX." },
             { role: "user", content: `Explain the graph of y = ${expression}` }
@@ -830,7 +830,7 @@ export async function registerRoutes(
         // Stream casual chat response
         const stream = await openai.chat.completions.create({
           model: "gpt-4o-mini",
-          max_tokens: 500,
+          max_completion_tokens: 500,
           messages: [
             { role: "system", content: "You are Gradeio, a friendly AI homework tutor. Be warm, helpful, and brief." },
             { role: "user", content: problem.trim() }
@@ -902,7 +902,7 @@ RULES:
       // For homework problems - stream readable solution
       const stream = await openai.chat.completions.create({
         model: "gpt-4o-mini",
-        max_tokens: 8000,
+        max_completion_tokens: 8000,
         messages: conversationMessages,
         stream: true,
       });
@@ -1064,7 +1064,7 @@ RULES:
                 },
               ],
               stream: true,
-              max_tokens: 4000,
+              max_completion_tokens: 4000,
             });
 
             for await (const chunk of stream) {
@@ -1139,7 +1139,7 @@ RULES:
             ],
           },
         ],
-        max_tokens: 5000,
+        max_completion_tokens: 5000,
         stream: true,
       });
 
@@ -1536,7 +1536,7 @@ FORMATTING RULES:
 
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
-        max_tokens: 4000,
+        max_completion_tokens: 4000,
         messages: [
           { role: "system", content: systemContext },
           ...chatMessages,
@@ -2012,7 +2012,7 @@ Do NOT use markdown formatting - use plain text with clear structure.`,
           },
         ],
         stream: true,
-        max_tokens: 2000,
+        max_completion_tokens: 2000,
       });
 
       for await (const chunk of stream) {
