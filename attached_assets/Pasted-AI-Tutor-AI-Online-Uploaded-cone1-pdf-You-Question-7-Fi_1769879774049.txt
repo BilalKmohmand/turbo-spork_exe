@@ -1,0 +1,117 @@
+AI Tutor
+AI Online
+[Uploaded: cone1.pdf]
+You
+Question 7
+Find the volume of the cone with a radius of 9 yd and a height of 17 yd.
+
+Identify the Radius (r) and Height (h)
+Radius = 9 yd
+Height = 17 yd
+
+Apply the Volume Formula: V = (1/3)πr²h
+V = (1/3)π(9 yd)²(17 yd)
+V = (1/3)π(81 yd²)(17 yd)
+V = (1/3)π(1377 yd³)
+V ≈ 1,443.7 yd³
+
+Answer: 1,443.7 yd³
+
+Question 8
+Find the volume of the cone with a radius of 5 in and a height of 8 in.
+
+Identify the Radius (r) and Height (h)
+Radius = 5 in
+Height = 8 in
+
+Apply the Volume Formula: V = (1/3)πr²h
+V = (1/3)π(5 in)²(8 in)
+V = (1/3)π(25 in²)(8 in)
+V = (1/3)π(200 in³)
+V ≈ 209.4 in³
+
+Answer: 209.4 in³
+
+Question 9
+Find the volume of the cone with a radius of 22.5 km and a height of 27 km.
+
+Identify the Radius (r) and Height (h)
+Radius = 22.5 km
+Height = 27 km
+
+Apply the Volume Formula: V = (1/3)πr²h
+V = (1/3)π(22.5 km)²(27 km)
+V = (1/3)π(506.25 km²)(27 km)
+V = (1/3)π(13,668.75 km³)
+V ≈ 14,330.7 km³
+
+Answer: 14,330.7 km³
+
+Question 10
+A cone has a volume of 1,309 cm³. If the height of the cone is 8 cm, find its radius.
+
+Identify the Volume (V) and Height (h)
+Volume = 1,309 cm³
+Height = 8 cm
+
+Apply the Volume Formula: V = (1/3)πr²h
+Solve for r²: r² = 3V / (πh)
+r² = (3 × 1,309 cm³) / (π × 8 cm)
+r² = 3,927 cm³ / (25.132 cm)
+r² ≈ 156.2 cm²
+
+Find r: r = √156.2 cm²
+r ≈ 12.5 cm
+
+Answer: 12.5 cm
+
+Question 11
+Katelyn must build a sandcastle pyramid with a base of 25 in × 25 in and a height of 18 in. She bought 3 bags of sand, each containing 1,200 in³ of sand. Will she have enough sand to build the castle?
+
+Find the Volume of the Pyramid
+Area of the Base (B) = 25 in × 25 in = 625 in²
+Height (h) = 18 in
+
+Apply the Volume Formula: V = (1/3) × B × h
+V = (1/3)(625 in²)(18 in)
+V = (1/3)(11,250 in³)
+V = 3,750 in³
+
+Total Sand Available
+3 bags × 1,200 in³ = 3,600 in³
+
+Check if Sand is Sufficient
+3,600 in³ < 3,750 in³
+
+Answer: No
+
+Question 12
+The cylinder contains two congruent hollow cones. If the height of the cylinder is 20 in and its diameter is 14 in, find the volume of the solid.
+
+Step 1: Radius of Cylinder and Cones
+Radius = Diameter/2
+Radius = 14 in/2 = 7 in
+
+Step 2: Volume of the Cylinder
+Height = 20 in
+Volume = πr²h
+V = π(7 in)²(20 in)
+V = π(49 in²)(20 in)
+V ≈ 3,080.4 in³
+
+Step 3: Volume of One Cone
+Height = Half of Cylinder Height = 20 in / 2 = 10 in
+Volume = (1/3)πr²h
+V = (1/3)π(7 in)²(10 in)
+V = (1/3)π(49 in²)(10 in)
+V = (1/3)π(490 in³)
+V ≈ 513.1 in³
+
+Step 4: Volume of Two Cones
+2 × 513.1 in³ = 1,026.2 in³
+
+Step 5: Subtract Cone Volumes from Cylinder Volume
+Solid Volume = Cylinder Volume - Hollow Cone Volumes
+Solid Volume = 3,080.4 in³ - 1,026.2 in³
+Solid Volume = 2,054.2 in³
+

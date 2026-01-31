@@ -1228,31 +1228,36 @@ Please:
                 type: "text",
                 text: `READ THIS IMAGE CAREFULLY. Solve every math problem you see with the ACTUAL numbers from the image.
 
-Format each answer EXACTLY like this (no markdown, no **):
+FORMAT ALL MATH WITH LATEX:
+- Use $...$ for inline math: $V = \\frac{1}{3}\\pi r^2 h$
+- Use $$...$$ for display/block math equations
 
-Question 1
-Find the volume of the pyramid with base 10 in by 11 in and height 16 in.
+Example format:
 
-Calculate the Area of the Base (B)
-The area of the rectangular base is 110 square inches. The base is a rectangle with length 11 in and width 10 in. The area is B = 11 in × 10 in = 110 in².
+**Question 7**
+Find the volume of the cone with radius 9 yd and height 17 yd.
 
-Identify the Height (h)
-The height of the pyramid is 16 inches.
+**Given:**
+- Radius $r = 9$ yd
+- Height $h = 17$ yd
 
-Calculate the Volume (V)
-The volume is approximately 586.7 cubic inches. Using V = (1/3) × B × h, we get V = (1/3) × 110 in² × 16 in = 1760/3 in³ ≈ 586.67 in³.
+**Solution:**
+Using the cone volume formula:
+$$V = \\frac{1}{3}\\pi r^2 h$$
 
-Answer: 586.67 in³
+Substituting values:
+$$V = \\frac{1}{3}\\pi (9)^2 (17) = \\frac{1}{3}\\pi \\cdot 81 \\cdot 17 = \\frac{1377\\pi}{3} \\approx 1443.7 \\text{ yd}^3$$
 
-Question 2
-[next problem...]
+**Answer:** $V \\approx 1443.7$ yd³
+
+---
 
 RULES:
-- NO markdown (no #, *, ---)
+- Use LaTeX for ALL mathematical expressions
+- Use **bold** for section headers
 - Read ACTUAL numbers from the image
-- Use × for multiplication, ² for squared, ³ for cubed
-- Solve ALL problems (usually 6)
-- Plain text only, professional and clean`,
+- Solve ALL problems visible in the image
+- Show clear step-by-step work with proper math notation`,
               },
               {
                 type: "image_url",
