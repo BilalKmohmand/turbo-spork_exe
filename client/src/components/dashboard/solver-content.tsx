@@ -77,6 +77,7 @@ export default function SolverContent() {
       const decoder = new TextDecoder();
       let fullText = "";
       let finalResult: any = null;
+      let streamError: string | null = null;
 
       if (reader) {
         while (true) {
@@ -91,6 +92,9 @@ export default function SolverContent() {
               const jsonStr = line.slice(6).trim();
               if (!jsonStr) continue;
               const data = JSON.parse(jsonStr);
+              if (data.error) {
+                streamError = data.error;
+              }
               if (data.token) {
                 fullText += data.token;
               }
@@ -104,20 +108,39 @@ export default function SolverContent() {
         }
       }
 
+      // Handle stream errors
+      if (streamError) {
+        toast({
+          title: "Error",
+          description: streamError,
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Display the complete response at once
-      const newResult = {
-        id: Date.now().toString(),
-        content: problem,
-        aiSolution: finalResult?.aiSolution || finalResult?.message || finalResult?.rawText || fullText,
-        graphSpec: finalResult?.type === "graph" ? finalResult.graphSpec : undefined,
-        isChat: finalResult?.type === "chat",
-      };
-      setResult(newResult);
-      setChatHistory(prev => [...prev, 
-        { role: "user", content: problem, timestamp: new Date() },
-        { role: "assistant", content: newResult.aiSolution, timestamp: new Date() }
-      ]);
-      scrollToBottom();
+      const aiSolution = finalResult?.aiSolution || finalResult?.message || finalResult?.rawText || fullText;
+      if (aiSolution.trim()) {
+        const newResult = {
+          id: Date.now().toString(),
+          content: problem,
+          aiSolution,
+          graphSpec: finalResult?.type === "graph" ? finalResult.graphSpec : undefined,
+          isChat: finalResult?.type === "chat",
+        };
+        setResult(newResult);
+        setChatHistory(prev => [...prev, 
+          { role: "user", content: problem, timestamp: new Date() },
+          { role: "assistant", content: newResult.aiSolution, timestamp: new Date() }
+        ]);
+        scrollToBottom();
+      } else {
+        toast({
+          title: "Error",
+          description: "Could not get a response. Please try again.",
+          variant: "destructive",
+        });
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -165,6 +188,7 @@ export default function SolverContent() {
         const decoder = new TextDecoder();
         let fullText = "";
         let finalResult: any = null;
+        let streamError: string | null = null;
 
         setIsStreaming(true);
         if (readerStream) {
@@ -180,6 +204,9 @@ export default function SolverContent() {
                 const jsonStr = line.slice(6).trim();
                 if (!jsonStr) continue;
                 const data = JSON.parse(jsonStr);
+                if (data.error) {
+                  streamError = data.error;
+                }
                 if (data.token) {
                   fullText += data.token;
                 }
@@ -193,18 +220,36 @@ export default function SolverContent() {
           }
         }
 
-        // Display the complete response at once
+        // Handle stream errors
+        if (streamError) {
+          toast({
+            title: "Error",
+            description: streamError,
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Display the complete response at once (only if there's content)
         const solution = finalResult?.aiSolution || fullText;
-        setResult({
-          id: Date.now().toString(),
-          content: file.name,
-          aiSolution: solution,
-        });
-        setChatHistory(prev => [...prev, 
-          { role: "user", content: `[Uploaded: ${file.name}]`, timestamp: new Date() },
-          { role: "assistant", content: solution, timestamp: new Date() }
-        ]);
-        scrollToBottom();
+        if (solution.trim()) {
+          setResult({
+            id: Date.now().toString(),
+            content: file.name,
+            aiSolution: solution,
+          });
+          setChatHistory(prev => [...prev, 
+            { role: "user", content: `[Uploaded: ${file.name}]`, timestamp: new Date() },
+            { role: "assistant", content: solution, timestamp: new Date() }
+          ]);
+          scrollToBottom();
+        } else {
+          toast({
+            title: "Error",
+            description: "Could not process the file. Please try again.",
+            variant: "destructive",
+          });
+        }
       } catch (error: any) {
         toast({
           title: "Error",
