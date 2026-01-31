@@ -1298,10 +1298,10 @@ RULES:
             problemType: result.problemType || "general",
           });
 
-          res.write(`data: ${JSON.stringify({ done: true, result: { ...result, id: submission.id } })}\n\n`);
+          res.write(`data: ${JSON.stringify({ done: true, result: { ...result, id: submission.id, aiSolution: fullText } })}\n\n`);
         }
       } catch {
-        res.write(`data: ${JSON.stringify({ done: true, result: { type: "chat", message: fullText } })}\n\n`);
+        res.write(`data: ${JSON.stringify({ done: true, result: { type: "chat", aiSolution: fullText } })}\n\n`);
       }
       
       res.end();
