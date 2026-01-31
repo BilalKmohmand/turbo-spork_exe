@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Brain, GraduationCap, BookOpen } from "lucide-react";
-import { Link, useLocation } from "wouter";
+import { Link, useLocation, useSearch } from "wouter";
 import { BackgroundVideo } from "@/components/background-video";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -37,7 +37,12 @@ type RegisterForm = z.infer<typeof registerSchema>;
 export default function Auth() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("login");
+  const searchString = useSearch();
+  
+  // Check if mode=register is in URL query params
+  const urlParams = new URLSearchParams(searchString);
+  const initialMode = urlParams.get("mode") === "register" ? "register" : "login";
+  const [activeTab, setActiveTab] = useState(initialMode);
 
   const loginForm = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),

@@ -3,6 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import { GraphPanel } from "@/components/graph-panel";
 import { renderMathText } from "@/components/math-display";
@@ -46,6 +47,7 @@ interface ChatMessage {
 }
 
 export default function Solver() {
+  const { isLoading: authLoading, isAuthenticated } = useAuth(true);
   const [result, setResult] = useState<SubmissionResult | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);

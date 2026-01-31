@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import { 
   Loader2, 
@@ -24,6 +25,7 @@ interface EssayResult {
 }
 
 export default function Essay() {
+  useAuth(true);
   const [topic, setTopic] = useState("");
   const [essayType, setEssayType] = useState("argumentative");
   const [wordCount, setWordCount] = useState("500");

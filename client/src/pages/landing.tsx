@@ -178,7 +178,7 @@ export default function Landing() {
                   </p>
                   
                   <div className="flex flex-wrap items-center gap-4">
-                    <Link href="/solver">
+                    <Link href="/auth?mode=register">
                       <Button 
                         size="lg" 
                         className="bg-[#3b82f6] hover:bg-[#2563eb] text-white"
@@ -187,7 +187,7 @@ export default function Landing() {
                         Start free trial
                       </Button>
                     </Link>
-                    <Link href="/login">
+                    <Link href="/auth">
                       <Button 
                         size="lg" 
                         variant="outline"
@@ -470,7 +470,7 @@ export default function Landing() {
             <p className="text-lg text-white/50 mb-10 max-w-xl mx-auto">
               Join millions of students learning smarter, not harder.
             </p>
-            <Link href="/solver">
+            <Link href="/auth?mode=register">
               <Button 
                 size="lg" 
                 className="bg-[#3b82f6] hover:bg-[#2563eb] text-white"

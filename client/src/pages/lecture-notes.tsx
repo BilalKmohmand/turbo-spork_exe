@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mic, Square, FileText, Loader2, Download, Copy, Check, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 interface TranscriptChunk {
   text: string;
@@ -10,6 +11,7 @@ interface TranscriptChunk {
 }
 
 export default function LectureNotes() {
+  useAuth(true);
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [transcriptChunks, setTranscriptChunks] = useState<TranscriptChunk[]>([]);

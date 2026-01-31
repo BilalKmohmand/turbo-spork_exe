@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import { 
   Loader2, 
@@ -31,6 +32,7 @@ interface QuizResult {
 }
 
 export default function Quiz() {
+  useAuth(true);
   const [sourceText, setSourceText] = useState("");
   const [quiz, setQuiz] = useState<QuizResult | null>(null);
   const [userAnswers, setUserAnswers] = useState<Record<number, number>>({});
