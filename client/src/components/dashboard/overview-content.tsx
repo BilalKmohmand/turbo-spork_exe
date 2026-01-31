@@ -19,15 +19,17 @@ import type { User } from "@/hooks/use-auth";
 
 interface OverviewContentProps {
   user: User;
+  onNavigate: (section: string) => void;
 }
 
-export default function OverviewContent({ user }: OverviewContentProps) {
+export default function OverviewContent({ user, onNavigate }: OverviewContentProps) {
   const { data: stats } = useQuery<{ totalSubmissions: number; pendingReview: number; reviewed: number }>({
     queryKey: ["/api/student/stats"],
   });
 
   const tools = [
     { 
+      id: "solver",
       icon: MessageSquare, 
       title: "AI Tutor", 
       description: "Get instant help with any subject",
@@ -35,6 +37,7 @@ export default function OverviewContent({ user }: OverviewContentProps) {
       bgColor: "bg-violet-50 dark:bg-violet-950/30"
     },
     { 
+      id: "notes",
       icon: Mic, 
       title: "Lecture Notes", 
       description: "Record and transcribe lectures",
@@ -42,6 +45,7 @@ export default function OverviewContent({ user }: OverviewContentProps) {
       bgColor: "bg-purple-50 dark:bg-purple-950/30"
     },
     { 
+      id: "quiz",
       icon: FileText, 
       title: "Quiz Generator", 
       description: "Create quizzes from any text",
@@ -49,6 +53,7 @@ export default function OverviewContent({ user }: OverviewContentProps) {
       bgColor: "bg-emerald-50 dark:bg-emerald-950/30"
     },
     { 
+      id: "essay",
       icon: FileEdit, 
       title: "Essay Writer", 
       description: "AI essay assistance",
@@ -143,7 +148,7 @@ export default function OverviewContent({ user }: OverviewContentProps) {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {tools.map((tool) => (
-            <Card key={tool.title} className="border-border/50 hover-elevate cursor-pointer transition-all group">
+            <Card key={tool.title} className="border-border/50 hover-elevate cursor-pointer transition-all group" onClick={() => onNavigate(tool.id)}>
               <CardContent className="p-4 flex items-center gap-4">
                 <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${tool.color} flex items-center justify-center flex-shrink-0 shadow-lg`}>
                   <tool.icon className="w-6 h-6 text-white" />

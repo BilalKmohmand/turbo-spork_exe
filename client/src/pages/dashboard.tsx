@@ -242,7 +242,7 @@ export default function Dashboard() {
           </header>
 
           <div className="flex-1 overflow-auto bg-muted/30">
-            {activeSection === "overview" && <OverviewContent user={user} />}
+            {activeSection === "overview" && <OverviewContent user={user} onNavigate={setActiveSection} />}
             {activeSection === "solver" && <SolverContent />}
             {activeSection === "notes" && <NotesContent />}
             {activeSection === "quiz" && <QuizContent />}
