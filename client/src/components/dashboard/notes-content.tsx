@@ -13,6 +13,8 @@ interface TranscriptChunk {
 export default function NotesContent() {
   const [isRecording, setIsRecording] = useState(false);
   const [transcriptChunks, setTranscriptChunks] = useState<TranscriptChunk[]>([]);
+  const [liveTranscript, setLiveTranscript] = useState("");
+  const [interimTranscript, setInterimTranscript] = useState("");
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isGeneratingNotes, setIsGeneratingNotes] = useState(false);
   const [generatedNotes, setGeneratedNotes] = useState("");
@@ -22,11 +24,15 @@ export default function NotesContent() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const recognitionRef = useRef<any>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
     };
   }, []);
 
@@ -51,17 +57,72 @@ export default function NotesContent() {
 
       mediaRecorder.onstop = async () => {
         stream.getTracks().forEach(track => track.stop());
-        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        await transcribeAudio(audioBlob);
+        // Save the live transcript as a chunk when recording stops
+        if (liveTranscript.trim()) {
+          setTranscriptChunks(prev => [...prev, { text: liveTranscript, timestamp: Date.now() }]);
+        }
       };
 
       mediaRecorder.start();
       setIsRecording(true);
       setRecordingTime(0);
+      setLiveTranscript("");
+      setInterimTranscript("");
       
       timerRef.current = setInterval(() => {
         setRecordingTime(prev => prev + 1);
       }, 1000);
+
+      // Start Web Speech API for real-time transcription
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = "en-US";
+        
+        recognition.onresult = (event: any) => {
+          let interim = "";
+          let final = "";
+          
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              final += transcript + " ";
+            } else {
+              interim += transcript;
+            }
+          }
+          
+          if (final) {
+            setLiveTranscript(prev => prev + final);
+          }
+          setInterimTranscript(interim);
+        };
+        
+        recognition.onerror = (event: any) => {
+          console.log("Speech recognition error:", event.error);
+        };
+        
+        recognition.onend = () => {
+          // Restart if still recording
+          if (isRecording && recognitionRef.current) {
+            try {
+              recognitionRef.current.start();
+            } catch (e) {
+              // Already started
+            }
+          }
+        };
+        
+        recognitionRef.current = recognition;
+        recognition.start();
+      } else {
+        toast({
+          title: "Live transcription not supported",
+          description: "Your browser doesn't support real-time transcription. Recording will still work.",
+        });
+      }
 
     } catch (error) {
       toast({
@@ -80,6 +141,11 @@ export default function NotesContent() {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+        recognitionRef.current = null;
+      }
+      setInterimTranscript("");
     }
   };
 
@@ -206,9 +272,26 @@ export default function NotesContent() {
 
             <div className="flex flex-col items-center gap-6 py-4">
               {isRecording && (
-                <div className="text-5xl font-mono font-bold text-violet-600 tabular-nums">
-                  {formatTime(recordingTime)}
-                </div>
+                <>
+                  <div className="text-5xl font-mono font-bold text-violet-600 tabular-nums">
+                    {formatTime(recordingTime)}
+                  </div>
+                  
+                  {(liveTranscript || interimTranscript) && (
+                    <div className="w-full max-h-40 overflow-y-auto bg-muted/50 rounded-xl p-4 text-sm">
+                      <p className="text-foreground">
+                        {liveTranscript}
+                        <span className="text-muted-foreground italic">{interimTranscript}</span>
+                      </p>
+                    </div>
+                  )}
+                  
+                  {!liveTranscript && !interimTranscript && (
+                    <p className="text-sm text-muted-foreground animate-pulse">
+                      Listening... Start speaking to see live transcription
+                    </p>
+                  )}
+                </>
               )}
               
               {!isRecording ? (
