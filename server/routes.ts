@@ -1357,7 +1357,40 @@ Output ONLY valid JSON.`
         responseText = jsonMatch[0];
       }
       
-      const result = JSON.parse(responseText);
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        // If JSON parsing fails, try to fix incomplete JSON
+        console.log("Quiz JSON parse failed, attempting recovery");
+        let fixedJson = responseText;
+        const openBraces = (fixedJson.match(/{/g) || []).length;
+        const closeBraces = (fixedJson.match(/}/g) || []).length;
+        const openBrackets = (fixedJson.match(/\[/g) || []).length;
+        const closeBrackets = (fixedJson.match(/]/g) || []).length;
+        
+        for (let i = 0; i < openBrackets - closeBrackets; i++) {
+          fixedJson += ']}';
+        }
+        for (let i = 0; i < openBraces - closeBraces; i++) {
+          fixedJson += '}';
+        }
+        
+        try {
+          result = JSON.parse(fixedJson);
+        } catch {
+          // Final fallback - create a basic quiz structure
+          result = {
+            topic: "Quiz",
+            questions: [{
+              question: "Failed to parse AI response. Please try again.",
+              options: ["Option A", "Option B", "Option C", "Option D"],
+              correctAnswer: 0,
+              explanation: "Please regenerate the quiz."
+            }]
+          };
+        }
+      }
       res.json(result);
     } catch (error: any) {
       console.error("Quiz generation error:", error?.message || error);
@@ -1408,12 +1441,45 @@ Output ONLY valid JSON.`
 
       let responseText = response.choices[0]?.message?.content || "";
       
+      // Try to extract JSON
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         responseText = jsonMatch[0];
       }
       
-      const result = JSON.parse(responseText);
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        // If JSON parsing fails, try to fix incomplete JSON
+        console.log("Essay JSON parse failed, attempting recovery");
+        let fixedJson = responseText;
+        const openBraces = (fixedJson.match(/{/g) || []).length;
+        const closeBraces = (fixedJson.match(/}/g) || []).length;
+        const openBrackets = (fixedJson.match(/\[/g) || []).length;
+        const closeBrackets = (fixedJson.match(/]/g) || []).length;
+        
+        for (let i = 0; i < openBrackets - closeBrackets; i++) {
+          fixedJson += '"]';
+        }
+        for (let i = 0; i < openBraces - closeBraces; i++) {
+          fixedJson += '}';
+        }
+        
+        try {
+          result = JSON.parse(fixedJson);
+        } catch {
+          // Final fallback - extract essay content
+          const essayMatch = responseText.match(/"essay"\s*:\s*"([\s\S]*?)(?:"|$)/);
+          const essayText = essayMatch ? essayMatch[1].replace(/\\n/g, '\n') : responseText;
+          result = {
+            title: topic,
+            outline: ["Introduction", "Body Paragraphs", "Conclusion"],
+            essay: essayText,
+            wordCount: essayText.split(/\s+/).length
+          };
+        }
+      }
       res.json(result);
     } catch (error: any) {
       console.error("Essay generation error:", error?.message || error);

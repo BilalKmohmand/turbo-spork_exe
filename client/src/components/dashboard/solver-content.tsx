@@ -87,7 +87,9 @@ export default function SolverContent() {
           
           for (const line of lines) {
             try {
-              const data = JSON.parse(line.slice(6));
+              const jsonStr = line.slice(6).trim();
+              if (!jsonStr) continue;
+              const data = JSON.parse(jsonStr);
               if (data.token) {
                 fullText += data.token;
                 setStreamingText(fullText);
@@ -95,33 +97,22 @@ export default function SolverContent() {
               }
               if (data.done && data.result) {
                 const r = data.result;
-                if (r.type === "graph") {
-                  setResult({
-                    id: Date.now().toString(),
-                    content: problem,
-                    aiSolution: r.aiSolution || r.message,
-                    graphSpec: r.graphSpec,
-                  });
-                } else if (r.type === "chat") {
-                  setResult({
-                    id: Date.now().toString(),
-                    content: problem,
-                    aiSolution: r.message,
-                    isChat: true,
-                  });
-                } else if (r.type === "problem" || r.aiSolution) {
-                  setResult({
-                    id: Date.now().toString(),
-                    content: problem,
-                    aiSolution: r.aiSolution || r.rawText,
-                  });
-                }
+                const newResult = {
+                  id: Date.now().toString(),
+                  content: problem,
+                  aiSolution: r.aiSolution || r.message || r.rawText || fullText,
+                  graphSpec: r.type === "graph" ? r.graphSpec : undefined,
+                  isChat: r.type === "chat",
+                };
+                setResult(newResult);
                 setChatHistory(prev => [...prev, 
                   { role: "user", content: problem, timestamp: new Date() },
-                  { role: "assistant", content: r.aiSolution || r.message || r.rawText || fullText, timestamp: new Date() }
+                  { role: "assistant", content: newResult.aiSolution, timestamp: new Date() }
                 ]);
               }
-            } catch {}
+            } catch (e) {
+              console.error("Stream parse error:", e, line);
+            }
           }
         }
       }
@@ -183,24 +174,29 @@ export default function SolverContent() {
             
             for (const line of lines) {
               try {
-                const data = JSON.parse(line.slice(6));
+                const jsonStr = line.slice(6).trim();
+                if (!jsonStr) continue;
+                const data = JSON.parse(jsonStr);
                 if (data.token) {
                   fullText += data.token;
                   setStreamingText(fullText);
                   scrollToBottom();
                 }
                 if (data.done && data.result) {
+                  const solution = data.result.aiSolution || fullText;
                   setResult({
                     id: Date.now().toString(),
                     content: file.name,
-                    aiSolution: data.result.aiSolution || fullText,
+                    aiSolution: solution,
                   });
                   setChatHistory(prev => [...prev, 
                     { role: "user", content: `[Uploaded: ${file.name}]`, timestamp: new Date() },
-                    { role: "assistant", content: data.result.aiSolution || fullText, timestamp: new Date() }
+                    { role: "assistant", content: solution, timestamp: new Date() }
                   ]);
                 }
-              } catch {}
+              } catch (e) {
+                console.error("Stream parse error:", e, line);
+              }
             }
           }
         }
