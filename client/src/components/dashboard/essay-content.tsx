@@ -182,7 +182,7 @@ export default function EssayContent() {
               <div className="flex items-center gap-2 mt-1">
                 <Badge variant="secondary" className="text-xs gap-1">
                   <AlignLeft className="w-3 h-3" />
-                  {result.wordCount} words
+                  {result.wordCount} {result.wordCount === 1 ? "word" : "words"}
                 </Badge>
                 <Badge variant="outline" className="text-xs">
                   {essayTypes.find(t => t.value === essayType)?.label}

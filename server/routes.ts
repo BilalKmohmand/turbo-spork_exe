@@ -1437,8 +1437,8 @@ RULES:
     try {
       const { text } = req.body;
       
-      if (!text || typeof text !== "string" || text.trim().length < 50) {
-        return res.status(400).json({ error: "Please provide at least 50 characters of text" });
+      if (!text || typeof text !== "string" || !text.trim()) {
+        return res.status(400).json({ error: "Please provide some text to generate a quiz from" });
       }
 
       const response = await openai.chat.completions.create({
