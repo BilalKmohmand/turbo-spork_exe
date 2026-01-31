@@ -38,6 +38,8 @@ import NotesContent from "@/components/dashboard/notes-content";
 import QuizContent from "@/components/dashboard/quiz-content";
 import EssayContent from "@/components/dashboard/essay-content";
 import OverviewContent from "@/components/dashboard/overview-content";
+import HelpContent from "@/components/dashboard/help-content";
+import SettingsContent from "@/components/dashboard/settings-content";
 
 const menuItems = [
   { id: "overview", label: "Overview", icon: LayoutDashboard, badge: null },
@@ -45,6 +47,11 @@ const menuItems = [
   { id: "notes", label: "Lecture Notes", icon: Mic, badge: null },
   { id: "quiz", label: "Quiz Generator", icon: FileText, badge: null },
   { id: "essay", label: "Essay Writer", icon: FileEdit, badge: null },
+];
+
+const supportItems = [
+  { id: "help", label: "Help Center", icon: HelpCircle },
+  { id: "settings", label: "Settings", icon: Settings },
 ];
 
 export default function Dashboard() {
@@ -144,26 +151,23 @@ export default function Dashboard() {
               </p>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton 
-                      className="w-full justify-start gap-3 h-10 px-3 rounded-lg hover:bg-muted"
-                      onClick={() => toast({ title: "Help Center", description: "Help documentation coming soon!" })}
-                      data-testid="button-help"
-                    >
-                      <HelpCircle className="w-4 h-4" />
-                      <span className="font-medium text-sm">Help Center</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton 
-                      className="w-full justify-start gap-3 h-10 px-3 rounded-lg hover:bg-muted"
-                      onClick={() => toast({ title: "Settings", description: "Settings page coming soon!" })}
-                      data-testid="button-settings"
-                    >
-                      <Settings className="w-4 h-4" />
-                      <span className="font-medium text-sm">Settings</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {supportItems.map((item) => (
+                    <SidebarMenuItem key={item.id}>
+                      <SidebarMenuButton
+                        onClick={() => setActiveSection(item.id)}
+                        isActive={activeSection === item.id}
+                        className={`w-full justify-start gap-3 h-10 px-3 rounded-lg transition-all ${
+                          activeSection === item.id 
+                            ? "bg-violet-600 text-white hover:bg-violet-600 hover:text-white" 
+                            : "hover:bg-muted"
+                        }`}
+                        data-testid={`sidebar-${item.id}`}
+                      >
+                        <item.icon className="w-4 h-4" />
+                        <span className="font-medium text-sm">{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
@@ -243,6 +247,8 @@ export default function Dashboard() {
             {activeSection === "notes" && <NotesContent />}
             {activeSection === "quiz" && <QuizContent />}
             {activeSection === "essay" && <EssayContent />}
+            {activeSection === "help" && <HelpContent />}
+            {activeSection === "settings" && <SettingsContent user={user} />}
           </div>
         </main>
       </div>
