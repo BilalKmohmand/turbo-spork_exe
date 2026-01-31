@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { 
   Sidebar, 
   SidebarContent, 
@@ -21,14 +22,15 @@ import {
   FileEdit, 
   Brain,
   LogOut,
-  User,
   LayoutDashboard,
-  BookOpen,
-  History,
+  ChevronRight,
+  Sparkles,
   Settings,
-  ChevronRight
+  HelpCircle,
+  Crown
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Badge } from "@/components/ui/badge";
 
 import SolverContent from "@/components/dashboard/solver-content";
 import NotesContent from "@/components/dashboard/notes-content";
@@ -37,11 +39,11 @@ import EssayContent from "@/components/dashboard/essay-content";
 import OverviewContent from "@/components/dashboard/overview-content";
 
 const menuItems = [
-  { id: "overview", label: "Dashboard", icon: LayoutDashboard },
-  { id: "solver", label: "AI Homework Help", icon: MessageSquare },
-  { id: "notes", label: "Lecture Notes", icon: Mic },
-  { id: "quiz", label: "Quiz Generator", icon: FileText },
-  { id: "essay", label: "Essay Writer", icon: FileEdit },
+  { id: "overview", label: "Overview", icon: LayoutDashboard, badge: null },
+  { id: "solver", label: "AI Tutor", icon: MessageSquare, badge: "Popular" },
+  { id: "notes", label: "Lecture Notes", icon: Mic, badge: null },
+  { id: "quiz", label: "Quiz Generator", icon: FileText, badge: null },
+  { id: "essay", label: "Essay Writer", icon: FileEdit, badge: null },
 ];
 
 export default function Dashboard() {
@@ -51,9 +53,15 @@ export default function Dashboard() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse flex items-center gap-3">
-          <Brain className="w-8 h-8 text-violet-600" />
-          <span className="text-lg font-medium">Loading...</span>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center animate-pulse">
+            <Brain className="w-6 h-6 text-white" />
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-violet-600 animate-bounce" style={{ animationDelay: "0ms" }} />
+            <div className="w-2 h-2 rounded-full bg-violet-600 animate-bounce" style={{ animationDelay: "150ms" }} />
+            <div className="w-2 h-2 rounded-full bg-violet-600 animate-bounce" style={{ animationDelay: "300ms" }} />
+          </div>
         </div>
       </div>
     );
@@ -64,28 +72,35 @@ export default function Dashboard() {
   }
 
   const sidebarStyle = {
-    "--sidebar-width": "280px",
-    "--sidebar-width-icon": "60px",
+    "--sidebar-width": "260px",
+    "--sidebar-width-icon": "56px",
+  };
+
+  const getInitials = (name: string) => {
+    return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
   return (
     <SidebarProvider style={sidebarStyle as React.CSSProperties}>
-      <div className="flex h-screen w-full bg-background">
-        <Sidebar className="border-r">
-          <SidebarHeader className="p-4 border-b">
+      <div className="flex h-screen w-full bg-muted/30">
+        <Sidebar className="border-r border-border/50">
+          <SidebarHeader className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center">
-                <Brain className="w-6 h-6 text-white" />
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-600/20">
+                <Sparkles className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="font-bold text-lg truncate">Gradeio</h2>
-                <p className="text-xs text-muted-foreground truncate">AI Learning Platform</p>
+                <h2 className="font-bold text-base">Gradeio</h2>
+                <p className="text-[11px] text-muted-foreground">AI Learning Platform</p>
               </div>
             </div>
           </SidebarHeader>
 
-          <SidebarContent className="px-2 py-4">
+          <SidebarContent className="px-3 py-2">
             <SidebarGroup>
+              <p className="px-3 py-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                Main Menu
+              </p>
               <SidebarGroupContent>
                 <SidebarMenu>
                   {menuItems.map((item) => (
@@ -93,13 +108,26 @@ export default function Dashboard() {
                       <SidebarMenuButton
                         onClick={() => setActiveSection(item.id)}
                         isActive={activeSection === item.id}
-                        className="w-full justify-start gap-3 h-11"
+                        className={`w-full justify-start gap-3 h-10 px-3 rounded-lg transition-all ${
+                          activeSection === item.id 
+                            ? "bg-violet-600 text-white hover:bg-violet-600 hover:text-white" 
+                            : "hover:bg-muted"
+                        }`}
                         data-testid={`sidebar-${item.id}`}
                       >
-                        <item.icon className="w-5 h-5" />
-                        <span className="font-medium">{item.label}</span>
-                        {activeSection === item.id && (
-                          <ChevronRight className="w-4 h-4 ml-auto" />
+                        <item.icon className="w-4 h-4" />
+                        <span className="font-medium text-sm">{item.label}</span>
+                        {item.badge && (
+                          <Badge 
+                            variant="secondary" 
+                            className={`ml-auto text-[10px] px-1.5 py-0 ${
+                              activeSection === item.id 
+                                ? "bg-white/20 text-white" 
+                                : "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300"
+                            }`}
+                          >
+                            {item.badge}
+                          </Badge>
                         )}
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -107,28 +135,65 @@ export default function Dashboard() {
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
+
+            <SidebarGroup className="mt-4">
+              <p className="px-3 py-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                Support
+              </p>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton className="w-full justify-start gap-3 h-10 px-3 rounded-lg hover:bg-muted">
+                      <HelpCircle className="w-4 h-4" />
+                      <span className="font-medium text-sm">Help Center</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton className="w-full justify-start gap-3 h-10 px-3 rounded-lg hover:bg-muted">
+                      <Settings className="w-4 h-4" />
+                      <span className="font-medium text-sm">Settings</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            <div className="mt-4 mx-2 p-3 rounded-xl bg-gradient-to-br from-violet-600/10 to-indigo-600/10 border border-violet-200/50 dark:border-violet-800/30">
+              <div className="flex items-center gap-2 mb-2">
+                <Crown className="w-4 h-4 text-amber-500" />
+                <span className="text-xs font-semibold">Free Plan</span>
+              </div>
+              <p className="text-[11px] text-muted-foreground mb-3">
+                Upgrade for unlimited AI credits
+              </p>
+              <Button size="sm" className="w-full h-8 text-xs bg-violet-600 hover:bg-violet-700">
+                Upgrade Now
+              </Button>
+            </div>
           </SidebarContent>
 
-          <SidebarFooter className="p-4 border-t">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center">
-                <User className="w-5 h-5 text-white" />
-              </div>
+          <SidebarFooter className="p-3 border-t border-border/50">
+            <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors cursor-pointer">
+              <Avatar className="w-8 h-8">
+                <AvatarFallback className="bg-gradient-to-br from-violet-500 to-indigo-500 text-white text-xs font-medium">
+                  {getInitials(user.displayName)}
+                </AvatarFallback>
+              </Avatar>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm truncate">{user.displayName}</p>
-                <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                <p className="text-[11px] text-muted-foreground truncate">{user.email}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mt-2">
               <ThemeToggle />
               <Button 
-                variant="outline" 
+                variant="ghost" 
                 size="sm" 
-                className="flex-1 gap-2"
+                className="flex-1 gap-2 h-8 text-xs text-muted-foreground hover:text-foreground"
                 onClick={logout}
                 data-testid="button-logout"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-3.5 h-3.5" />
                 Sign Out
               </Button>
             </div>
@@ -136,16 +201,33 @@ export default function Dashboard() {
         </Sidebar>
 
         <main className="flex-1 flex flex-col overflow-hidden">
-          <header className="h-14 border-b flex items-center justify-between px-4 bg-background/80 backdrop-blur-sm">
+          <header className="h-14 border-b border-border/50 flex items-center justify-between px-4 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
             <div className="flex items-center gap-3">
-              <SidebarTrigger data-testid="button-sidebar-toggle" />
-              <h1 className="font-semibold text-lg">
-                {menuItems.find(m => m.id === activeSection)?.label || "Dashboard"}
-              </h1>
+              <SidebarTrigger className="text-muted-foreground hover:text-foreground" data-testid="button-sidebar-toggle" />
+              <div className="h-5 w-px bg-border" />
+              <div className="flex items-center gap-2">
+                {menuItems.find(m => m.id === activeSection)?.icon && (
+                  <div className="w-6 h-6 rounded-md bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
+                    {(() => {
+                      const Icon = menuItems.find(m => m.id === activeSection)?.icon || LayoutDashboard;
+                      return <Icon className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />;
+                    })()}
+                  </div>
+                )}
+                <h1 className="font-semibold text-sm">
+                  {menuItems.find(m => m.id === activeSection)?.label || "Dashboard"}
+                </h1>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs gap-1 font-normal">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                AI Online
+              </Badge>
             </div>
           </header>
 
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 overflow-auto bg-muted/30">
             {activeSection === "overview" && <OverviewContent user={user} />}
             {activeSection === "solver" && <SolverContent />}
             {activeSection === "notes" && <NotesContent />}
