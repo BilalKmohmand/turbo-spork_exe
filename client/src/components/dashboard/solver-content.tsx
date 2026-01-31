@@ -323,7 +323,7 @@ export default function SolverContent() {
         )}
       </div>
 
-      <div className="border-t border-border/50 p-4 bg-background">
+      <div className="sticky bottom-0 border-t border-border/50 p-4 bg-background z-50">
         <div className="max-w-3xl mx-auto">
           <div className="flex items-end gap-2 bg-muted/50 rounded-2xl p-2 border border-border/50">
             <input
