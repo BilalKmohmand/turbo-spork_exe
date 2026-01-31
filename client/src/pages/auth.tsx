@@ -105,7 +105,7 @@ export default function Auth() {
     onSuccess: (data) => {
       localStorage.setItem("user", JSON.stringify(data.user));
       toast({ title: "Welcome back!", description: "You've successfully logged in." });
-      navigate(data.user.role === "teacher" ? "/teacher" : "/student");
+      navigate(data.user.role === "teacher" ? "/teacher" : "/dashboard");
     },
     onError: (error: Error) => {
       toast({ 
@@ -125,7 +125,7 @@ export default function Auth() {
     onSuccess: (data) => {
       localStorage.setItem("user", JSON.stringify(data.user));
       toast({ title: "Account created!", description: "Welcome to Gradeio." });
-      navigate(data.user.role === "teacher" ? "/teacher" : "/student");
+      navigate(data.user.role === "teacher" ? "/teacher" : "/dashboard");
     },
     onError: (error: Error) => {
       toast({ 
