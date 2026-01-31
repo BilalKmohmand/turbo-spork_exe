@@ -76,6 +76,7 @@ export default function SolverContent() {
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let fullText = "";
+      let finalResult: any = null;
 
       if (reader) {
         while (true) {
@@ -92,23 +93,9 @@ export default function SolverContent() {
               const data = JSON.parse(jsonStr);
               if (data.token) {
                 fullText += data.token;
-                setStreamingText(fullText);
-                scrollToBottom();
               }
               if (data.done && data.result) {
-                const r = data.result;
-                const newResult = {
-                  id: Date.now().toString(),
-                  content: problem,
-                  aiSolution: r.aiSolution || r.message || r.rawText || fullText,
-                  graphSpec: r.type === "graph" ? r.graphSpec : undefined,
-                  isChat: r.type === "chat",
-                };
-                setResult(newResult);
-                setChatHistory(prev => [...prev, 
-                  { role: "user", content: problem, timestamp: new Date() },
-                  { role: "assistant", content: newResult.aiSolution, timestamp: new Date() }
-                ]);
+                finalResult = data.result;
               }
             } catch (e) {
               console.error("Stream parse error:", e, line);
@@ -116,6 +103,21 @@ export default function SolverContent() {
           }
         }
       }
+
+      // Display the complete response at once
+      const newResult = {
+        id: Date.now().toString(),
+        content: problem,
+        aiSolution: finalResult?.aiSolution || finalResult?.message || finalResult?.rawText || fullText,
+        graphSpec: finalResult?.type === "graph" ? finalResult.graphSpec : undefined,
+        isChat: finalResult?.type === "chat",
+      };
+      setResult(newResult);
+      setChatHistory(prev => [...prev, 
+        { role: "user", content: problem, timestamp: new Date() },
+        { role: "assistant", content: newResult.aiSolution, timestamp: new Date() }
+      ]);
+      scrollToBottom();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -162,6 +164,7 @@ export default function SolverContent() {
         const readerStream = response.body?.getReader();
         const decoder = new TextDecoder();
         let fullText = "";
+        let finalResult: any = null;
 
         setIsStreaming(true);
         if (readerStream) {
@@ -179,20 +182,9 @@ export default function SolverContent() {
                 const data = JSON.parse(jsonStr);
                 if (data.token) {
                   fullText += data.token;
-                  setStreamingText(fullText);
-                  scrollToBottom();
                 }
                 if (data.done && data.result) {
-                  const solution = data.result.aiSolution || fullText;
-                  setResult({
-                    id: Date.now().toString(),
-                    content: file.name,
-                    aiSolution: solution,
-                  });
-                  setChatHistory(prev => [...prev, 
-                    { role: "user", content: `[Uploaded: ${file.name}]`, timestamp: new Date() },
-                    { role: "assistant", content: solution, timestamp: new Date() }
-                  ]);
+                  finalResult = data.result;
                 }
               } catch (e) {
                 console.error("Stream parse error:", e, line);
@@ -200,6 +192,19 @@ export default function SolverContent() {
             }
           }
         }
+
+        // Display the complete response at once
+        const solution = finalResult?.aiSolution || fullText;
+        setResult({
+          id: Date.now().toString(),
+          content: file.name,
+          aiSolution: solution,
+        });
+        setChatHistory(prev => [...prev, 
+          { role: "user", content: `[Uploaded: ${file.name}]`, timestamp: new Date() },
+          { role: "assistant", content: solution, timestamp: new Date() }
+        ]);
+        scrollToBottom();
       } catch (error: any) {
         toast({
           title: "Error",

@@ -195,6 +195,7 @@ export default function NotesContent() {
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
+      let fullNotes = "";
 
       if (reader) {
         while (true) {
@@ -208,12 +209,15 @@ export default function NotesContent() {
             try {
               const data = JSON.parse(line.slice(6));
               if (data.token) {
-                setGeneratedNotes(prev => prev + data.token);
+                fullNotes += data.token;
               }
             } catch {}
           }
         }
       }
+      
+      // Display the complete notes at once
+      setGeneratedNotes(fullNotes);
     } catch (error) {
       toast({
         title: "Error",
