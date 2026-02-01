@@ -16,7 +16,9 @@ import {
   Calculator,
   FlaskConical,
   Globe,
-  Image
+  Image,
+  Mic,
+  MicOff
 } from "lucide-react";
 import type { GraphSpec } from "@shared/schema";
 
@@ -49,9 +51,107 @@ export default function SolverContent() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isListening, setIsListening] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<any>(null);
+  const isListeningRef = useRef(false);
   const { toast } = useToast();
+
+  const startVoiceInput = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
+      toast({
+        title: "Voice input not supported",
+        description: "Your browser doesn't support voice input. Try Chrome or Edge.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      isListeningRef.current = true;
+    };
+
+    recognition.onresult = (event: any) => {
+      let finalTranscript = "";
+      let interimTranscript = "";
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript;
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+
+      if (finalTranscript) {
+        setTextProblem(prev => prev + finalTranscript);
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      console.log("Speech recognition error:", event.error);
+      if (event.error === "not-allowed") {
+        toast({
+          title: "Microphone access denied",
+          description: "Please allow microphone access to use voice input.",
+          variant: "destructive",
+        });
+      }
+      stopVoiceInput();
+    };
+
+    recognition.onend = () => {
+      if (isListeningRef.current && recognitionRef.current) {
+        try {
+          recognitionRef.current.start();
+        } catch (e) {
+          // Already started or stopped
+        }
+      }
+    };
+
+    recognitionRef.current = recognition;
+    try {
+      recognition.start();
+    } catch (e) {
+      toast({
+        title: "Voice input error",
+        description: "Could not start voice input. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const stopVoiceInput = () => {
+    isListeningRef.current = false;
+    setIsListening(false);
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {
+        // Already stopped
+      }
+      recognitionRef.current = null;
+    }
+  };
+
+  const toggleVoiceInput = () => {
+    if (isListening) {
+      stopVoiceInput();
+    } else {
+      startVoiceInput();
+    }
+  };
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -405,8 +505,22 @@ export default function SolverContent() {
                 <Plus className="w-4 h-4" />
               </Button>
             )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-9 w-9 rounded-xl transition-colors ${
+                isListening 
+                  ? "text-red-500 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50" 
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              onClick={toggleVoiceInput}
+              disabled={isLoading}
+              data-testid="button-voice-input"
+            >
+              {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+            </Button>
             <Textarea
-              placeholder="Ask me anything..."
+              placeholder={isListening ? "Listening... speak now" : "Ask me anything..."}
               value={textProblem}
               onChange={(e) => setTextProblem(e.target.value)}
               onKeyDown={(e) => {
