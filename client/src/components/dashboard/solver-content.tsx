@@ -52,11 +52,28 @@ export default function SolverContent() {
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isListening, setIsListening] = useState(false);
+  const [interimTranscript, setInterimTranscript] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
   const isListeningRef = useRef(false);
+  const silenceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
+
+  const resetSilenceTimeout = () => {
+    if (silenceTimeoutRef.current) {
+      clearTimeout(silenceTimeoutRef.current);
+    }
+    silenceTimeoutRef.current = setTimeout(() => {
+      if (isListeningRef.current) {
+        stopVoiceInput();
+        toast({
+          title: "Voice input stopped",
+          description: "Stopped listening due to silence. Click mic to continue.",
+        });
+      }
+    }, 5000);
+  };
 
   const startVoiceInput = () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -70,6 +87,7 @@ export default function SolverContent() {
       return;
     }
 
+    setInterimTranscript("");
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
@@ -78,23 +96,35 @@ export default function SolverContent() {
     recognition.onstart = () => {
       setIsListening(true);
       isListeningRef.current = true;
+      resetSilenceTimeout();
+      toast({
+        title: "Listening...",
+        description: "Speak now. I'll stop after 5 seconds of silence.",
+      });
     };
 
     recognition.onresult = (event: any) => {
       let finalTranscript = "";
-      let interimTranscript = "";
+      let interim = "";
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
           finalTranscript += transcript;
         } else {
-          interimTranscript += transcript;
+          interim += transcript;
         }
       }
 
+      setInterimTranscript(interim);
+      resetSilenceTimeout();
+
       if (finalTranscript) {
-        setTextProblem(prev => prev + finalTranscript);
+        setTextProblem(prev => {
+          const needsSpace = prev.length > 0 && !prev.endsWith(" ");
+          return prev + (needsSpace ? " " : "") + finalTranscript.trim();
+        });
+        setInterimTranscript("");
       }
     };
 
@@ -105,6 +135,11 @@ export default function SolverContent() {
           title: "Microphone access denied",
           description: "Please allow microphone access to use voice input.",
           variant: "destructive",
+        });
+      } else if (event.error === "no-speech") {
+        toast({
+          title: "No speech detected",
+          description: "Please try speaking again.",
         });
       }
       stopVoiceInput();
@@ -135,6 +170,11 @@ export default function SolverContent() {
   const stopVoiceInput = () => {
     isListeningRef.current = false;
     setIsListening(false);
+    setInterimTranscript("");
+    if (silenceTimeoutRef.current) {
+      clearTimeout(silenceTimeoutRef.current);
+      silenceTimeoutRef.current = null;
+    }
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
@@ -473,9 +513,25 @@ export default function SolverContent() {
         )}
       </div>
 
-      <div className="sticky bottom-0 border-t border-border/50 p-4 bg-background z-50">
+      <div className="sticky bottom-0 border-t border-border/50 p-4 bg-background/95 backdrop-blur-sm z-50">
         <div className="max-w-3xl mx-auto">
-          <div className="flex items-end gap-2 bg-muted/50 rounded-2xl p-2 border border-border/50">
+          {isListening && (
+            <div className="flex items-center gap-2 mb-3 px-2">
+              <div className="flex items-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-950/30 rounded-full border border-red-200 dark:border-red-900">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                </span>
+                <span className="text-xs font-medium text-red-600 dark:text-red-400">Listening...</span>
+              </div>
+              {interimTranscript && (
+                <span className="text-sm text-muted-foreground italic truncate flex-1">
+                  "{interimTranscript}"
+                </span>
+              )}
+            </div>
+          )}
+          <div className="flex items-end gap-2 bg-muted/50 rounded-2xl p-2 border border-border/50 shadow-sm">
             <input
               type="file"
               ref={fileInputRef}
@@ -486,9 +542,10 @@ export default function SolverContent() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9 rounded-xl text-muted-foreground hover:text-foreground"
+              className="h-9 w-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/80"
               onClick={() => fileInputRef.current?.click()}
               disabled={isLoading}
+              title="Upload image"
               data-testid="button-upload"
             >
               <Image className="w-4 h-4" />
@@ -497,30 +554,17 @@ export default function SolverContent() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 rounded-xl text-muted-foreground hover:text-foreground"
+                className="h-9 w-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/80"
                 onClick={handleNewChat}
                 disabled={isLoading}
+                title="New chat"
                 data-testid="button-new-chat"
               >
                 <Plus className="w-4 h-4" />
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className={`h-9 w-9 rounded-xl transition-colors ${
-                isListening 
-                  ? "text-red-500 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50" 
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              onClick={toggleVoiceInput}
-              disabled={isLoading}
-              data-testid="button-voice-input"
-            >
-              {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-            </Button>
             <Textarea
-              placeholder={isListening ? "Listening... speak now" : "Ask me anything..."}
+              placeholder={isListening ? "Speak now..." : "Ask me anything..."}
               value={textProblem}
               onChange={(e) => setTextProblem(e.target.value)}
               onKeyDown={(e) => {
@@ -533,15 +577,33 @@ export default function SolverContent() {
               disabled={isLoading}
               data-testid="input-problem"
             />
-            <Button
-              onClick={handleSubmit}
-              disabled={isLoading || !textProblem.trim()}
-              size="icon"
-              className="h-9 w-9 rounded-xl bg-violet-600 hover:bg-violet-700 shadow-md"
-              data-testid="button-submit"
-            >
-              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`h-9 w-9 rounded-xl transition-all ${
+                  isListening 
+                    ? "text-white bg-red-500 hover:bg-red-600 shadow-md" 
+                    : "text-muted-foreground hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-950/30"
+                }`}
+                onClick={toggleVoiceInput}
+                disabled={isLoading}
+                title={isListening ? "Stop listening" : "Voice input"}
+                data-testid="button-voice-input"
+              >
+                {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={isLoading || !textProblem.trim()}
+                size="icon"
+                className="h-9 w-9 rounded-xl bg-violet-600 hover:bg-violet-700 shadow-md disabled:opacity-50"
+                title="Send message"
+                data-testid="button-submit"
+              >
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              </Button>
+            </div>
           </div>
           <p className="text-[11px] text-muted-foreground text-center mt-2">
             Gradeio AI can make mistakes. Always verify important information.
