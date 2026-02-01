@@ -58,6 +58,7 @@ export default function SolverContent() {
   const recognitionRef = useRef<any>(null);
   const isListeningRef = useRef(false);
   const silenceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const baseTextRef = useRef("");
   const { toast } = useToast();
 
   const resetSilenceTimeout = () => {
@@ -88,6 +89,8 @@ export default function SolverContent() {
     }
 
     setInterimTranscript("");
+    baseTextRef.current = textProblem;
+    
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
@@ -120,11 +123,16 @@ export default function SolverContent() {
       resetSilenceTimeout();
 
       if (finalTranscript) {
-        setTextProblem(prev => {
-          const needsSpace = prev.length > 0 && !prev.endsWith(" ");
-          return prev + (needsSpace ? " " : "") + finalTranscript.trim();
-        });
+        const base = baseTextRef.current;
+        const needsSpace = base.length > 0 && !base.endsWith(" ");
+        const newText = base + (needsSpace ? " " : "") + finalTranscript.trim();
+        setTextProblem(newText);
+        baseTextRef.current = newText;
         setInterimTranscript("");
+      } else if (interim) {
+        const base = baseTextRef.current;
+        const needsSpace = base.length > 0 && !base.endsWith(" ");
+        setTextProblem(base + (needsSpace ? " " : "") + interim);
       }
     };
 
