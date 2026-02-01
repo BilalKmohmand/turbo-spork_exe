@@ -1517,18 +1517,44 @@ RULES:
         try {
           result = JSON.parse(fixedJson);
         } catch {
-          // Final fallback - create a basic quiz structure
+          // Final fallback - create a basic quiz structure with sections
           result = {
             topic: "Quiz",
-            questions: [{
-              question: "Failed to parse AI response. Please try again.",
-              options: ["Option A", "Option B", "Option C", "Option D"],
-              correctAnswer: 0,
-              explanation: "Please regenerate the quiz."
+            sections: [{
+              name: "General Questions",
+              questions: [{
+                question: "Failed to parse AI response. Please try again.",
+                options: ["Option A", "Option B", "Option C", "Option D"],
+                correctAnswer: 0,
+                explanation: "Please regenerate the quiz."
+              }]
             }]
           };
         }
       }
+      
+      // Transform old format (flat questions array) to new format (sections)
+      if (result.questions && !result.sections) {
+        result.sections = [{
+          name: "General Questions",
+          questions: result.questions
+        }];
+        delete result.questions;
+      }
+      
+      // Ensure sections exist
+      if (!result.sections || !Array.isArray(result.sections) || result.sections.length === 0) {
+        result.sections = [{
+          name: "General Questions",
+          questions: [{
+            question: "No questions could be generated. Please try again with different text.",
+            options: ["Option A", "Option B", "Option C", "Option D"],
+            correctAnswer: 0,
+            explanation: "Please regenerate the quiz with more detailed content."
+          }]
+        }];
+      }
+      
       res.json(result);
     } catch (error: any) {
       console.error("Quiz generation error:", error?.message || error);

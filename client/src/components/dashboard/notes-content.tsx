@@ -25,6 +25,7 @@ export default function NotesContent() {
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const recognitionRef = useRef<any>(null);
+  const isRecordingRef = useRef(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -65,6 +66,7 @@ export default function NotesContent() {
 
       mediaRecorder.start();
       setIsRecording(true);
+      isRecordingRef.current = true;
       setRecordingTime(0);
       setLiveTranscript("");
       setInterimTranscript("");
@@ -105,12 +107,12 @@ export default function NotesContent() {
         };
         
         recognition.onend = () => {
-          // Restart if still recording
-          if (isRecording && recognitionRef.current) {
+          // Restart if still recording (use ref to avoid closure issue)
+          if (isRecordingRef.current && recognitionRef.current) {
             try {
               recognitionRef.current.start();
             } catch (e) {
-              // Already started
+              // Already started or not allowed
             }
           }
         };
@@ -135,6 +137,7 @@ export default function NotesContent() {
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
+      isRecordingRef.current = false;
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       if (timerRef.current) {
@@ -142,7 +145,11 @@ export default function NotesContent() {
         timerRef.current = null;
       }
       if (recognitionRef.current) {
-        recognitionRef.current.stop();
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {
+          // Already stopped
+        }
         recognitionRef.current = null;
       }
       setInterimTranscript("");
