@@ -8,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, Sparkles, CheckCircle, XCircle, RotateCcw, FileText, Trophy, Target } from "lucide-react";
+import { Loader2, Sparkles, CheckCircle, XCircle, RotateCcw, FileText, Trophy, Target, ArrowLeft, ChevronRight, BookOpen } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 interface QuizQuestion {
@@ -33,6 +33,7 @@ export default function QuizContent() {
   const [quiz, setQuiz] = useState<QuizResult | null>(null);
   const [userAnswers, setUserAnswers] = useState<Record<number, number>>({});
   const [showResults, setShowResults] = useState(false);
+  const [selectedSection, setSelectedSection] = useState<number | null>(null);
   const { toast } = useToast();
 
   const generateMutation = useMutation({
@@ -44,6 +45,7 @@ export default function QuizContent() {
       setQuiz(data);
       setUserAnswers({});
       setShowResults(false);
+      setSelectedSection(null);
     },
     onError: (error: Error) => {
       toast({
@@ -92,6 +94,29 @@ export default function QuizContent() {
     setSourceText("");
     setUserAnswers({});
     setShowResults(false);
+    setSelectedSection(null);
+  };
+
+  // Get questions answered count per section
+  const getSectionProgress = (sectionIndex: number) => {
+    if (!quiz) return { answered: 0, total: 0 };
+    const section = quiz.sections[sectionIndex];
+    const sectionStartIndex = quiz.sections
+      .slice(0, sectionIndex)
+      .reduce((acc, s) => acc + s.questions.length, 0);
+    
+    let answered = 0;
+    section.questions.forEach((_, qIndex) => {
+      if (userAnswers[sectionStartIndex + qIndex] !== undefined) {
+        answered++;
+      }
+    });
+    return { answered, total: section.questions.length };
+  };
+
+  const isSectionComplete = (sectionIndex: number) => {
+    const { answered, total } = getSectionProgress(sectionIndex);
+    return answered === total;
   };
 
   const answeredCount = Object.keys(userAnswers).length;
@@ -138,12 +163,13 @@ export default function QuizContent() {
             </Button>
           </CardContent>
         </Card>
-      ) : (
+      ) : selectedSection === null && !showResults ? (
+        /* Section Selection Screen */
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold">{quiz.topic}</h2>
-              <p className="text-sm text-muted-foreground">{quiz.sections.length} sections · {totalQuestions} questions</p>
+              <p className="text-sm text-muted-foreground">Choose a section to start</p>
             </div>
             <Button variant="outline" size="sm" onClick={resetQuiz} className="gap-2">
               <RotateCcw className="w-4 h-4" />
@@ -151,14 +177,122 @@ export default function QuizContent() {
             </Button>
           </div>
 
-          {!showResults && (
+          <Card className="border-border/50">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-muted-foreground">Overall Progress</span>
+                <span className="text-sm font-medium">{answeredCount}/{totalQuestions}</span>
+              </div>
+              <Progress value={progressPercent} className="h-2" />
+            </CardContent>
+          </Card>
+
+          <div className="grid gap-3">
+            {quiz.sections.map((section, sectionIndex) => {
+              const { answered, total } = getSectionProgress(sectionIndex);
+              const isComplete = answered === total;
+              const hasStarted = answered > 0;
+              
+              return (
+                <Card 
+                  key={sectionIndex} 
+                  className={`border-border/50 cursor-pointer transition-all hover-elevate ${
+                    isComplete ? "bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900" : ""
+                  }`}
+                  onClick={() => setSelectedSection(sectionIndex)}
+                  data-testid={`card-section-${sectionIndex}`}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                          isComplete 
+                            ? "bg-emerald-600 text-white" 
+                            : hasStarted 
+                              ? "bg-amber-500 text-white"
+                              : "bg-muted"
+                        }`}>
+                          {isComplete ? (
+                            <CheckCircle className="w-5 h-5" />
+                          ) : (
+                            <BookOpen className="w-5 h-5" />
+                          )}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">Section {sectionIndex + 1}</Badge>
+                            {isComplete && <Badge className="bg-emerald-600 text-xs">Complete</Badge>}
+                            {hasStarted && !isComplete && <Badge className="bg-amber-500 text-xs">In Progress</Badge>}
+                          </div>
+                          <h3 className="font-medium mt-1">{section.name}</h3>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {total} question{total !== 1 ? 's' : ''} · {answered}/{total} answered
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          <Button 
+            onClick={handleSubmitQuiz} 
+            className="w-full bg-emerald-600 hover:bg-emerald-700"
+            disabled={answeredCount !== totalQuestions}
+            data-testid="button-submit-quiz"
+          >
+            <Target className="w-4 h-4 mr-2" />
+            Submit Quiz ({answeredCount}/{totalQuestions} answered)
+          </Button>
+        </div>
+      ) : (
+        /* Questions View (single section or results) */
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {!showResults && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setSelectedSection(null)}
+                  className="gap-1 -ml-2"
+                  data-testid="button-back-to-sections"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Sections
+                </Button>
+              )}
+              <div>
+                <h2 className="text-lg font-semibold">{quiz.topic}</h2>
+                {!showResults && selectedSection !== null && (
+                  <p className="text-sm text-muted-foreground">
+                    Section {selectedSection + 1}: {quiz.sections[selectedSection].name}
+                  </p>
+                )}
+              </div>
+            </div>
+            <Button variant="outline" size="sm" onClick={resetQuiz} className="gap-2">
+              <RotateCcw className="w-4 h-4" />
+              New Quiz
+            </Button>
+          </div>
+
+          {!showResults && selectedSection !== null && (
             <Card className="border-border/50">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">Progress</span>
-                  <span className="text-sm font-medium">{answeredCount}/{totalQuestions}</span>
+                  <span className="text-sm text-muted-foreground">Section Progress</span>
+                  <span className="text-sm font-medium">
+                    {getSectionProgress(selectedSection).answered}/{getSectionProgress(selectedSection).total}
+                  </span>
                 </div>
-                <Progress value={progressPercent} className="h-2" />
+                <Progress 
+                  value={(getSectionProgress(selectedSection).answered / getSectionProgress(selectedSection).total) * 100} 
+                  className="h-2" 
+                />
               </CardContent>
             </Card>
           )}
@@ -187,20 +321,23 @@ export default function QuizContent() {
             </Card>
           )}
 
-          {quiz.sections.map((section, sectionIndex) => {
-            // Calculate global index offset for this section
+          {/* Show only selected section when not showing results, or all sections for results */}
+          {(showResults ? quiz.sections : [quiz.sections[selectedSection!]]).map((section, idx) => {
+            const sectionIndex = showResults ? idx : selectedSection!;
             const sectionStartIndex = quiz.sections
               .slice(0, sectionIndex)
               .reduce((acc, s) => acc + s.questions.length, 0);
             
             return (
               <div key={sectionIndex} className="space-y-3">
-                <div className="flex items-center gap-2 mt-6 first:mt-0">
-                  <Badge variant="outline" className="text-xs font-medium">
-                    Section {sectionIndex + 1}
-                  </Badge>
-                  <h3 className="font-semibold text-sm text-muted-foreground">{section.name}</h3>
-                </div>
+                {showResults && (
+                  <div className="flex items-center gap-2 mt-6 first:mt-0">
+                    <Badge variant="outline" className="text-xs font-medium">
+                      Section {sectionIndex + 1}
+                    </Badge>
+                    <h3 className="font-semibold text-sm text-muted-foreground">{section.name}</h3>
+                  </div>
+                )}
                 
                 {section.questions.map((question, qIndex) => {
                   const globalIndex = sectionStartIndex + qIndex;
@@ -218,7 +355,7 @@ export default function QuizContent() {
                                   : "bg-violet-600"
                               }`}
                             >
-                              {globalIndex + 1}
+                              {qIndex + 1}
                             </Badge>
                             <p className="font-medium text-sm">{question.question}</p>
                           </div>
@@ -275,16 +412,27 @@ export default function QuizContent() {
             );
           })}
 
-          {!showResults && (
-            <Button 
-              onClick={handleSubmitQuiz} 
-              className="w-full bg-emerald-600 hover:bg-emerald-700"
-              disabled={answeredCount !== totalQuestions}
-              data-testid="button-submit-quiz"
-            >
-              <Target className="w-4 h-4 mr-2" />
-              Submit Quiz
-            </Button>
+          {!showResults && selectedSection !== null && (
+            <div className="flex gap-3">
+              <Button 
+                variant="outline"
+                onClick={() => setSelectedSection(null)} 
+                className="flex-1"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Sections
+              </Button>
+              {isSectionComplete(selectedSection) && answeredCount === totalQuestions && (
+                <Button 
+                  onClick={handleSubmitQuiz} 
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                  data-testid="button-submit-quiz"
+                >
+                  <Target className="w-4 h-4 mr-2" />
+                  Submit Quiz
+                </Button>
+              )}
+            </div>
           )}
         </div>
       )}
