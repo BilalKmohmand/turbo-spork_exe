@@ -178,6 +178,16 @@ export default function SolverContent() {
   const stopVoiceInput = () => {
     isListeningRef.current = false;
     setIsListening(false);
+    
+    // Commit any remaining interim text before clearing
+    if (interimTranscript) {
+      const base = baseTextRef.current;
+      const needsSpace = base.length > 0 && !base.endsWith(" ");
+      const finalText = base + (needsSpace ? " " : "") + interimTranscript.trim();
+      setTextProblem(finalText);
+      baseTextRef.current = finalText;
+    }
+    
     setInterimTranscript("");
     if (silenceTimeoutRef.current) {
       clearTimeout(silenceTimeoutRef.current);
