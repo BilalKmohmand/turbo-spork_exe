@@ -1452,28 +1452,39 @@ RULES:
         messages: [
           {
             role: "system",
-            content: `You are a quiz generator. Create a practice quiz from the provided text.
+            content: `You are a quiz generator. Create a practice quiz from the provided text, organized by sections.
 
 Respond with ONLY a JSON object:
 {
   "topic": "Brief topic name",
-  "questions": [
+  "sections": [
     {
-      "question": "The question text",
-      "options": ["Option A", "Option B", "Option C", "Option D"],
-      "correctAnswer": 0,
-      "explanation": "Why this is the correct answer"
+      "name": "Section 1: Key Concepts",
+      "questions": [
+        {
+          "question": "The question text",
+          "options": ["Option A", "Option B", "Option C", "Option D"],
+          "correctAnswer": 0,
+          "explanation": "Why this is the correct answer"
+        }
+      ]
+    },
+    {
+      "name": "Section 2: Application",
+      "questions": [...]
     }
   ]
 }
 
-Create 5-7 multiple choice questions that test understanding of the key concepts.
-Each question should have exactly 4 options.
-correctAnswer is the index (0-3) of the correct option.
-
-Output ONLY valid JSON.`
+RULES:
+- Create 2-4 sections based on different aspects of the content (e.g., Definitions, Concepts, Application, Analysis)
+- Each section should have 2-4 questions
+- Total of 8-12 questions across all sections
+- Each question should have exactly 4 options
+- correctAnswer is the index (0-3) of the correct option
+- Output ONLY valid JSON`
           },
-          { role: "user", content: `Generate a quiz from this text:\n\n${text.trim()}` }
+          { role: "user", content: `Generate a sectioned quiz from this text:\n\n${text.trim()}` }
         ],
       });
 

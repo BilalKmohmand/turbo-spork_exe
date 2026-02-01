@@ -18,8 +18,13 @@ interface QuizQuestion {
   explanation: string;
 }
 
-interface QuizResult {
+interface QuizSection {
+  name: string;
   questions: QuizQuestion[];
+}
+
+interface QuizResult {
+  sections: QuizSection[];
   topic: string;
 }
 
@@ -53,14 +58,33 @@ export default function QuizContent() {
     setShowResults(true);
   };
 
+  // Flatten all questions with global index for answer tracking
+  const getAllQuestions = () => {
+    if (!quiz) return [];
+    const all: { question: QuizQuestion; sectionIndex: number; questionIndex: number; globalIndex: number }[] = [];
+    let globalIndex = 0;
+    quiz.sections.forEach((section, sectionIndex) => {
+      section.questions.forEach((question, questionIndex) => {
+        all.push({ question, sectionIndex, questionIndex, globalIndex });
+        globalIndex++;
+      });
+    });
+    return all;
+  };
+
+  const allQuestions = getAllQuestions();
+  const totalQuestions = allQuestions.length;
+
   const getScore = () => {
     if (!quiz) return 0;
-    return quiz.questions.filter((q, i) => userAnswers[i] === q.correctAnswer).length;
+    return allQuestions.filter(({ question, globalIndex }) => 
+      userAnswers[globalIndex] === question.correctAnswer
+    ).length;
   };
 
   const getScorePercent = () => {
-    if (!quiz) return 0;
-    return Math.round((getScore() / quiz.questions.length) * 100);
+    if (!quiz || totalQuestions === 0) return 0;
+    return Math.round((getScore() / totalQuestions) * 100);
   };
 
   const resetQuiz = () => {
@@ -71,7 +95,7 @@ export default function QuizContent() {
   };
 
   const answeredCount = Object.keys(userAnswers).length;
-  const progressPercent = quiz ? (answeredCount / quiz.questions.length) * 100 : 0;
+  const progressPercent = quiz ? (answeredCount / totalQuestions) * 100 : 0;
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
@@ -119,7 +143,7 @@ export default function QuizContent() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold">{quiz.topic}</h2>
-              <p className="text-sm text-muted-foreground">{quiz.questions.length} questions</p>
+              <p className="text-sm text-muted-foreground">{quiz.sections.length} sections · {totalQuestions} questions</p>
             </div>
             <Button variant="outline" size="sm" onClick={resetQuiz} className="gap-2">
               <RotateCcw className="w-4 h-4" />
@@ -132,7 +156,7 @@ export default function QuizContent() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-muted-foreground">Progress</span>
-                  <span className="text-sm font-medium">{answeredCount}/{quiz.questions.length}</span>
+                  <span className="text-sm font-medium">{answeredCount}/{totalQuestions}</span>
                 </div>
                 <Progress value={progressPercent} className="h-2" />
               </CardContent>
@@ -149,7 +173,7 @@ export default function QuizContent() {
                       <span className="text-sm font-medium opacity-90">Your Score</span>
                     </div>
                     <p className="text-3xl font-bold">
-                      {getScore()} / {quiz.questions.length}
+                      {getScore()} / {totalQuestions}
                     </p>
                   </div>
                   <div className="text-right">
@@ -163,78 +187,99 @@ export default function QuizContent() {
             </Card>
           )}
 
-          {quiz.questions.map((question, qIndex) => (
-            <Card key={qIndex} className="border-border/50 overflow-hidden">
-              <CardContent className="p-0">
-                <div className="p-4 border-b border-border/50 bg-muted/30">
-                  <div className="flex items-start gap-3">
-                    <Badge 
-                      className={`mt-0.5 ${
-                        showResults 
-                          ? userAnswers[qIndex] === question.correctAnswer 
-                            ? "bg-emerald-600" 
-                            : "bg-red-600"
-                          : "bg-violet-600"
-                      }`}
-                    >
-                      {qIndex + 1}
-                    </Badge>
-                    <p className="font-medium text-sm">{question.question}</p>
-                  </div>
+          {quiz.sections.map((section, sectionIndex) => {
+            // Calculate global index offset for this section
+            const sectionStartIndex = quiz.sections
+              .slice(0, sectionIndex)
+              .reduce((acc, s) => acc + s.questions.length, 0);
+            
+            return (
+              <div key={sectionIndex} className="space-y-3">
+                <div className="flex items-center gap-2 mt-6 first:mt-0">
+                  <Badge variant="outline" className="text-xs font-medium">
+                    Section {sectionIndex + 1}
+                  </Badge>
+                  <h3 className="font-semibold text-sm text-muted-foreground">{section.name}</h3>
                 </div>
+                
+                {section.questions.map((question, qIndex) => {
+                  const globalIndex = sectionStartIndex + qIndex;
+                  return (
+                    <Card key={qIndex} className="border-border/50 overflow-hidden">
+                      <CardContent className="p-0">
+                        <div className="p-4 border-b border-border/50 bg-muted/30">
+                          <div className="flex items-start gap-3">
+                            <Badge 
+                              className={`mt-0.5 ${
+                                showResults 
+                                  ? userAnswers[globalIndex] === question.correctAnswer 
+                                    ? "bg-emerald-600" 
+                                    : "bg-red-600"
+                                  : "bg-violet-600"
+                              }`}
+                            >
+                              {globalIndex + 1}
+                            </Badge>
+                            <p className="font-medium text-sm">{question.question}</p>
+                          </div>
+                        </div>
 
-                <div className="p-4">
-                  <RadioGroup
-                    value={userAnswers[qIndex]?.toString()}
-                    onValueChange={(val) => setUserAnswers(prev => ({ ...prev, [qIndex]: parseInt(val) }))}
-                    disabled={showResults}
-                    className="space-y-2"
-                  >
-                    {question.options.map((option, oIndex) => (
-                      <div 
-                        key={oIndex} 
-                        className={`flex items-center space-x-3 p-3 rounded-lg border transition-all ${
-                          showResults 
-                            ? oIndex === question.correctAnswer 
-                              ? "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900" 
-                              : userAnswers[qIndex] === oIndex 
-                                ? "bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-900" 
-                                : "border-border/50"
-                            : userAnswers[qIndex] === oIndex
-                              ? "border-violet-300 bg-violet-50 dark:bg-violet-950/20"
-                              : "border-border/50 hover:border-border"
-                        }`}
-                      >
-                        <RadioGroupItem value={oIndex.toString()} id={`q${qIndex}-o${oIndex}`} />
-                        <Label htmlFor={`q${qIndex}-o${oIndex}`} className="flex-1 cursor-pointer text-sm">
-                          {option}
-                        </Label>
-                        {showResults && oIndex === question.correctAnswer && (
-                          <CheckCircle className="w-4 h-4 text-emerald-600" />
-                        )}
-                        {showResults && userAnswers[qIndex] === oIndex && oIndex !== question.correctAnswer && (
-                          <XCircle className="w-4 h-4 text-red-600" />
-                        )}
-                      </div>
-                    ))}
-                  </RadioGroup>
+                        <div className="p-4">
+                          <RadioGroup
+                            value={userAnswers[globalIndex]?.toString()}
+                            onValueChange={(val) => setUserAnswers(prev => ({ ...prev, [globalIndex]: parseInt(val) }))}
+                            disabled={showResults}
+                            className="space-y-2"
+                          >
+                            {question.options.map((option, oIndex) => (
+                              <div 
+                                key={oIndex} 
+                                className={`flex items-center space-x-3 p-3 rounded-lg border transition-all ${
+                                  showResults 
+                                    ? oIndex === question.correctAnswer 
+                                      ? "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900" 
+                                      : userAnswers[globalIndex] === oIndex 
+                                        ? "bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-900" 
+                                        : "border-border/50"
+                                    : userAnswers[globalIndex] === oIndex
+                                      ? "border-violet-300 bg-violet-50 dark:bg-violet-950/20"
+                                      : "border-border/50 hover:border-border"
+                                }`}
+                              >
+                                <RadioGroupItem value={oIndex.toString()} id={`q${globalIndex}-o${oIndex}`} />
+                                <Label htmlFor={`q${globalIndex}-o${oIndex}`} className="flex-1 cursor-pointer text-sm">
+                                  {option}
+                                </Label>
+                                {showResults && oIndex === question.correctAnswer && (
+                                  <CheckCircle className="w-4 h-4 text-emerald-600" />
+                                )}
+                                {showResults && userAnswers[globalIndex] === oIndex && oIndex !== question.correctAnswer && (
+                                  <XCircle className="w-4 h-4 text-red-600" />
+                                )}
+                              </div>
+                            ))}
+                          </RadioGroup>
 
-                  {showResults && (
-                    <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
-                      <p className="text-xs font-medium text-blue-800 dark:text-blue-200 mb-1">Explanation</p>
-                      <p className="text-sm text-blue-700 dark:text-blue-300">{question.explanation}</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                          {showResults && (
+                            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
+                              <p className="text-xs font-medium text-blue-800 dark:text-blue-200 mb-1">Explanation</p>
+                              <p className="text-sm text-blue-700 dark:text-blue-300">{question.explanation}</p>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            );
+          })}
 
           {!showResults && (
             <Button 
               onClick={handleSubmitQuiz} 
               className="w-full bg-emerald-600 hover:bg-emerald-700"
-              disabled={answeredCount !== quiz.questions.length}
+              disabled={answeredCount !== totalQuestions}
               data-testid="button-submit-quiz"
             >
               <Target className="w-4 h-4 mr-2" />
