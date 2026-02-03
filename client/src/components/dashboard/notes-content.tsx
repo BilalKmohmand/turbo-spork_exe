@@ -26,6 +26,8 @@ export default function NotesContent() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const recognitionRef = useRef<any>(null);
   const isRecordingRef = useRef(false);
+  const interimTranscriptRef = useRef("");
+  const liveTranscriptRef = useRef("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -69,7 +71,9 @@ export default function NotesContent() {
       isRecordingRef.current = true;
       setRecordingTime(0);
       setLiveTranscript("");
+      liveTranscriptRef.current = "";
       setInterimTranscript("");
+      interimTranscriptRef.current = "";
       
       timerRef.current = setInterval(() => {
         setRecordingTime(prev => prev + 1);
@@ -97,9 +101,17 @@ export default function NotesContent() {
           }
           
           if (final) {
-            setLiveTranscript(prev => prev + final);
+            setLiveTranscript(prev => {
+              const newText = prev + final;
+              liveTranscriptRef.current = newText;
+              return newText;
+            });
+            setInterimTranscript("");
+            interimTranscriptRef.current = "";
+          } else {
+            setInterimTranscript(interim);
+            interimTranscriptRef.current = interim;
           }
-          setInterimTranscript(interim);
         };
         
         recognition.onerror = (event: any) => {
@@ -138,6 +150,15 @@ export default function NotesContent() {
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       isRecordingRef.current = false;
+      
+      // Commit any remaining interim transcript before stopping (use refs for latest value)
+      const currentInterim = interimTranscriptRef.current;
+      if (currentInterim) {
+        const newText = liveTranscriptRef.current + currentInterim;
+        setLiveTranscript(newText);
+        liveTranscriptRef.current = newText;
+      }
+      
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       if (timerRef.current) {
@@ -153,6 +174,7 @@ export default function NotesContent() {
         recognitionRef.current = null;
       }
       setInterimTranscript("");
+      interimTranscriptRef.current = "";
     }
   };
 
