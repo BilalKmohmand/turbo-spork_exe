@@ -60,9 +60,10 @@ export default function NotesContent() {
 
       mediaRecorder.onstop = async () => {
         stream.getTracks().forEach(track => track.stop());
-        // Save the live transcript as a chunk when recording stops
-        if (liveTranscript.trim()) {
-          setTranscriptChunks(prev => [...prev, { text: liveTranscript, timestamp: Date.now() }]);
+        // Save the live transcript as a chunk when recording stops (use ref for latest value)
+        const currentTranscript = liveTranscriptRef.current;
+        if (currentTranscript && currentTranscript.trim()) {
+          setTranscriptChunks(prev => [...prev, { text: currentTranscript.trim(), timestamp: Date.now() }]);
         }
       };
 
