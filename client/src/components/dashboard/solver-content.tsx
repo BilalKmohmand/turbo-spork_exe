@@ -59,6 +59,7 @@ export default function SolverContent() {
   const isListeningRef = useRef(false);
   const silenceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const baseTextRef = useRef("");
+  const interimTranscriptRef = useRef("");
   const { toast } = useToast();
 
   const resetSilenceTimeout = () => {
@@ -89,6 +90,7 @@ export default function SolverContent() {
     }
 
     setInterimTranscript("");
+    interimTranscriptRef.current = "";
     baseTextRef.current = textProblem;
     
     const recognition = new SpeechRecognition();
@@ -120,6 +122,7 @@ export default function SolverContent() {
       }
 
       setInterimTranscript(interim);
+      interimTranscriptRef.current = interim;
       resetSilenceTimeout();
 
       if (finalTranscript) {
@@ -129,6 +132,7 @@ export default function SolverContent() {
         setTextProblem(newText);
         baseTextRef.current = newText;
         setInterimTranscript("");
+        interimTranscriptRef.current = "";
       } else if (interim) {
         const base = baseTextRef.current;
         const needsSpace = base.length > 0 && !base.endsWith(" ");
@@ -179,16 +183,18 @@ export default function SolverContent() {
     isListeningRef.current = false;
     setIsListening(false);
     
-    // Commit any remaining interim text before clearing
-    if (interimTranscript) {
+    // Commit any remaining interim text before clearing (use ref for latest value)
+    const currentInterim = interimTranscriptRef.current;
+    if (currentInterim) {
       const base = baseTextRef.current;
       const needsSpace = base.length > 0 && !base.endsWith(" ");
-      const finalText = base + (needsSpace ? " " : "") + interimTranscript.trim();
+      const finalText = base + (needsSpace ? " " : "") + currentInterim.trim();
       setTextProblem(finalText);
       baseTextRef.current = finalText;
     }
     
     setInterimTranscript("");
+    interimTranscriptRef.current = "";
     if (silenceTimeoutRef.current) {
       clearTimeout(silenceTimeoutRef.current);
       silenceTimeoutRef.current = null;
