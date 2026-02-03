@@ -723,7 +723,7 @@ export async function registerRoutes(
       });
 
       const updated = await storage.getSubmission(submission.id);
-      // Include questions array in response for Solvely-style display
+      // Include questions array in response for step-by-step display
       res.status(201).json({
         ...updated,
         questions: aiResult.questions || [],
@@ -1343,7 +1343,7 @@ RULES:
       });
 
       const updated = await storage.getSubmission(submission.id);
-      // Include questions array in response for Solvely-style display
+      // Include questions array in response for step-by-step display
       res.status(201).json({
         ...updated,
         questions: aiResult.questions || [],

@@ -880,7 +880,7 @@ export default function Solver() {
                         </div>
                       </div>
                     ) : result.questions && Array.isArray(result.questions) && result.questions.length > 0 ? (
-                      /* Solvely-style Question-by-Question Display */
+                      /* step-by-step Question-by-Question Display */
                       <div className="space-y-8">
                         {result.questions.map((question) => (
                           <div key={question.questionNumber} className="space-y-4" data-testid={`question-${question.questionNumber}`}>

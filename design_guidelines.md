@@ -1,8 +1,8 @@
-# Design Guidelines: Solvely-Style AI Homework Solver
+# Design Guidelines: Professional AI Homework Solver
 
 ## Design Approach
 
-**Reference-Based:** Inspired by Solvely, Photomath, and Notion's clarity
+**Reference-Based:** Inspired by Photomath, and Notion's clarity
 **Rationale:** Educational solver apps need immediate clarity on core function (input problem → get solution) while maintaining professional credibility. Minimalist approach keeps focus on the AI interaction, gradient accents add modern polish without distraction.
 
 ## Typography System
