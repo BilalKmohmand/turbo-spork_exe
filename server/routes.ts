@@ -2146,12 +2146,7 @@ Output ONLY valid JSON.`;
 
       console.log("Generating notes from transcript, length:", transcript.length);
 
-      res.setHeader("Content-Type", "text/event-stream");
-      res.setHeader("Cache-Control", "no-cache");
-      res.setHeader("Connection", "keep-alive");
-      res.flushHeaders();
-
-      const stream = await openai.chat.completions.create({
+      const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
           {
@@ -2175,23 +2170,14 @@ Do NOT use markdown formatting - use plain text with clear structure.`,
             content: `Please create comprehensive study notes from this lecture transcript:\n\n${transcript}`,
           },
         ],
-        stream: true,
         max_completion_tokens: 2000,
       });
 
-      for await (const chunk of stream) {
-        const token = chunk.choices[0]?.delta?.content || "";
-        if (token) {
-          res.write(`data: ${JSON.stringify({ token })}\n\n`);
-        }
-      }
-
-      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-      res.end();
+      const notes = completion.choices[0]?.message?.content || "";
+      res.json({ notes });
     } catch (error: any) {
       console.error("Note generation error:", error);
-      res.write(`data: ${JSON.stringify({ error: error?.message || "Failed to generate notes" })}\n\n`);
-      res.end();
+      res.status(500).json({ error: error?.message || "Failed to generate notes" });
     }
   });
 

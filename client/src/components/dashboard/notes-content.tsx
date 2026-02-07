@@ -221,37 +221,17 @@ export default function NotesContent() {
         body: JSON.stringify({ transcript: fullTranscript }),
       });
 
-      if (!response.ok) throw new Error("Failed to generate notes");
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let fullNotes = "";
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          
-          const chunk = decoder.decode(value);
-          const lines = chunk.split("\n").filter(line => line.startsWith("data: "));
-          
-          for (const line of lines) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              if (data.token) {
-                fullNotes += data.token;
-              }
-            } catch {}
-          }
-        }
+      if (!response.ok) {
+        const errData = await response.json().catch(() => null);
+        throw new Error(errData?.error || "Failed to generate notes");
       }
-      
-      // Display the complete notes at once
-      setGeneratedNotes(fullNotes);
-    } catch (error) {
+
+      const data = await response.json();
+      setGeneratedNotes(data.notes || "");
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to generate notes. Please try again.",
+        description: error?.message || "Failed to generate notes. Please try again.",
         variant: "destructive",
       });
     } finally {
