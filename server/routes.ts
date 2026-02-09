@@ -190,7 +190,7 @@ async function solveFromImage(base64Image: string, mimeType: string): Promise<So
   try {
     // Use GPT-4o for best vision capabilities
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "user",
@@ -397,7 +397,7 @@ Rules:
     
     // Use GPT-5-nano for fast responses with higher token limit
     const response = await openai.chat.completions.create({
-      model: "gpt-5-nano",
+      model: "gpt-4o-mini",
       max_completion_tokens: 8000,
       messages,
     });
@@ -1032,7 +1032,7 @@ RULES:
             
             // Use GPT-4o to process all images at once
             const stream = await openai.chat.completions.create({
-              model: "gpt-4o",
+              model: "gpt-4o-mini",
               messages: [
                 {
                   role: "user",
@@ -1108,7 +1108,7 @@ RULES:
           
           // Stream response for text content
           const stream = await openai.chat.completions.create({
-            model: "gpt-5-nano",
+            model: "gpt-4o-mini",
             messages: [
               {
                 role: "user",
@@ -1171,7 +1171,7 @@ Please:
             console.log("Processing unknown file as text, length:", textContent.length);
             
             const stream = await openai.chat.completions.create({
-              model: "gpt-5-nano",
+              model: "gpt-4o-mini",
               messages: [
                 {
                   role: "user",
@@ -1219,7 +1219,7 @@ Please:
 
       // Use GPT-4o for accurate image reading
       const stream = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "user",
@@ -1447,7 +1447,7 @@ RULES:
       }
 
       const response = await openai.chat.completions.create({
-        model: "gpt-5-nano",
+        model: "gpt-4o-mini",
         max_completion_tokens: 4096,
         messages: [
           {
@@ -1571,7 +1571,7 @@ RULES:
       }
 
       const response = await openai.chat.completions.create({
-        model: "gpt-5-nano",
+        model: "gpt-4o-mini",
         max_completion_tokens: 8192,
         messages: [
           {
@@ -2053,7 +2053,7 @@ RULES:
 Output ONLY valid JSON.`;
 
       const response = await openai.chat.completions.create({
-        model: "gpt-5-nano",
+        model: "gpt-4o-mini",
         max_completion_tokens: 16384,
         messages: [
           { role: "system", content: systemPrompt },
