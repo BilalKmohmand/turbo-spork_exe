@@ -224,7 +224,7 @@ Start with {`,
           ],
         },
       ],
-      max_completion_tokens: 8000,
+      max_completion_tokens: 2000,
     });
 
     let text = response.choices[0]?.message?.content || "";
@@ -398,7 +398,7 @@ Rules:
     // Use GPT-5-nano for fast responses with higher token limit
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      max_completion_tokens: 8000,
+      max_completion_tokens: 2000,
       messages,
     });
 
@@ -902,7 +902,7 @@ RULES:
       // For homework problems - stream readable solution
       const stream = await openai.chat.completions.create({
         model: "gpt-4o-mini",
-        max_completion_tokens: 8000,
+        max_completion_tokens: 2000,
         messages: conversationMessages,
         stream: true,
       });
@@ -1068,7 +1068,7 @@ RULES:
                 },
               ],
               stream: true,
-              max_completion_tokens: 4000,
+              max_completion_tokens: 1500,
             });
 
             for await (const chunk of stream) {
@@ -1125,7 +1125,7 @@ Please:
 4. Provide helpful insights or analysis`,
               },
             ],
-            max_completion_tokens: 4000,
+            max_completion_tokens: 1500,
             stream: true,
           });
 
@@ -1188,7 +1188,7 @@ Please:
 4. Provide helpful insights or analysis`,
                 },
               ],
-              max_completion_tokens: 4000,
+              max_completion_tokens: 1500,
               stream: true,
             });
 
@@ -1266,7 +1266,7 @@ RULES:
             ],
           },
         ],
-        max_completion_tokens: 5000,
+        max_completion_tokens: 1500,
         stream: true,
       });
 
@@ -1448,7 +1448,7 @@ RULES:
 
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
-        max_completion_tokens: 4096,
+        max_completion_tokens: 1500,
         messages: [
           {
             role: "system",
@@ -1572,7 +1572,7 @@ RULES:
 
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
-        max_completion_tokens: 8192,
+        max_completion_tokens: 2000,
         messages: [
           {
             role: "system",
@@ -1700,7 +1700,7 @@ FORMATTING RULES:
 
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
-        max_completion_tokens: 4000,
+        max_completion_tokens: 1500,
         messages: [
           { role: "system", content: systemContext },
           ...chatMessages,
@@ -2054,7 +2054,7 @@ Output ONLY valid JSON.`;
 
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
-        max_completion_tokens: 16384,
+        max_completion_tokens: 2000,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `Solve this problem: ${problem}` }
