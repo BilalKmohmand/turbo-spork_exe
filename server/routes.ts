@@ -224,7 +224,7 @@ Start with {`,
           ],
         },
       ],
-      max_completion_tokens: 2000,
+      max_completion_tokens: 600,
     });
 
     let text = response.choices[0]?.message?.content || "";
@@ -398,7 +398,7 @@ Rules:
     // Use GPT-5-nano for fast responses with higher token limit
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      max_completion_tokens: 2000,
+      max_completion_tokens: 600,
       messages,
     });
 
@@ -782,7 +782,7 @@ export async function registerRoutes(
         // Stream the explanation
         const stream = await openai.chat.completions.create({
           model: "gpt-4o-mini",
-          max_completion_tokens: 1000,
+          max_completion_tokens: 600,
           messages: [
             { role: "system", content: "You are a math tutor. Briefly explain the graph being shown. Describe its key features (intercepts, asymptotes, domain, range) in plain text. Don't use LaTeX." },
             { role: "user", content: `Explain the graph of y = ${expression}` }
@@ -830,7 +830,7 @@ export async function registerRoutes(
         // Stream casual chat response
         const stream = await openai.chat.completions.create({
           model: "gpt-4o-mini",
-          max_completion_tokens: 500,
+          max_completion_tokens: 300,
           messages: [
             { role: "system", content: "You are Gradeio, a friendly AI homework tutor. Be warm, helpful, and brief." },
             { role: "user", content: problem.trim() }
@@ -902,7 +902,7 @@ RULES:
       // For homework problems - stream readable solution
       const stream = await openai.chat.completions.create({
         model: "gpt-4o-mini",
-        max_completion_tokens: 2000,
+        max_completion_tokens: 600,
         messages: conversationMessages,
         stream: true,
       });
@@ -1068,7 +1068,7 @@ RULES:
                 },
               ],
               stream: true,
-              max_completion_tokens: 1500,
+              max_completion_tokens: 800,
             });
 
             for await (const chunk of stream) {
@@ -1125,7 +1125,7 @@ Please:
 4. Provide helpful insights or analysis`,
               },
             ],
-            max_completion_tokens: 1500,
+            max_completion_tokens: 800,
             stream: true,
           });
 
@@ -1188,7 +1188,7 @@ Please:
 4. Provide helpful insights or analysis`,
                 },
               ],
-              max_completion_tokens: 1500,
+              max_completion_tokens: 800,
               stream: true,
             });
 
@@ -1266,7 +1266,7 @@ RULES:
             ],
           },
         ],
-        max_completion_tokens: 1500,
+        max_completion_tokens: 800,
         stream: true,
       });
 
@@ -1448,7 +1448,7 @@ RULES:
 
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
-        max_completion_tokens: 1500,
+        max_completion_tokens: 800,
         messages: [
           {
             role: "system",
@@ -1572,7 +1572,7 @@ RULES:
 
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
-        max_completion_tokens: 2000,
+        max_completion_tokens: 600,
         messages: [
           {
             role: "system",
@@ -1700,7 +1700,7 @@ FORMATTING RULES:
 
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
-        max_completion_tokens: 1500,
+        max_completion_tokens: 800,
         messages: [
           { role: "system", content: systemContext },
           ...chatMessages,
@@ -2054,7 +2054,7 @@ Output ONLY valid JSON.`;
 
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
-        max_completion_tokens: 2000,
+        max_completion_tokens: 600,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `Solve this problem: ${problem}` }
@@ -2170,7 +2170,7 @@ Do NOT use markdown formatting - use plain text with clear structure.`,
             content: `Please create comprehensive study notes from this lecture transcript:\n\n${transcript}`,
           },
         ],
-        max_completion_tokens: 2000,
+        max_completion_tokens: 600,
       });
 
       const notes = completion.choices[0]?.message?.content || "";
