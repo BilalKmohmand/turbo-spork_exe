@@ -26,7 +26,7 @@ function Router() {
       <Route path="/quiz" component={Dashboard} />
       <Route path="/essay" component={Dashboard} />
       <Route path="/notes" component={Dashboard} />
-      <Route path="/teacher" component={TeacherDashboard} />
+      <Route path="/teacher" component={Dashboard} />
       <Route path="/knowledge" component={Knowledge} />
       <Route>
         <div className="flex items-center justify-center h-screen">
