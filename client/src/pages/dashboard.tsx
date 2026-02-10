@@ -40,6 +40,8 @@ import EssayContent from "@/components/dashboard/essay-content";
 import OverviewContent from "@/components/dashboard/overview-content";
 import HelpContent from "@/components/dashboard/help-content";
 import SettingsContent from "@/components/dashboard/settings-content";
+import EvaluateContent from "@/components/dashboard/evaluate-content";
+import { ClipboardCheck } from "lucide-react";
 
 const menuItems = [
   { id: "overview", label: "Overview", icon: LayoutDashboard, badge: null },
@@ -47,6 +49,10 @@ const menuItems = [
   { id: "notes", label: "Lecture Notes", icon: Mic, badge: null },
   { id: "quiz", label: "Quiz Generator", icon: FileText, badge: null },
   { id: "essay", label: "Essay Writer", icon: FileEdit, badge: null },
+];
+
+const teacherItems = [
+  { id: "evaluate", label: "AI Evaluator", icon: ClipboardCheck, badge: "New" },
 ];
 
 const supportItems = [
@@ -145,6 +151,47 @@ export default function Dashboard() {
               </SidebarGroupContent>
             </SidebarGroup>
 
+            {user.role === "teacher" && (
+              <SidebarGroup className="mt-4">
+                <p className="px-3 py-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                  Teacher Tools
+                </p>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {teacherItems.map((item) => (
+                      <SidebarMenuItem key={item.id}>
+                        <SidebarMenuButton
+                          onClick={() => setActiveSection(item.id)}
+                          isActive={activeSection === item.id}
+                          className={`w-full justify-start gap-3 h-10 px-3 rounded-lg transition-all ${
+                            activeSection === item.id 
+                              ? "bg-emerald-600 text-white hover:bg-emerald-600 hover:text-white" 
+                              : "hover:bg-muted"
+                          }`}
+                          data-testid={`sidebar-${item.id}`}
+                        >
+                          <item.icon className="w-4 h-4" />
+                          <span className="font-medium text-sm">{item.label}</span>
+                          {item.badge && (
+                            <Badge 
+                              variant="secondary" 
+                              className={`ml-auto text-[10px] px-1.5 py-0 ${
+                                activeSection === item.id 
+                                  ? "bg-white/20 text-white" 
+                                  : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                              }`}
+                            >
+                              {item.badge}
+                            </Badge>
+                          )}
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            )}
+
             <SidebarGroup className="mt-4">
               <p className="px-3 py-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                 Support
@@ -219,19 +266,22 @@ export default function Dashboard() {
             <div className="flex items-center gap-3">
               <SidebarTrigger className="text-muted-foreground hover:text-foreground" data-testid="button-sidebar-toggle" />
               <div className="h-5 w-px bg-border" />
-              <div className="flex items-center gap-2">
-                {menuItems.find(m => m.id === activeSection)?.icon && (
-                  <div className="w-6 h-6 rounded-md bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
-                    {(() => {
-                      const Icon = menuItems.find(m => m.id === activeSection)?.icon || LayoutDashboard;
-                      return <Icon className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />;
-                    })()}
+              {(() => {
+                const allItems = [...menuItems, ...teacherItems, ...supportItems];
+                const active = allItems.find(m => m.id === activeSection);
+                const isTeacher = teacherItems.some(t => t.id === activeSection);
+                const Icon = active?.icon || LayoutDashboard;
+                return (
+                  <div className="flex items-center gap-2">
+                    <div className={`w-6 h-6 rounded-md flex items-center justify-center ${isTeacher ? "bg-emerald-100 dark:bg-emerald-900/30" : "bg-violet-100 dark:bg-violet-900/30"}`}>
+                      <Icon className={`w-3.5 h-3.5 ${isTeacher ? "text-emerald-600 dark:text-emerald-400" : "text-violet-600 dark:text-violet-400"}`} />
+                    </div>
+                    <h1 className="font-semibold text-sm">
+                      {active?.label || "Dashboard"}
+                    </h1>
                   </div>
-                )}
-                <h1 className="font-semibold text-sm">
-                  {menuItems.find(m => m.id === activeSection)?.label || "Dashboard"}
-                </h1>
-              </div>
+                );
+              })()}
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="text-xs gap-1 font-normal">
@@ -247,6 +297,7 @@ export default function Dashboard() {
             {activeSection === "notes" && <NotesContent />}
             {activeSection === "quiz" && <QuizContent />}
             {activeSection === "essay" && <EssayContent />}
+            {activeSection === "evaluate" && user.role === "teacher" && <EvaluateContent />}
             {activeSection === "help" && <HelpContent />}
             {activeSection === "settings" && <SettingsContent user={user} />}
           </div>

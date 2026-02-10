@@ -159,6 +159,93 @@ export const evaluateSchema = z.object({
   feedback: z.string().min(1, "Feedback is required"),
 });
 
+// Rubrics table for teacher evaluation criteria
+export const rubrics = pgTable("rubrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  teacherId: varchar("teacher_id").references(() => users.id).notNull(),
+  name: text("name").notNull(),
+  subject: text("subject").notNull().default("General"),
+  totalPoints: integer("total_points").notNull().default(100),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const rubricCriteria = pgTable("rubric_criteria", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  rubricId: varchar("rubric_id").references(() => rubrics.id).notNull(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  maxPoints: integer("max_points").notNull(),
+  orderIndex: integer("order_index").notNull().default(0),
+});
+
+export const rubricSubmissions = pgTable("rubric_submissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  rubricId: varchar("rubric_id").references(() => rubrics.id).notNull(),
+  teacherId: varchar("teacher_id").references(() => users.id).notNull(),
+  studentName: text("student_name").notNull(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  status: text("status").notNull().default("pending"), // pending | evaluated
+  submittedAt: timestamp("submitted_at").defaultNow(),
+});
+
+export const rubricEvaluations = pgTable("rubric_evaluations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  submissionId: varchar("submission_id").references(() => rubricSubmissions.id).notNull(),
+  rubricId: varchar("rubric_id").references(() => rubrics.id).notNull(),
+  teacherId: varchar("teacher_id").references(() => users.id).notNull(),
+  overallScore: integer("overall_score").notNull(),
+  overallFeedback: text("overall_feedback").notNull(),
+  criteriaScores: jsonb("criteria_scores").notNull(), // [{criterionId, criterionName, score, maxPoints, feedback}]
+  evaluatedAt: timestamp("evaluated_at").defaultNow(),
+});
+
+// Rubric insert schemas
+export const insertRubricSchema = createInsertSchema(rubrics).omit({ id: true, createdAt: true });
+export const insertRubricCriterionSchema = createInsertSchema(rubricCriteria).omit({ id: true });
+export const insertRubricSubmissionSchema = createInsertSchema(rubricSubmissions).omit({ id: true, submittedAt: true, status: true });
+export const insertRubricEvaluationSchema = createInsertSchema(rubricEvaluations).omit({ id: true, evaluatedAt: true });
+
+// Rubric types
+export type Rubric = typeof rubrics.$inferSelect;
+export type InsertRubric = z.infer<typeof insertRubricSchema>;
+export type RubricCriterion = typeof rubricCriteria.$inferSelect;
+export type InsertRubricCriterion = z.infer<typeof insertRubricCriterionSchema>;
+export type RubricSubmission = typeof rubricSubmissions.$inferSelect;
+export type InsertRubricSubmission = z.infer<typeof insertRubricSubmissionSchema>;
+export type RubricEvaluation = typeof rubricEvaluations.$inferSelect;
+export type InsertRubricEvaluation = z.infer<typeof insertRubricEvaluationSchema>;
+
+export interface CriterionScore {
+  criterionId: string;
+  criterionName: string;
+  score: number;
+  maxPoints: number;
+  feedback: string;
+}
+
+// Rubric validation schemas
+export const createRubricSchema = z.object({
+  name: z.string().min(1, "Rubric name is required"),
+  subject: z.string().min(1, "Subject is required"),
+  criteria: z.array(z.object({
+    name: z.string().min(1, "Criterion name is required"),
+    description: z.string().min(1, "Description is required"),
+    maxPoints: z.number().min(1, "Points must be at least 1"),
+  })).min(1, "At least one criterion is required"),
+});
+
+export const addSubmissionSchema = z.object({
+  rubricId: z.string().min(1),
+  studentName: z.string().min(1, "Student name is required"),
+  title: z.string().min(1, "Title is required"),
+  content: z.string().min(1, "Content is required"),
+});
+
+export const batchEvaluateSchema = z.object({
+  submissionIds: z.array(z.string()).min(1, "At least one submission required"),
+});
+
 // Knowledge chunks table for RAG system
 export const knowledgeChunks = pgTable("knowledge_chunks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
