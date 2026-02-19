@@ -2489,5 +2489,96 @@ RULES: Each score MUST be 0 to maxPoints. Evaluate strictly. Output ONLY JSON.`
     }
   });
 
+  app.post("/api/quick-evaluate", requireAuth, requireTeacher, async (req, res) => {
+    try {
+      const { criteria, studentName, content } = req.body;
+
+      if (!criteria || !Array.isArray(criteria) || criteria.length === 0) {
+        return res.status(400).json({ error: "Please add at least one criterion" });
+      }
+      if (!content || typeof content !== "string" || !content.trim()) {
+        return res.status(400).json({ error: "Please provide student work to evaluate" });
+      }
+
+      const validCriteria = criteria.filter((c: any) => c.name && c.maxPoints > 0);
+      if (validCriteria.length === 0) {
+        return res.status(400).json({ error: "Each criterion needs a name and points" });
+      }
+
+      const criteriaPrompt = validCriteria.map((c: any, i: number) =>
+        `${i + 1}. "${c.name}" (max ${c.maxPoints} points)${c.description ? `: ${c.description}` : ""}`
+      ).join("\n");
+
+      const totalMaxPoints = validCriteria.reduce((s: number, c: any) => s + c.maxPoints, 0);
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        max_completion_tokens: 800,
+        messages: [
+          {
+            role: "system",
+            content: `You are an academic evaluator. Evaluate student work using ONLY these criteria:
+
+${criteriaPrompt}
+
+Respond with ONLY valid JSON:
+{
+  "scores": [
+    {"name": "CRITERION_NAME", "score": NUMBER, "maxPoints": NUMBER, "feedback": "Brief feedback"}
+  ],
+  "overallScore": NUMBER,
+  "totalMaxPoints": ${totalMaxPoints},
+  "overallFeedback": "Summary feedback with strengths and areas for improvement"
+}
+
+RULES:
+- Score each criterion from 0 to its max points
+- Be fair but rigorous
+- Output ONLY valid JSON`
+          },
+          {
+            role: "user",
+            content: `${studentName ? `Student: ${studentName}\n\n` : ""}Student Work:\n${content.trim()}`
+          }
+        ],
+      });
+
+      let responseText = response.choices[0]?.message?.content || "";
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) responseText = jsonMatch[0];
+
+      let parsed;
+      try {
+        parsed = JSON.parse(responseText);
+      } catch {
+        return res.status(500).json({ error: "AI returned invalid response, please try again" });
+      }
+
+      const scores = validCriteria.map((c: any) => {
+        const aiScore = parsed.scores?.find((s: any) => s.name === c.name);
+        return {
+          name: c.name,
+          score: Math.min(aiScore?.score ?? 0, c.maxPoints),
+          maxPoints: c.maxPoints,
+          feedback: aiScore?.feedback || "No feedback",
+        };
+      });
+
+      const overallScore = scores.reduce((s: number, c: any) => s + c.score, 0);
+
+      res.json({
+        scores,
+        overallScore,
+        totalMaxPoints,
+        overallFeedback: parsed.overallFeedback || "Evaluation complete",
+        studentName: studentName || "Student",
+        evaluatedAt: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Quick evaluate error:", error);
+      res.status(500).json({ error: "Failed to evaluate. Please try again." });
+    }
+  });
+
   return httpServer;
 }
