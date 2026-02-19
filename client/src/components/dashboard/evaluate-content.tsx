@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,6 +17,12 @@ import {
   Sparkles,
   RotateCcw,
   Target,
+  Upload,
+  FileText,
+  X,
+  Award,
+  TrendingUp,
+  MessageSquare,
 } from "lucide-react";
 
 interface Criterion {
@@ -41,14 +47,44 @@ interface EvalResult {
   evaluatedAt: string;
 }
 
+const ACCEPT_TYPES = ".pdf,.doc,.docx,.txt,.rtf,.csv,.json,.xml,.md";
+
 export default function EvaluateContent() {
   const [criteria, setCriteria] = useState<Criterion[]>([
     { name: "", description: "", maxPoints: 20 },
   ]);
   const [studentName, setStudentName] = useState("");
   const [content, setContent] = useState("");
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [result, setResult] = useState<EvalResult | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/extract-text", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to process file");
+      }
+      return res.json();
+    },
+    onSuccess: (data: { text: string; fileName: string }) => {
+      setContent(data.text);
+      setUploadedFileName(data.fileName);
+      toast({ title: "File loaded", description: `Extracted text from ${data.fileName}` });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+    },
+  });
 
   const evaluateMutation = useMutation({
     mutationFn: async () => {
@@ -79,6 +115,27 @@ export default function EvaluateContent() {
     setCriteria(updated);
   };
 
+  const handleFileDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragOver(false);
+      const file = e.dataTransfer.files[0];
+      if (file) uploadMutation.mutate(file);
+    },
+    [uploadMutation]
+  );
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) uploadMutation.mutate(file);
+    e.target.value = "";
+  };
+
+  const clearFile = () => {
+    setUploadedFileName(null);
+    setContent("");
+  };
+
   const totalPoints = criteria.reduce((s, c) => s + (c.maxPoints || 0), 0);
   const isValid =
     criteria.some((c) => c.name.trim() && c.maxPoints > 0) && content.trim();
@@ -88,6 +145,7 @@ export default function EvaluateContent() {
     setCriteria([{ name: "", description: "", maxPoints: 20 }]);
     setStudentName("");
     setContent("");
+    setUploadedFileName(null);
   };
 
   const scorePercent =
@@ -112,7 +170,7 @@ export default function EvaluateContent() {
           AI Evaluator
         </h1>
         <p className="text-muted-foreground">
-          Add your criteria, paste student work, and let AI evaluate it
+          Set your criteria, upload student work, and get instant AI-powered evaluation
         </p>
       </div>
 
@@ -124,13 +182,18 @@ export default function EvaluateContent() {
           onReset={resetAll}
         />
       ) : (
-        <div className="space-y-4">
-          <Card className="border-border/50">
-            <CardContent className="p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <Label className="font-semibold">Evaluation Criteria</Label>
-                <Badge variant="outline" className="text-xs">
-                  Total: {totalPoints} pts
+        <div className="space-y-5">
+          <Card className="border-border/50 overflow-visible">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                    <Target className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <Label className="font-semibold text-sm">Evaluation Criteria</Label>
+                </div>
+                <Badge variant="outline" className="text-xs font-medium">
+                  {totalPoints} pts total
                 </Badge>
               </div>
 
@@ -138,33 +201,41 @@ export default function EvaluateContent() {
                 {criteria.map((c, i) => (
                   <div
                     key={i}
-                    className="flex items-start gap-2"
+                    className="group relative flex items-start gap-2 p-3 rounded-lg border border-border/50 bg-muted/20 transition-colors"
                     data-testid={`criterion-row-${i}`}
                   >
+                    <div className="flex items-center justify-center w-6 h-9 text-muted-foreground/40 flex-shrink-0">
+                      <span className="text-xs font-bold">{i + 1}</span>
+                    </div>
                     <div className="flex-1 space-y-2">
                       <div className="flex gap-2">
                         <Input
                           value={c.name}
                           onChange={(e) => updateCriterion(i, "name", e.target.value)}
-                          placeholder="Criterion name (e.g., Grammar)"
+                          placeholder="Criterion name (e.g., Grammar, Thesis, Evidence)"
+                          className="border-border/40 bg-background"
                           data-testid={`input-criterion-name-${i}`}
                         />
-                        <Input
-                          type="number"
-                          value={c.maxPoints}
-                          onChange={(e) =>
-                            updateCriterion(i, "maxPoints", parseInt(e.target.value) || 0)
-                          }
-                          className="w-20"
-                          placeholder="Pts"
-                          data-testid={`input-criterion-points-${i}`}
-                        />
+                        <div className="relative w-24 flex-shrink-0">
+                          <Input
+                            type="number"
+                            value={c.maxPoints}
+                            onChange={(e) =>
+                              updateCriterion(i, "maxPoints", parseInt(e.target.value) || 0)
+                            }
+                            className="pr-7 border-border/40 bg-background"
+                            data-testid={`input-criterion-points-${i}`}
+                          />
+                          <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                            pts
+                          </span>
+                        </div>
                       </div>
                       <Input
                         value={c.description}
                         onChange={(e) => updateCriterion(i, "description", e.target.value)}
-                        placeholder="Optional: What should this criterion evaluate?"
-                        className="text-sm"
+                        placeholder="What should this evaluate? (optional)"
+                        className="text-sm border-border/40 bg-background"
                         data-testid={`input-criterion-desc-${i}`}
                       />
                     </div>
@@ -173,10 +244,11 @@ export default function EvaluateContent() {
                         variant="ghost"
                         size="icon"
                         onClick={() => removeCriterion(i)}
-                        className="mt-0.5 flex-shrink-0"
+                        className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        style={{ visibility: "visible" }}
                         data-testid={`button-remove-criterion-${i}`}
                       >
-                        <Trash2 className="w-4 h-4 text-destructive" />
+                        <Trash2 className="w-3.5 h-3.5 text-destructive" />
                       </Button>
                     )}
                   </div>
@@ -186,7 +258,7 @@ export default function EvaluateContent() {
               <Button
                 variant="outline"
                 onClick={addCriterion}
-                className="w-full gap-2"
+                className="w-full gap-2 mt-3 border-dashed border-border/60"
                 data-testid="button-add-criterion"
               >
                 <Plus className="w-4 h-4" /> Add Criterion
@@ -194,39 +266,124 @@ export default function EvaluateContent() {
             </CardContent>
           </Card>
 
-          <Card className="border-border/50">
-            <CardContent className="p-5 space-y-3">
-              <Label className="font-semibold">Student Work</Label>
+          <Card className="border-border/50 overflow-visible">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-7 h-7 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
+                  <FileText className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                </div>
+                <Label className="font-semibold text-sm">Student Work</Label>
+              </div>
+
               <Input
                 value={studentName}
                 onChange={(e) => setStudentName(e.target.value)}
                 placeholder="Student name (optional)"
+                className="mb-3 border-border/40"
                 data-testid="input-student-name"
               />
-              <Textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="Paste student's work here..."
-                className="min-h-[180px] resize-none"
-                data-testid="input-student-work"
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={ACCEPT_TYPES}
+                onChange={handleFileSelect}
+                className="hidden"
+                data-testid="input-file-upload"
               />
+
+              {!content ? (
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDragOver(true);
+                  }}
+                  onDragLeave={() => setIsDragOver(false)}
+                  onDrop={handleFileDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all ${
+                    isDragOver
+                      ? "border-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/20"
+                      : "border-border/60 hover:border-emerald-300 hover:bg-muted/30"
+                  }`}
+                  data-testid="dropzone-upload"
+                >
+                  {uploadMutation.isPending ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
+                      <p className="text-sm font-medium">Extracting text...</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900/30 dark:to-teal-900/30 flex items-center justify-center mx-auto mb-3">
+                        <Upload className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                      </div>
+                      <p className="font-medium text-sm mb-1">
+                        Drop file here or click to browse
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        PDF, Word, TXT, and more supported
+                      </p>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {uploadedFileName && (
+                    <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800">
+                      <FileText className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                      <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300 flex-1 truncate">
+                        {uploadedFileName}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={clearFile}
+                        className="w-6 h-6 flex-shrink-0"
+                        data-testid="button-clear-file"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  )}
+                  <Textarea
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    placeholder="Or paste student's work directly here..."
+                    className="min-h-[160px] resize-none border-border/40"
+                    data-testid="input-student-work"
+                  />
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="gap-1.5 text-xs"
+                      data-testid="button-upload-file"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      {uploadedFileName ? "Upload different file" : "Upload file instead"}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
           <Button
             onClick={() => evaluateMutation.mutate()}
             disabled={!isValid || evaluateMutation.isPending}
-            className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700"
+            className="w-full gap-2 h-12 text-base bg-gradient-to-r from-emerald-600 to-teal-600 shadow-lg shadow-emerald-600/20 border-0"
             data-testid="button-evaluate"
           >
             {evaluateMutation.isPending ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Evaluating...
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Evaluating with AI...
               </>
             ) : (
               <>
-                <Sparkles className="w-4 h-4" />
+                <Sparkles className="w-5 h-5" />
                 Evaluate with AI
               </>
             )}
@@ -248,14 +405,25 @@ function ResultView({
   scoreGradient: string;
   onReset: () => void;
 }) {
+  const gradeLabel =
+    scorePercent >= 90
+      ? "Excellent"
+      : scorePercent >= 80
+        ? "Great"
+        : scorePercent >= 70
+          ? "Good"
+          : scorePercent >= 60
+            ? "Satisfactory"
+            : "Needs Improvement";
+
   return (
     <div className="space-y-4">
-      <Card className={`border-0 bg-gradient-to-br ${scoreGradient} text-white`}>
+      <Card className={`border-0 bg-gradient-to-br ${scoreGradient} text-white shadow-lg`}>
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Target className="w-5 h-5" />
+              <div className="flex items-center gap-2 mb-2">
+                <Award className="w-5 h-5 opacity-80" />
                 <span className="text-sm font-medium opacity-90">
                   {result.studentName}
                 </span>
@@ -263,9 +431,12 @@ function ResultView({
               <p className="text-3xl font-bold" data-testid="text-overall-score">
                 {result.overallScore}/{result.totalMaxPoints}
               </p>
+              <Badge className="mt-2 bg-white/20 text-white border-0 no-default-hover-elevate no-default-active-elevate">
+                {gradeLabel}
+              </Badge>
             </div>
             <div className="text-right">
-              <p className="text-5xl font-bold" data-testid="text-score-percent">
+              <p className="text-6xl font-bold tracking-tight" data-testid="text-score-percent">
                 {scorePercent}%
               </p>
             </div>
@@ -275,8 +446,11 @@ function ResultView({
 
       <Card className="border-border/50">
         <CardContent className="p-5">
-          <h3 className="font-semibold text-sm mb-3">Score Breakdown</h3>
-          <div className="space-y-3">
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp className="w-4 h-4 text-emerald-600" />
+            <h3 className="font-semibold text-sm">Score Breakdown</h3>
+          </div>
+          <div className="space-y-4">
             {result.scores.map((s, i) => {
               const pct =
                 s.maxPoints > 0 ? Math.round((s.score / s.maxPoints) * 100) : 0;
@@ -286,22 +460,28 @@ function ResultView({
                   : pct >= 60
                     ? "bg-amber-500"
                     : "bg-red-500";
+              const textColor =
+                pct >= 80
+                  ? "text-emerald-600 dark:text-emerald-400"
+                  : pct >= 60
+                    ? "text-amber-600 dark:text-amber-400"
+                    : "text-red-600 dark:text-red-400";
 
               return (
                 <div key={i} data-testid={`score-criterion-${i}`}>
-                  <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center justify-between mb-1.5">
                     <span className="text-sm font-medium">{s.name}</span>
-                    <span className="text-sm font-bold">
+                    <span className={`text-sm font-bold ${textColor}`}>
                       {s.score}/{s.maxPoints}
                     </span>
                   </div>
-                  <div className="h-2 w-full bg-muted rounded-full overflow-hidden mb-1.5">
+                  <div className="h-2.5 w-full bg-muted rounded-full overflow-hidden mb-2">
                     <div
-                      className={`h-full rounded-full transition-all ${barColor}`}
+                      className={`h-full rounded-full transition-all duration-700 ${barColor}`}
                       style={{ width: `${pct}%` }}
                     />
                   </div>
-                  <p className="text-xs text-muted-foreground">{s.feedback}</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{s.feedback}</p>
                 </div>
               );
             })}
@@ -311,11 +491,14 @@ function ResultView({
 
       <Card className="border-border/50">
         <CardContent className="p-5">
-          <div className="flex items-center gap-2 mb-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+          <div className="flex items-center gap-2 mb-3">
+            <MessageSquare className="w-4 h-4 text-violet-600" />
             <h3 className="font-semibold text-sm">Overall Feedback</h3>
           </div>
-          <p className="text-sm text-muted-foreground leading-relaxed" data-testid="text-overall-feedback">
+          <p
+            className="text-sm text-muted-foreground leading-relaxed"
+            data-testid="text-overall-feedback"
+          >
             {result.overallFeedback}
           </p>
         </CardContent>

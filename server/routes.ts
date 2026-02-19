@@ -2089,6 +2089,70 @@ Output ONLY valid JSON.`;
     }
   });
 
+  const docUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 },
+  });
+
+  app.post("/api/extract-text", requireAuth, docUpload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file provided" });
+      }
+
+      const mime = req.file.mimetype || "";
+      const fileName = req.file.originalname || "file";
+      const buffer = req.file.buffer;
+
+      if (mime === "application/pdf") {
+        try {
+          const pdfParse = await getPDFParse();
+          const data = await pdfParse(buffer);
+          const text = data.text?.trim();
+          if (!text) {
+            return res.status(400).json({ error: "Could not extract text from this PDF. It may be a scanned image." });
+          }
+          return res.json({ text, fileName });
+        } catch (e: any) {
+          return res.status(400).json({ error: "Failed to read PDF. The file may be corrupted." });
+        }
+      }
+
+      if (mime === "application/msword" || mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+        try {
+          const mammoth = await import("mammoth");
+          const result = await mammoth.extractRawText({ buffer });
+          const text = result.value?.trim();
+          if (!text) {
+            return res.status(400).json({ error: "Could not extract text from this Word document." });
+          }
+          return res.json({ text, fileName });
+        } catch (e: any) {
+          return res.status(400).json({ error: "Failed to read Word document." });
+        }
+      }
+
+      if (mime.startsWith("text/") || mime === "application/json" || mime === "application/xml") {
+        const text = buffer.toString("utf-8").trim();
+        if (!text) {
+          return res.status(400).json({ error: "The file appears to be empty." });
+        }
+        return res.json({ text, fileName });
+      }
+
+      const textAttempt = buffer.toString("utf-8").trim();
+      const printable = textAttempt.replace(/[^\x20-\x7E\n\r\t]/g, "");
+      if (printable.length > textAttempt.length * 0.7 && printable.length > 10) {
+        return res.json({ text: printable, fileName });
+      }
+
+      return res.status(400).json({ error: "Unsupported file type. Please upload a PDF, Word document, or text file." });
+    } catch (error: any) {
+      console.error("Extract text error:", error);
+      res.status(500).json({ error: "Failed to process file." });
+    }
+  });
+
   // Multer configuration for audio uploads
   const audioUpload = multer({
     storage: multer.memoryStorage(),
