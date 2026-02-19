@@ -1448,43 +1448,16 @@ RULES:
 
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
-        max_completion_tokens: 800,
+        max_completion_tokens: 2000,
         messages: [
           {
             role: "system",
-            content: `You are a quiz generator. Create a practice quiz from the provided text, organized by sections.
+            content: `Generate a quiz as JSON. Format:
+{"topic":"name","sections":[{"name":"Section Name","questions":[{"question":"text","options":["A","B","C","D"],"correctAnswer":0,"explanation":"why"}]}]}
 
-Respond with ONLY a JSON object:
-{
-  "topic": "Brief topic name",
-  "sections": [
-    {
-      "name": "Section 1: Key Concepts",
-      "questions": [
-        {
-          "question": "The question text",
-          "options": ["Option A", "Option B", "Option C", "Option D"],
-          "correctAnswer": 0,
-          "explanation": "Why this is the correct answer"
-        }
-      ]
-    },
-    {
-      "name": "Section 2: Application",
-      "questions": [...]
-    }
-  ]
-}
-
-RULES:
-- Create 2-4 sections based on different aspects of the content (e.g., Definitions, Concepts, Application, Analysis)
-- Each section should have 2-4 questions
-- Total of 8-12 questions across all sections
-- Each question should have exactly 4 options
-- correctAnswer is the index (0-3) of the correct option
-- Output ONLY valid JSON`
+Rules: 2-3 sections, 2-3 questions each (5-8 total). 4 options per question. correctAnswer=index 0-3. Keep explanations brief (1 sentence). Output ONLY valid JSON, no markdown.`
           },
-          { role: "user", content: `Generate a sectioned quiz from this text:\n\n${text.trim()}` }
+          { role: "user", content: `Quiz from:\n\n${text.trim().slice(0, 3000)}` }
         ],
       });
 
