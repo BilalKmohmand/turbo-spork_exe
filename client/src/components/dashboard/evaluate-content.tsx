@@ -23,6 +23,9 @@ import {
   Award,
   TrendingUp,
   MessageSquare,
+  ThumbsUp,
+  AlertTriangle,
+  Lightbulb,
 } from "lucide-react";
 
 interface Criterion {
@@ -42,7 +45,10 @@ interface EvalResult {
   scores: ScoreResult[];
   overallScore: number;
   totalMaxPoints: number;
-  overallFeedback: string;
+  summary: string;
+  strengths: string[];
+  weaknesses: string[];
+  suggestions: string[];
   studentName: string;
   evaluatedAt: string;
 }
@@ -76,13 +82,18 @@ export default function EvaluateContent() {
       }
       return res.json();
     },
-    onSuccess: (data: { text: string; fileName: string }) => {
-      setContent(data.text);
+    onSuccess: (data: { text: string; fileName: string; notice?: string }) => {
       setUploadedFileName(data.fileName);
-      toast({ title: "File loaded", description: `Extracted text from ${data.fileName}` });
+      if (data.notice || !data.text) {
+        setContent("");
+        toast({ title: "Notice", description: data.notice || "File uploaded but no readable content found.", variant: "destructive" });
+      } else {
+        setContent(data.text);
+        toast({ title: "File loaded", description: `Extracted text from ${data.fileName}` });
+      }
     },
     onError: (err: Error) => {
-      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+      toast({ title: "Error", description: err.message, variant: "destructive" });
     },
   });
 
@@ -489,20 +500,76 @@ function ResultView({
         </CardContent>
       </Card>
 
-      <Card className="border-border/50">
-        <CardContent className="p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <MessageSquare className="w-4 h-4 text-violet-600" />
-            <h3 className="font-semibold text-sm">Overall Feedback</h3>
-          </div>
-          <p
-            className="text-sm text-muted-foreground leading-relaxed"
-            data-testid="text-overall-feedback"
-          >
-            {result.overallFeedback}
-          </p>
-        </CardContent>
-      </Card>
+      {result.summary && (
+        <Card className="border-border/50">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <MessageSquare className="w-4 h-4 text-violet-600" />
+              <h3 className="font-semibold text-sm">Summary</h3>
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed" data-testid="text-summary">
+              {result.summary}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {result.strengths?.length > 0 && (
+        <Card className="border-border/50">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <ThumbsUp className="w-4 h-4 text-emerald-600" />
+              <h3 className="font-semibold text-sm">Strengths</h3>
+            </div>
+            <ul className="space-y-2" data-testid="list-strengths">
+              {result.strengths.map((s, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground leading-relaxed">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                  <span>{s}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      {result.weaknesses?.length > 0 && (
+        <Card className="border-border/50">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle className="w-4 h-4 text-amber-600" />
+              <h3 className="font-semibold text-sm">Weaknesses</h3>
+            </div>
+            <ul className="space-y-2" data-testid="list-weaknesses">
+              {result.weaknesses.map((w, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground leading-relaxed">
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <span>{w}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      {result.suggestions?.length > 0 && (
+        <Card className="border-border/50">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Lightbulb className="w-4 h-4 text-blue-600" />
+              <h3 className="font-semibold text-sm">Suggestions for Improvement</h3>
+            </div>
+            <ul className="space-y-2" data-testid="list-suggestions">
+              {result.suggestions.map((s, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground leading-relaxed">
+                  <Lightbulb className="w-3.5 h-3.5 text-blue-500 flex-shrink-0 mt-0.5" />
+                  <span>{s}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       <Button
         variant="outline"

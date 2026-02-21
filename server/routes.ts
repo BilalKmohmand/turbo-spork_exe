@@ -2077,38 +2077,44 @@ Output ONLY valid JSON.`;
       const fileName = req.file.originalname || "file";
       const buffer = req.file.buffer;
 
-      if (mime === "application/pdf") {
+      const ext = fileName.toLowerCase().split(".").pop() || "";
+
+      if (mime === "application/pdf" || ext === "pdf") {
         try {
-          const pdfParse = await getPDFParse();
-          const data = await pdfParse(buffer);
-          const text = data.text?.trim();
+          const PDFParseClass = await getPDFParse();
+          const uint8 = new Uint8Array(buffer);
+          const parser = new PDFParseClass(uint8);
+          const pdfResult = await parser.getText();
+          const text = pdfResult.text?.trim().replace(/\n*-- \d+ of \d+ --\n*/g, "").trim();
           if (!text) {
-            return res.status(400).json({ error: "Could not extract text from this PDF. It may be a scanned image." });
+            return res.json({ text: "", fileName, notice: "File uploaded but no readable content found." });
           }
           return res.json({ text, fileName });
         } catch (e: any) {
-          return res.status(400).json({ error: "Failed to read PDF. The file may be corrupted." });
+          console.error("PDF extraction error:", e?.message);
+          return res.json({ text: "", fileName, notice: "File uploaded but no readable content found." });
         }
       }
 
-      if (mime === "application/msword" || mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+      if (mime === "application/msword" || mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || ext === "doc" || ext === "docx") {
         try {
           const mammoth = await import("mammoth");
           const result = await mammoth.extractRawText({ buffer });
           const text = result.value?.trim();
           if (!text) {
-            return res.status(400).json({ error: "Could not extract text from this Word document." });
+            return res.json({ text: "", fileName, notice: "File uploaded but no readable content found." });
           }
           return res.json({ text, fileName });
         } catch (e: any) {
-          return res.status(400).json({ error: "Failed to read Word document." });
+          console.error("DOCX extraction error:", e?.message);
+          return res.json({ text: "", fileName, notice: "File uploaded but no readable content found." });
         }
       }
 
-      if (mime.startsWith("text/") || mime === "application/json" || mime === "application/xml") {
+      if (mime.startsWith("text/") || mime === "application/json" || mime === "application/xml" || ["txt", "md", "csv", "json", "xml", "rtf"].includes(ext)) {
         const text = buffer.toString("utf-8").trim();
         if (!text) {
-          return res.status(400).json({ error: "The file appears to be empty." });
+          return res.json({ text: "", fileName, notice: "File uploaded but no readable content found." });
         }
         return res.json({ text, fileName });
       }
@@ -2119,7 +2125,7 @@ Output ONLY valid JSON.`;
         return res.json({ text: printable, fileName });
       }
 
-      return res.status(400).json({ error: "Unsupported file type. Please upload a PDF, Word document, or text file." });
+      return res.json({ text: "", fileName, notice: "File uploaded but no readable content found." });
     } catch (error: any) {
       console.error("Extract text error:", error);
       res.status(500).json({ error: "Failed to process file." });
@@ -2526,7 +2532,7 @@ RULES: Each score MUST be 0 to maxPoints. Evaluate strictly. Output ONLY JSON.`
     }
   });
 
-  app.post("/api/quick-evaluate", requireAuth, requireTeacher, async (req, res) => {
+  app.post("/api/quick-evaluate", requireAuth, async (req, res) => {
     try {
       const { criteria, studentName, content } = req.body;
 
@@ -2543,39 +2549,26 @@ RULES: Each score MUST be 0 to maxPoints. Evaluate strictly. Output ONLY JSON.`
       }
 
       const criteriaPrompt = validCriteria.map((c: any, i: number) =>
-        `${i + 1}. "${c.name}" (max ${c.maxPoints} points)${c.description ? `: ${c.description}` : ""}`
+        `${i + 1}. "${c.name}" (max ${c.maxPoints} pts)${c.description ? `: ${c.description}` : ""}`
       ).join("\n");
 
       const totalMaxPoints = validCriteria.reduce((s: number, c: any) => s + c.maxPoints, 0);
 
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
-        max_completion_tokens: 800,
+        max_completion_tokens: 1500,
         messages: [
           {
             role: "system",
-            content: `You are an academic evaluator. Evaluate student work using ONLY these criteria:
-
+            content: `You are an academic evaluator. Evaluate student work against these criteria:
 ${criteriaPrompt}
 
-Respond with ONLY valid JSON:
-{
-  "scores": [
-    {"name": "CRITERION_NAME", "score": NUMBER, "maxPoints": NUMBER, "feedback": "Brief feedback"}
-  ],
-  "overallScore": NUMBER,
-  "totalMaxPoints": ${totalMaxPoints},
-  "overallFeedback": "Summary feedback with strengths and areas for improvement"
-}
-
-RULES:
-- Score each criterion from 0 to its max points
-- Be fair but rigorous
-- Output ONLY valid JSON`
+Respond with ONLY valid JSON (no markdown):
+{"scores":[{"name":"CRITERION_NAME","score":NUMBER,"maxPoints":NUMBER,"feedback":"1-2 sentence feedback"}],"overallScore":NUMBER,"totalMaxPoints":${totalMaxPoints},"summary":"2-3 sentence summary of the document","strengths":["strength 1","strength 2"],"weaknesses":["weakness 1","weakness 2"],"suggestions":["suggestion 1","suggestion 2"]}`
           },
           {
             role: "user",
-            content: `${studentName ? `Student: ${studentName}\n\n` : ""}Student Work:\n${content.trim()}`
+            content: `${studentName ? `Student: ${studentName}\n` : ""}Work:\n${content.trim().slice(0, 4000)}`
           }
         ],
       });
@@ -2592,7 +2585,11 @@ RULES:
       }
 
       const scores = validCriteria.map((c: any) => {
-        const aiScore = parsed.scores?.find((s: any) => s.name === c.name);
+        const aiScore = parsed.scores?.find((s: any) =>
+          s.name?.toLowerCase() === c.name.toLowerCase()
+        ) || parsed.scores?.find((_s: any, i: number) =>
+          i === validCriteria.indexOf(c)
+        );
         return {
           name: c.name,
           score: Math.min(aiScore?.score ?? 0, c.maxPoints),
@@ -2607,7 +2604,10 @@ RULES:
         scores,
         overallScore,
         totalMaxPoints,
-        overallFeedback: parsed.overallFeedback || "Evaluation complete",
+        summary: parsed.summary || "Evaluation complete.",
+        strengths: Array.isArray(parsed.strengths) ? parsed.strengths : [],
+        weaknesses: Array.isArray(parsed.weaknesses) ? parsed.weaknesses : [],
+        suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
         studentName: studentName || "Student",
         evaluatedAt: new Date().toISOString(),
       });
