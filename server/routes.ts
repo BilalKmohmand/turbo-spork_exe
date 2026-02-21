@@ -1446,89 +1446,69 @@ RULES:
         return res.status(400).json({ error: "Please provide some text to generate a quiz from" });
       }
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        max_completion_tokens: 2000,
-        messages: [
-          {
-            role: "system",
-            content: `Generate a quiz as JSON. Format:
-{"topic":"name","sections":[{"name":"Section Name","questions":[{"question":"text","options":["A","B","C","D"],"correctAnswer":0,"explanation":"why"}]}]}
+      const levels = [
+        { name: "Level 1: Beginner", difficulty: "easy recall/definition", count: 10 },
+        { name: "Level 2: Fundamentals", difficulty: "basic understanding", count: 10 },
+        { name: "Level 3: Intermediate", difficulty: "application and analysis", count: 10 },
+        { name: "Level 4: Advanced", difficulty: "complex reasoning and synthesis", count: 10 },
+        { name: "Level 5: Expert", difficulty: "critical evaluation and edge cases", count: 10 },
+      ];
 
-Rules: 2-3 sections, 2-3 questions each (5-8 total). 4 options per question. correctAnswer=index 0-3. Keep explanations brief (1 sentence). Output ONLY valid JSON, no markdown.`
-          },
-          { role: "user", content: `Quiz from:\n\n${text.trim().slice(0, 3000)}` }
-        ],
-      });
+      const trimmedText = text.trim().slice(0, 3000);
+      let topicName = "Quiz";
 
-      let responseText = response.choices[0]?.message?.content || "";
-      
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        responseText = jsonMatch[0];
-      }
-      
-      let result;
-      try {
-        result = JSON.parse(responseText);
-      } catch (parseError) {
-        // If JSON parsing fails, try to fix incomplete JSON
-        console.log("Quiz JSON parse failed, attempting recovery");
-        let fixedJson = responseText;
-        const openBraces = (fixedJson.match(/{/g) || []).length;
-        const closeBraces = (fixedJson.match(/}/g) || []).length;
-        const openBrackets = (fixedJson.match(/\[/g) || []).length;
-        const closeBrackets = (fixedJson.match(/]/g) || []).length;
-        
-        for (let i = 0; i < openBrackets - closeBrackets; i++) {
-          fixedJson += ']}';
-        }
-        for (let i = 0; i < openBraces - closeBraces; i++) {
-          fixedJson += '}';
-        }
-        
+      async function generateBatch(level: typeof levels[0], batchNum: number): Promise<any> {
+        const resp = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          max_completion_tokens: 3000,
+          messages: [
+            {
+              role: "system",
+              content: `Generate exactly ${level.count} quiz questions as JSON. Difficulty: ${level.difficulty}.
+Format: {"topic":"name","questions":[{"question":"text","options":["A","B","C","D"],"correctAnswer":0,"explanation":"why"}]}
+Rules: Exactly ${level.count} questions. 4 options each. correctAnswer=index 0-3. Brief explanations (1 sentence). All questions must be ${level.difficulty} level. No duplicates. Output ONLY valid JSON, no markdown.`
+            },
+            { role: "user", content: `Quiz from:\n\n${trimmedText}` }
+          ],
+        });
+        let rt = resp.choices[0]?.message?.content || "";
+        const jm = rt.match(/\{[\s\S]*\}/);
+        if (jm) rt = jm[0];
         try {
-          result = JSON.parse(fixedJson);
+          return JSON.parse(rt);
         } catch {
-          // Final fallback - create a basic quiz structure with sections
-          result = {
-            topic: "Quiz",
-            sections: [{
-              name: "General Questions",
-              questions: [{
-                question: "Failed to parse AI response. Please try again.",
-                options: ["Option A", "Option B", "Option C", "Option D"],
-                correctAnswer: 0,
-                explanation: "Please regenerate the quiz."
-              }]
-            }]
-          };
+          let fixed = rt;
+          const ob = (fixed.match(/{/g) || []).length;
+          const cb = (fixed.match(/}/g) || []).length;
+          const obk = (fixed.match(/\[/g) || []).length;
+          const cbk = (fixed.match(/]/g) || []).length;
+          for (let i = 0; i < obk - cbk; i++) fixed += ']';
+          for (let i = 0; i < ob - cb; i++) fixed += '}';
+          try { return JSON.parse(fixed); } catch { return null; }
         }
       }
-      
-      // Transform old format (flat questions array) to new format (sections)
-      if (result.questions && !result.sections) {
-        result.sections = [{
-          name: "General Questions",
-          questions: result.questions
-        }];
-        delete result.questions;
+
+      const batchResults = await Promise.all(levels.map((lvl, i) => generateBatch(lvl, i)));
+
+      const sections = levels.map((lvl, i) => {
+        const batch = batchResults[i];
+        if (batch?.topic && i === 0) topicName = batch.topic;
+        const questions = batch?.questions || [];
+        const validQs = questions.filter((q: any) =>
+          q?.question && Array.isArray(q?.options) && q.options.length === 4 &&
+          typeof q?.correctAnswer === "number" && q.correctAnswer >= 0 && q.correctAnswer <= 3
+        );
+        return { name: lvl.name, questions: validQs };
+      }).filter(s => s.questions.length > 0);
+
+      if (sections.length === 0) {
+        sections.push({
+          name: "Level 1: Beginner",
+          questions: [{ question: "No questions could be generated. Please try again with different text.", options: ["Option A", "Option B", "Option C", "Option D"], correctAnswer: 0, explanation: "Please regenerate the quiz with more detailed content." }]
+        });
       }
-      
-      // Ensure sections exist
-      if (!result.sections || !Array.isArray(result.sections) || result.sections.length === 0) {
-        result.sections = [{
-          name: "General Questions",
-          questions: [{
-            question: "No questions could be generated. Please try again with different text.",
-            options: ["Option A", "Option B", "Option C", "Option D"],
-            correctAnswer: 0,
-            explanation: "Please regenerate the quiz with more detailed content."
-          }]
-        }];
-      }
-      
-      res.json(result);
+
+      res.json({ topic: topicName, sections });
     } catch (error: any) {
       console.error("Quiz generation error:", error?.message || error);
       res.status(500).json({ error: error?.message || "Failed to generate quiz" });
