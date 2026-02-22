@@ -1440,33 +1440,65 @@ RULES:
 
   app.post("/api/generate-quiz", async (req, res) => {
     try {
-      const { text } = req.body;
-      
+      const { text, level, questionCount, quizType } = req.body;
+
       if (!text || typeof text !== "string" || !text.trim()) {
         return res.status(400).json({ error: "Please provide some text to generate a quiz from" });
       }
 
-      const levels = [
-        { name: "Level 1: Beginner", difficulty: "easy recall/definition", count: 10 },
-        { name: "Level 2: Fundamentals", difficulty: "basic understanding", count: 10 },
-        { name: "Level 3: Intermediate", difficulty: "application and analysis", count: 10 },
-        { name: "Level 4: Advanced", difficulty: "complex reasoning and synthesis", count: 10 },
-        { name: "Level 5: Expert", difficulty: "critical evaluation and edge cases", count: 10 },
-      ];
+      const validLevel = ["basic", "intermediate", "advanced"].includes(level) ? level : "intermediate";
+      const count = Math.max(5, Math.min(50, parseInt(questionCount) || 10));
+      const validType = ["single_choice", "multiple_choice", "true_false", "fill_blank", "short_answer"].includes(quizType) ? quizType : "single_choice";
+
+      const difficultyMap: Record<string, string> = {
+        basic: "easy recall, definitions, and basic understanding",
+        intermediate: "application, analysis, and moderate reasoning",
+        advanced: "critical thinking, synthesis, evaluation, and complex reasoning",
+      };
+      const levelLabel: Record<string, string> = {
+        basic: "Basic",
+        intermediate: "Intermediate",
+        advanced: "Advanced",
+      };
 
       const trimmedText = text.trim().slice(0, 3000);
-      let topicName = "Quiz";
 
-      async function generateBatch(level: typeof levels[0], batchNum: number): Promise<any> {
+      let typePrompt = "";
+      let formatPrompt = "";
+      if (validType === "single_choice") {
+        typePrompt = "single-choice (exactly 4 options, one correct answer)";
+        formatPrompt = `{"topic":"name","questions":[{"type":"single_choice","question":"text","options":["A","B","C","D"],"correctAnswer":0,"explanation":"why"}]}`;
+      } else if (validType === "multiple_choice") {
+        typePrompt = "multiple-choice (exactly 4 options, 2 or more correct answers)";
+        formatPrompt = `{"topic":"name","questions":[{"type":"multiple_choice","question":"text","options":["A","B","C","D"],"correctAnswers":[0,2],"explanation":"why"}]}`;
+      } else if (validType === "true_false") {
+        typePrompt = "true/false statements";
+        formatPrompt = `{"topic":"name","questions":[{"type":"true_false","question":"statement text","correctAnswer":true,"explanation":"why"}]}`;
+      } else if (validType === "fill_blank") {
+        typePrompt = "fill-in-the-blank (use ___ for the blank in the question)";
+        formatPrompt = `{"topic":"name","questions":[{"type":"fill_blank","question":"The ___ is the powerhouse of the cell.","correctAnswer":"mitochondria","explanation":"why"}]}`;
+      } else if (validType === "short_answer") {
+        typePrompt = "short answer (1-2 sentence answers)";
+        formatPrompt = `{"topic":"name","questions":[{"type":"short_answer","question":"question text","correctAnswer":"expected answer","explanation":"detailed explanation"}]}`;
+      }
+
+      const batchSize = Math.min(count, 15);
+      const batches = Math.ceil(count / batchSize);
+      const batchCounts = [];
+      for (let i = 0; i < batches; i++) {
+        batchCounts.push(i < batches - 1 ? batchSize : count - batchSize * (batches - 1));
+      }
+
+      async function generateBatch(batchCount: number, batchIndex: number): Promise<any> {
         const resp = await openai.chat.completions.create({
           model: "gpt-4o-mini",
-          max_completion_tokens: 3000,
+          max_completion_tokens: Math.min(4000, batchCount * 250 + 200),
           messages: [
             {
               role: "system",
-              content: `Generate exactly ${level.count} quiz questions as JSON. Difficulty: ${level.difficulty}.
-Format: {"topic":"name","questions":[{"question":"text","options":["A","B","C","D"],"correctAnswer":0,"explanation":"why"}]}
-Rules: Exactly ${level.count} questions. 4 options each. correctAnswer=index 0-3. Brief explanations (1 sentence). All questions must be ${level.difficulty} level. No duplicates. Output ONLY valid JSON, no markdown.`
+              content: `Generate exactly ${batchCount} ${typePrompt} quiz questions as JSON. Difficulty: ${difficultyMap[validLevel]}.
+Format: ${formatPrompt}
+Rules: Exactly ${batchCount} questions. Difficulty must be ${difficultyMap[validLevel]}. Brief explanations (1 sentence). No duplicates${batchIndex > 0 ? ", different from previous batches" : ""}. Output ONLY valid JSON, no markdown.`
             },
             { role: "user", content: `Quiz from:\n\n${trimmedText}` }
           ],
@@ -1488,27 +1520,52 @@ Rules: Exactly ${level.count} questions. 4 options each. correctAnswer=index 0-3
         }
       }
 
-      const batchResults = await Promise.all(levels.map((lvl, i) => generateBatch(lvl, i)));
+      const batchResults = await Promise.all(batchCounts.map((bc, i) => generateBatch(bc, i)));
 
-      const sections = levels.map((lvl, i) => {
-        const batch = batchResults[i];
-        if (batch?.topic && i === 0) topicName = batch.topic;
-        const questions = batch?.questions || [];
-        const validQs = questions.filter((q: any) =>
-          q?.question && Array.isArray(q?.options) && q.options.length === 4 &&
-          typeof q?.correctAnswer === "number" && q.correctAnswer >= 0 && q.correctAnswer <= 3
-        );
-        return { name: lvl.name, questions: validQs };
-      }).filter(s => s.questions.length > 0);
+      let topicName = "Quiz";
+      const allQuestions: any[] = [];
+      for (const batch of batchResults) {
+        if (!batch) continue;
+        if (batch.topic && !topicName.includes(batch.topic)) topicName = batch.topic;
+        if (Array.isArray(batch.questions)) {
+          allQuestions.push(...batch.questions);
+        }
+      }
 
-      if (sections.length === 0) {
-        sections.push({
-          name: "Level 1: Beginner",
-          questions: [{ question: "No questions could be generated. Please try again with different text.", options: ["Option A", "Option B", "Option C", "Option D"], correctAnswer: 0, explanation: "Please regenerate the quiz with more detailed content." }]
+      const validQuestions = allQuestions.filter((q: any) => {
+        if (!q?.question) return false;
+        if (validType === "single_choice") {
+          return Array.isArray(q.options) && q.options.length === 4 && typeof q.correctAnswer === "number";
+        }
+        if (validType === "multiple_choice") {
+          return Array.isArray(q.options) && q.options.length === 4 && Array.isArray(q.correctAnswers);
+        }
+        if (validType === "true_false") {
+          return typeof q.correctAnswer === "boolean";
+        }
+        if (validType === "fill_blank" || validType === "short_answer") {
+          return typeof q.correctAnswer === "string" && q.correctAnswer.length > 0;
+        }
+        return false;
+      });
+
+      const sectionName = `${levelLabel[validLevel]} Level`;
+
+      if (validQuestions.length === 0) {
+        return res.json({
+          topic: topicName,
+          level: validLevel,
+          quizType: validType,
+          sections: [{ name: sectionName, questions: [{ type: validType, question: "No questions could be generated. Please try again.", options: ["Option A", "Option B", "Option C", "Option D"], correctAnswer: 0, explanation: "Regenerate with different text." }] }]
         });
       }
 
-      res.json({ topic: topicName, sections });
+      res.json({
+        topic: topicName,
+        level: validLevel,
+        quizType: validType,
+        sections: [{ name: sectionName, questions: validQuestions }]
+      });
     } catch (error: any) {
       console.error("Quiz generation error:", error?.message || error);
       res.status(500).json({ error: error?.message || "Failed to generate quiz" });
