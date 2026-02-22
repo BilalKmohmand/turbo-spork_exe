@@ -2047,7 +2047,7 @@ Output ONLY valid JSON.`;
     limits: { fileSize: 10 * 1024 * 1024 },
   });
 
-  app.post("/api/extract-text", requireAuth, docUpload.single("file"), async (req, res) => {
+  app.post("/api/extract-text", docUpload.single("file"), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No file provided" });
