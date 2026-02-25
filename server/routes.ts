@@ -1403,9 +1403,12 @@ RULES:
 
   app.get("/api/student/stats", async (req, res) => {
     try {
-      const stats = await storage.getStudentStats(req.session.userId);
+      const stats = await storage.getStudentStats(req.session.userId ? String(req.session.userId) : undefined);
+      // Log for debugging
+      console.log(`Stats for user ${req.session.userId}:`, stats);
       res.json(stats);
     } catch (error) {
+      console.error("Stats error:", error);
       res.status(500).json({ error: "Failed to fetch stats" });
     }
   });

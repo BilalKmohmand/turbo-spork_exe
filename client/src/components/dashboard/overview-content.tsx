@@ -23,9 +23,14 @@ interface OverviewContentProps {
 }
 
 export default function OverviewContent({ user, onNavigate }: OverviewContentProps) {
-  const { data: stats } = useQuery<{ totalSubmissions: number; pendingReview: number; teacherReviewed: number; averageScore: number }>({
+  const { data: stats, isLoading, error } = useQuery<{ totalSubmissions: number; pendingReview: number; teacherReviewed: number; averageScore: number }>({
     queryKey: ["/api/student/stats"],
+    refetchInterval: 5000, // Refetch every 5 seconds to keep it updated
   });
+
+  if (error) {
+    console.error("Error fetching stats:", error);
+  }
 
   const tools = [
     { 
