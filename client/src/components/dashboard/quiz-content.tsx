@@ -154,6 +154,24 @@ export default function QuizContent() {
     queryKey: ["/api/student/stats"],
   });
 
+  const { data: quizAttempts = [] } = useQuery<Array<{ difficulty: string; score: number; correctCount: number; totalQuestions: number }>>({
+    queryKey: ["/api/quiz-attempts"],
+  });
+
+  const levelStats = ["basic", "intermediate", "advanced"].map((diff) => {
+    const attempts = quizAttempts.filter((a) => a.difficulty === diff);
+    const avgScore = attempts.length > 0 ? Math.round(attempts.reduce((s, a) => s + a.score, 0) / attempts.length) : null;
+    const best = attempts.length > 0 ? Math.max(...attempts.map((a) => a.score)) : null;
+    return { diff, count: attempts.length, avgScore, best };
+  });
+
+  const badges = [
+    { name: "Quick Learner", icon: Zap, color: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-950/20", earned: quizAttempts.length >= 1 },
+    { name: "Quiz Master", icon: Trophy, color: "text-violet-500", bg: "bg-violet-50 dark:bg-violet-950/20", earned: quizAttempts.length >= 10 },
+    { name: "Top Student", icon: Star, color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-950/20", earned: quizAttempts.some(a => a.score >= 80) },
+    { name: "Problem Solver", icon: Target, color: "text-blue-500", bg: "bg-blue-50 dark:bg-blue-950/20", earned: levelStats.every(l => l.count > 0) },
+  ];
+
   const generateMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/generate-quiz", {
@@ -328,7 +346,7 @@ export default function QuizContent() {
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
-      <div className="text-center mb-8">
+      <div className="text-center mb-6">
         <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-600/20">
           <FileText className="w-7 h-7 text-white" />
         </div>
@@ -352,6 +370,50 @@ export default function QuizContent() {
             </div>
           </div>
         )}
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        {badges.map((badge) => (
+          <Card key={badge.name} className={`border-0 ${badge.bg} ${!badge.earned ? "opacity-40 grayscale" : ""} transition-all`}>
+            <CardContent className="p-3 flex flex-col items-center text-center">
+              <div className="w-10 h-10 rounded-full bg-white dark:bg-background shadow-sm flex items-center justify-center mb-2">
+                <badge.icon className={`w-5 h-5 ${badge.color}`} />
+              </div>
+              <p className="text-[11px] font-bold uppercase tracking-tight leading-tight">{badge.name}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">{badge.earned ? "Earned" : "Locked"}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        {levelStats.map(({ diff, count, avgScore, best }) => {
+          const colors: Record<string, { bar: string; label: string; text: string }> = {
+            basic: { bar: "bg-emerald-500", label: "Basic", text: "text-emerald-600" },
+            intermediate: { bar: "bg-amber-500", label: "Intermediate", text: "text-amber-600" },
+            advanced: { bar: "bg-red-500", label: "Advanced", text: "text-red-600" },
+          };
+          const c = colors[diff];
+          return (
+            <Card key={diff} className="border-border/50">
+              <CardContent className="p-3">
+                <p className={`text-[11px] font-bold uppercase tracking-wider mb-2 ${c.text}`}>{c.label}</p>
+                {count === 0 ? (
+                  <p className="text-xs text-muted-foreground">No attempts yet</p>
+                ) : (
+                  <>
+                    <p className="text-xl font-black">{avgScore}</p>
+                    <p className="text-[10px] text-muted-foreground mb-2">avg score · {count} {count === 1 ? "quiz" : "quizzes"}</p>
+                    <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${c.bar}`} style={{ width: `${avgScore}%` }} />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-1">Best: {best}</p>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {!quiz ? (

@@ -1556,6 +1556,15 @@ RULES:
     }
   });
 
+  app.get("/api/quiz-attempts", requireAuth, async (req, res) => {
+    try {
+      const attempts = await storage.getQuizAttemptsByUser(req.session.userId!);
+      res.json(attempts);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch quiz attempts" });
+    }
+  });
+
   app.post("/api/generate-quiz", async (req, res) => {
     try {
       const { text, level, questionCount, quizType } = req.body;

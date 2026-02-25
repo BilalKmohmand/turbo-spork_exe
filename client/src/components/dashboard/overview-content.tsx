@@ -166,25 +166,6 @@ export default function OverviewContent({ user, onNavigate }: OverviewContentPro
 
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Your Badges</h2>
-          <Badge variant="outline" className="text-xs">Collect 'em all</Badge>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {badges.map((badge) => (
-            <Card key={badge.name} className={`border-border/50 ${badge.bgColor} border-0 overflow-hidden relative group`}>
-              <CardContent className="p-4 flex flex-col items-center text-center">
-                <div className="w-12 h-12 rounded-full bg-white dark:bg-background shadow-sm flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                  <badge.icon className={`w-6 h-6 ${badge.color}`} />
-                </div>
-                <p className="text-xs font-bold uppercase tracking-tight">{badge.name}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">AI Tools</h2>
           <Badge variant="outline" className="text-xs">4 available</Badge>
         </div>
