@@ -75,16 +75,16 @@ export default function OverviewContent({ user, onNavigate }: OverviewContentPro
       color: "text-violet-600"
     },
     { 
+      label: "Quizzes Completed", 
+      value: stats?.totalQuizzesSolved || 0, 
+      icon: ListChecks, 
+      color: "text-emerald-600"
+    },
+    { 
       label: "Average Score", 
       value: stats?.averageScore ? `${stats.averageScore}%` : "0%", 
       icon: TrendingUp, 
       color: "text-amber-600"
-    },
-    { 
-      label: "Completed", 
-      value: stats?.teacherReviewed || 0, 
-      icon: CheckCircle, 
-      color: "text-emerald-600"
     },
   ];
 

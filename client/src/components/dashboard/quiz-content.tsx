@@ -149,6 +149,10 @@ export default function QuizContent() {
     setSourceText("");
   }, []);
 
+  const { data: dashboardStats } = useQuery<DashboardStats>({
+    queryKey: ["/api/student/stats"],
+  });
+
   const generateMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/generate-quiz", {
@@ -204,6 +208,15 @@ export default function QuizContent() {
   const answeredCount = Object.keys(answers).length;
   const progressPercent = totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0;
 
+  const saveAttemptMutation = useMutation({
+    mutationFn: async (attemptData: any) => {
+      await apiRequest("POST", "/api/quiz-attempts", attemptData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/student/stats"] });
+    },
+  });
+
   const handleSubmitAnswer = () => {
     if (!currentQuestion) return;
 
@@ -247,11 +260,25 @@ export default function QuizContent() {
     }
     const newScore = Math.max(0, Math.min(100, smartScore + scoreChange));
 
-    setAnswers((prev) => ({ ...prev, [currentIndex]: { value: answerValue, correct: isCorrect } }));
+    const newAnswers = { ...answers, [currentIndex]: { value: answerValue, correct: isCorrect } };
+    setAnswers(newAnswers);
     setSmartScore(newScore);
     setStreak(newStreak);
     setBestStreak(newBestStreak);
     setShowFeedback(true);
+
+    // If it's the last question, save the attempt
+    if (currentIndex + 1 === totalQuestions) {
+      const finalCorrectCount = Object.values(newAnswers).filter(a => a.correct).length;
+      saveAttemptMutation.mutate({
+        topic: quiz?.topic || "Quiz",
+        score: newScore,
+        totalQuestions: totalQuestions,
+        correctCount: finalCorrectCount,
+        difficulty: level,
+        quizType: quizType,
+      });
+    }
   };
 
   const handleNext = () => {
@@ -306,6 +333,24 @@ export default function QuizContent() {
         </div>
         <h1 className="text-2xl font-bold mb-2" data-testid="text-quiz-title">AI Quiz Generator</h1>
         <p className="text-muted-foreground">Transform any text into interactive practice quizzes</p>
+        {dashboardStats && (
+          <div className="mt-4 flex items-center justify-center gap-6">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-emerald-600">{dashboardStats.quizzesSolvedToday}</p>
+              <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">Today</p>
+            </div>
+            <div className="w-px h-8 bg-border" />
+            <div className="text-center">
+              <p className="text-2xl font-bold text-amber-600">{dashboardStats.quizzesSolvedYesterday}</p>
+              <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">Yesterday</p>
+            </div>
+            <div className="w-px h-8 bg-border" />
+            <div className="text-center">
+              <p className="text-2xl font-bold text-violet-600">{dashboardStats.totalQuizzesSolved}</p>
+              <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">Total Solved</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {!quiz ? (

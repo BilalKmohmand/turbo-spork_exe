@@ -1534,6 +1534,23 @@ RULES:
     }
   });
 
+  app.post("/api/quiz-attempts", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const data = {
+        ...req.body,
+        userId: req.session.userId,
+      };
+      const attempt = await storage.createQuizAttempt(data);
+      res.status(201).json(attempt);
+    } catch (error: any) {
+      console.error("Quiz attempt error:", error);
+      res.status(500).json({ error: error?.message || "Failed to save quiz attempt" });
+    }
+  });
+
   app.post("/api/generate-quiz", async (req, res) => {
     try {
       const { text, level, questionCount, quizType } = req.body;

@@ -66,11 +66,46 @@ export const evaluationsRelations = relations(evaluations, ({ one }) => ({
   }),
 }));
 
-// Insert schemas
-export const insertUserSchema = createInsertSchema(users).omit({ 
-  id: true, 
-  createdAt: true 
+// Quiz attempts to track history and stats
+export const quizAttempts = pgTable("quiz_attempts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  topic: text("topic").notNull(),
+  score: integer("score").notNull(),
+  totalQuestions: integer("total_questions").notNull(),
+  correctCount: integer("correct_count").notNull(),
+  difficulty: text("difficulty").notNull(),
+  quizType: text("quiz_type").notNull(),
+  attemptedAt: timestamp("attempted_at").defaultNow(),
 });
+
+export const quizAttemptsRelations = relations(quizAttempts, ({ one }) => ({
+  user: one(users, {
+    fields: [quizAttempts.userId],
+    references: [users.id],
+  }),
+}));
+
+// Insert schemas
+export const insertQuizAttemptSchema = createInsertSchema(quizAttempts).omit({ 
+  id: true, 
+  attemptedAt: true 
+});
+
+export type QuizAttempt = typeof quizAttempts.$inferSelect;
+export type InsertQuizAttempt = z.infer<typeof insertQuizAttemptSchema>;
+
+// Update DashboardStats to include quiz data
+export interface DashboardStats {
+  totalSubmissions: number;
+  pendingReview: number;
+  aiGraded: number;
+  teacherReviewed: number;
+  averageScore: number;
+  quizzesSolvedToday: number;
+  quizzesSolvedYesterday: number;
+  totalQuizzesSolved: number;
+}
 
 export const insertSubmissionSchema = createInsertSchema(submissions).omit({ 
   id: true, 

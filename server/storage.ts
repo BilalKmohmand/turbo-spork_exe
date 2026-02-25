@@ -24,9 +24,10 @@ import {
   rubricCriteria,
   rubricSubmissions,
   rubricEvaluations,
+  quizAttempts,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql, and, inArray } from "drizzle-orm";
+import { eq, desc, sql, and, inArray, gte, lt } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -49,6 +50,10 @@ export interface IStorage {
   // Stats
   getStudentStats(studentId?: string): Promise<DashboardStats>;
   getTeacherStats(): Promise<DashboardStats>;
+
+  // Quiz operations
+  createQuizAttempt(data: InsertQuizAttempt): Promise<QuizAttempt>;
+  getQuizAttemptsByUser(userId: string): Promise<QuizAttempt[]>;
 
   // Rubric operations
   createRubric(data: InsertRubric): Promise<Rubric>;
@@ -175,13 +180,23 @@ export class DatabaseStorage implements IStorage {
 
   async getStudentStats(studentId?: string): Promise<DashboardStats> {
     let allSubmissions: Submission[];
+    let allQuizzes: QuizAttempt[];
     
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
     if (studentId) {
       allSubmissions = await db.select()
         .from(submissions)
         .where(eq(submissions.studentId, studentId));
+      allQuizzes = await db.select()
+        .from(quizAttempts)
+        .where(eq(quizAttempts.userId, studentId));
     } else {
       allSubmissions = await db.select().from(submissions);
+      allQuizzes = await db.select().from(quizAttempts);
     }
 
     const reviewed = allSubmissions.filter(s => s.status === "teacher_reviewed");
@@ -196,13 +211,31 @@ export class DatabaseStorage implements IStorage {
         .filter((s): s is number => s !== null && s !== undefined);
     }
 
+    const quizzesToday = allQuizzes.filter(q => q.attemptedAt && q.attemptedAt >= today).length;
+    const quizzesYesterday = allQuizzes.filter(q => q.attemptedAt && q.attemptedAt >= yesterday && q.attemptedAt < today).length;
+
     return {
       totalSubmissions: allSubmissions.length,
       pendingReview: allSubmissions.filter(s => s.status === "ai_graded").length,
       aiGraded: allSubmissions.filter(s => s.status === "ai_graded").length,
       teacherReviewed: reviewed.length,
       averageScore: scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0,
+      quizzesSolvedToday: quizzesToday,
+      quizzesSolvedYesterday: quizzesYesterday,
+      totalQuizzesSolved: allQuizzes.length,
     };
+  }
+
+  async createQuizAttempt(data: InsertQuizAttempt): Promise<QuizAttempt> {
+    const [attempt] = await db.insert(quizAttempts).values(data).returning();
+    return attempt;
+  }
+
+  async getQuizAttemptsByUser(userId: string): Promise<QuizAttempt[]> {
+    return await db.select()
+      .from(quizAttempts)
+      .where(eq(quizAttempts.userId, userId))
+      .orderBy(desc(quizAttempts.attemptedAt));
   }
 
   async getTeacherStats(): Promise<DashboardStats> {
