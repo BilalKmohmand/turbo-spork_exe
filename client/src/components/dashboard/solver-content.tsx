@@ -38,9 +38,15 @@ interface SubmissionResult {
 
 const quickPrompts = [
   { icon: Calculator, label: "Math", prompt: "Solve: " },
-  { icon: FlaskConical, label: "Science", prompt: "Explain: " },
+  { icon: FlaskConical, label: "Science", prompt: "Explain: ", isScience: true },
   { icon: BookOpen, label: "History", prompt: "Tell me about: " },
   { icon: Globe, label: "Languages", prompt: "Translate: " },
+];
+
+const scienceSubjects = [
+  { label: "Physics", prompt: "Explain this Physics concept: ", detail: "Focus on laws, formulas, and physical phenomena." },
+  { label: "Chemistry", prompt: "Explain this Chemistry concept: ", detail: "Focus on reactions, elements, and molecular structures." },
+  { label: "Biology", prompt: "Explain this Biology concept: ", detail: "Focus on living organisms, systems, and biological processes." },
 ];
 
 export default function SolverContent() {
@@ -449,11 +455,11 @@ export default function SolverContent() {
               Ask any question, upload a photo of your homework, or choose a subject below.
             </p>
             
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8 max-w-2xl w-full">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 max-w-2xl w-full">
               {quickPrompts.map((item) => (
                 <Card 
                   key={item.label}
-                  className="p-4 hover-elevate cursor-pointer transition-all border-border/50"
+                  className={`p-4 hover-elevate cursor-pointer transition-all border-border/50 ${textProblem.includes(item.prompt) && item.isScience ? 'border-violet-500 bg-violet-50/50 dark:bg-violet-900/20' : ''}`}
                   onClick={() => setTextProblem(item.prompt)}
                 >
                   <item.icon className="w-5 h-5 text-violet-600 mb-2" />
@@ -461,6 +467,22 @@ export default function SolverContent() {
                 </Card>
               ))}
             </div>
+
+            {quickPrompts.find(p => textProblem.includes(p.prompt) && p.isScience) && (
+              <div className="flex flex-wrap gap-2 justify-center mb-8 animate-in fade-in slide-in-from-top-2 duration-300">
+                {scienceSubjects.map((sub) => (
+                  <Button
+                    key={sub.label}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setTextProblem(sub.prompt)}
+                    className="text-xs border-violet-200 bg-violet-50/30 hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-900/20 hover:border-violet-400"
+                  >
+                    {sub.label}
+                  </Button>
+                ))}
+              </div>
+            )}
 
             <div className="flex flex-wrap gap-2 justify-center">
               {["Solve 2x + 5 = 13", "Explain photosynthesis", "What causes rain?"].map((example) => (
