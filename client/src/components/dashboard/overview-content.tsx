@@ -146,6 +146,20 @@ export default function OverviewContent({ user, onNavigate }: OverviewContentPro
             style={{ width: `${Math.min(100, (((stats?.points || 0) % 1000) / 10))}%` }}
           />
         </div>
+        <div className="flex flex-wrap gap-2 pt-1">
+          <div className="flex items-center gap-1 text-[11px] text-muted-foreground bg-muted/60 rounded-full px-2.5 py-1">
+            <MessageSquare className="w-3 h-3 text-violet-500" />
+            <span>+50 XP per problem solved</span>
+          </div>
+          <div className="flex items-center gap-1 text-[11px] text-muted-foreground bg-muted/60 rounded-full px-2.5 py-1">
+            <FileText className="w-3 h-3 text-emerald-500" />
+            <span>+score×2 XP per quiz</span>
+          </div>
+          <div className="flex items-center gap-1 text-[11px] text-muted-foreground bg-muted/60 rounded-full px-2.5 py-1">
+            <Zap className="w-3 h-3 text-amber-500" />
+            <span>Level up every 1,000 XP</span>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
