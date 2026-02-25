@@ -171,35 +171,6 @@ export default function EvaluateContent() {
         ? "from-amber-500 to-orange-500"
         : "from-red-500 to-orange-500";
 
-  const SCIENCE_CRITERIA = {
-    phy: [
-      { name: "Theoretical Understanding", description: "Knowledge of physical laws and concepts", maxPoints: 25 },
-      { name: "Mathematical Application", description: "Solving physics problems using formulas", maxPoints: 25 },
-      { name: "Experimental Methodology", description: "Design and analysis of physics experiments", maxPoints: 25 },
-      { name: "Scientific Communication", description: "Clarity and use of physics terminology", maxPoints: 25 }
-    ],
-    chem: [
-      { name: "Chemical Principles", description: "Understanding of reactions, bonding, and structure", maxPoints: 25 },
-      { name: "Stoichiometry & Calculations", description: "Accuracy in chemical math", maxPoints: 25 },
-      { name: "Laboratory Safety & Technique", description: "Knowledge of chemical handling and procedures", maxPoints: 25 },
-      { name: "Data Analysis", description: "Interpretation of chemical data and spectra", maxPoints: 25 }
-    ],
-    bio: [
-      { name: "Biological Concepts", description: "Understanding of life processes and systems", maxPoints: 25 },
-      { name: "Classification & Structure", description: "Knowledge of organisms and anatomical structures", maxPoints: 25 },
-      { name: "Ecological/Evolutionary Context", description: "Understanding broader biological relationships", maxPoints: 25 },
-      { name: "Scientific Literacy", description: "Analysis of biological research and terminology", maxPoints: 25 }
-    ]
-  };
-
-  const setScienceSubject = (subject: 'phy' | 'chem' | 'bio') => {
-    setCriteria(SCIENCE_CRITERIA[subject]);
-    toast({ 
-      title: `${subject === 'phy' ? 'Physics' : subject === 'chem' ? 'Chemistry' : 'Biology'} Template`, 
-      description: "Evaluation criteria updated for science subject." 
-    });
-  };
-
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <div className="text-center mb-8">
@@ -235,37 +206,6 @@ export default function EvaluateContent() {
                 <Badge variant="outline" className="text-xs font-medium">
                   {totalPoints} pts total
                 </Badge>
-              </div>
-
-              <div className="flex flex-wrap gap-2 mb-4 p-3 rounded-lg bg-muted/30 border border-border/40">
-                <span className="text-xs font-semibold text-muted-foreground w-full mb-1">Quick Science Templates:</span>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setScienceSubject('phy')}
-                  className="h-8 text-xs gap-1.5"
-                  data-testid="button-template-phy"
-                >
-                  Physics
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setScienceSubject('chem')}
-                  className="h-8 text-xs gap-1.5"
-                  data-testid="button-template-chem"
-                >
-                  Chemistry
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setScienceSubject('bio')}
-                  className="h-8 text-xs gap-1.5"
-                  data-testid="button-template-bio"
-                >
-                  Biology
-                </Button>
               </div>
 
               <div className="space-y-3">
