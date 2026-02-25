@@ -23,7 +23,7 @@ interface OverviewContentProps {
 }
 
 export default function OverviewContent({ user, onNavigate }: OverviewContentProps) {
-  const { data: stats } = useQuery<{ totalSubmissions: number; pendingReview: number; reviewed: number }>({
+  const { data: stats } = useQuery<{ totalSubmissions: number; pendingReview: number; teacherReviewed: number; averageScore: number }>({
     queryKey: ["/api/student/stats"],
   });
 
@@ -67,18 +67,17 @@ export default function OverviewContent({ user, onNavigate }: OverviewContentPro
       label: "Problems Solved", 
       value: stats?.totalSubmissions || 0, 
       icon: Target, 
-      change: "+12%",
       color: "text-violet-600"
     },
     { 
-      label: "Pending Review", 
-      value: stats?.pendingReview || 0, 
-      icon: Clock, 
+      label: "Average Score", 
+      value: stats?.averageScore ? `${stats.averageScore}%` : "0%", 
+      icon: TrendingUp, 
       color: "text-amber-600"
     },
     { 
       label: "Completed", 
-      value: stats?.reviewed || 0, 
+      value: stats?.teacherReviewed || 0, 
       icon: CheckCircle, 
       color: "text-emerald-600"
     },

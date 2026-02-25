@@ -1403,7 +1403,7 @@ RULES:
 
   app.get("/api/student/stats", async (req, res) => {
     try {
-      const stats = await storage.getStudentStats();
+      const stats = await storage.getStudentStats(req.session.userId);
       res.json(stats);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch stats" });
