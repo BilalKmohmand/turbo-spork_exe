@@ -352,24 +352,6 @@ export default function QuizContent() {
         </div>
         <h1 className="text-2xl font-bold mb-2" data-testid="text-quiz-title">AI Quiz Generator</h1>
         <p className="text-muted-foreground">Transform any text into interactive practice quizzes</p>
-        {dashboardStats && (
-          <div className="mt-4 flex items-center justify-center gap-6">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-emerald-600">{dashboardStats.quizzesSolvedToday}</p>
-              <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">Today</p>
-            </div>
-            <div className="w-px h-8 bg-border" />
-            <div className="text-center">
-              <p className="text-2xl font-bold text-amber-600">{dashboardStats.quizzesSolvedYesterday}</p>
-              <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">Yesterday</p>
-            </div>
-            <div className="w-px h-8 bg-border" />
-            <div className="text-center">
-              <p className="text-2xl font-bold text-violet-600">{dashboardStats.totalQuizzesSolved}</p>
-              <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">Total Solved</p>
-            </div>
-          </div>
-        )}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
