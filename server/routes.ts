@@ -1438,6 +1438,99 @@ RULES:
     }
   });
 
+  const quizUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 },
+  });
+
+  app.post("/api/extract-text", quizUpload.single("file"), async (req, res) => {
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      const mimeType = file.mimetype;
+      const isImage = mimeType.startsWith("image/");
+      const isPDF = mimeType === "application/pdf";
+      const isWord = mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+                     mimeType === "application/msword";
+      const isText = mimeType.startsWith("text/");
+
+      if (isText) {
+        const text = file.buffer.toString("utf-8").trim();
+        if (!text) return res.status(400).json({ error: "File appears to be empty" });
+        return res.json({ text: text.slice(0, 5000) });
+      }
+
+      if (isPDF) {
+        try {
+          const uint8Array = new Uint8Array(file.buffer);
+          const PDFParseClass = await getPDFParse();
+          const parser = new PDFParseClass(uint8Array);
+          const pdfResult = await parser.getText();
+          const extractedText = pdfResult.text?.trim().replace(/\n*-- \d+ of \d+ --\n*/g, '').trim();
+          if (extractedText && extractedText.length >= 50 && /[a-zA-Z]{3,}/.test(extractedText)) {
+            return res.json({ text: extractedText.slice(0, 5000) });
+          }
+          const base64 = file.buffer.toString("base64");
+          try {
+            const { fromBuffer } = await import("pdf2pic");
+            const convert = fromBuffer(file.buffer, { density: 100, saveFilename: "page", savePath: "/tmp", format: "png", width: 800, height: 1000 });
+            const pageOutput = await convert(1, { responseType: "base64" });
+            if (pageOutput?.base64) {
+              const visionResp = await openai.chat.completions.create({
+                model: "gpt-4o-mini",
+                max_completion_tokens: 2000,
+                messages: [
+                  { role: "system", content: "Extract ALL text content from this image. Return only the extracted text, nothing else." },
+                  { role: "user", content: [{ type: "image_url", image_url: { url: `data:image/png;base64,${pageOutput.base64}` } }] }
+                ],
+              });
+              const text = visionResp.choices[0]?.message?.content?.trim() || "";
+              if (text) return res.json({ text: text.slice(0, 5000) });
+            }
+          } catch {}
+          return res.status(400).json({ error: "Could not extract text from this PDF. Try a different file." });
+        } catch {
+          return res.status(400).json({ error: "Failed to read PDF file." });
+        }
+      }
+
+      if (isImage) {
+        const base64 = file.buffer.toString("base64");
+        const visionResp = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          max_completion_tokens: 2000,
+          messages: [
+            { role: "system", content: "Extract ALL text content from this image. Include all visible text, equations, diagrams labels, etc. Return only the extracted text, nothing else." },
+            { role: "user", content: [{ type: "image_url", image_url: { url: `data:${mimeType};base64,${base64}` } }] }
+          ],
+        });
+        const text = visionResp.choices[0]?.message?.content?.trim() || "";
+        if (!text) return res.status(400).json({ error: "Could not extract text from this image." });
+        return res.json({ text: text.slice(0, 5000) });
+      }
+
+      if (isWord) {
+        try {
+          const mammoth = await import("mammoth");
+          const result = await mammoth.extractRawText({ buffer: file.buffer });
+          const text = result.value?.trim();
+          if (!text) return res.status(400).json({ error: "Word document appears to be empty." });
+          return res.json({ text: text.slice(0, 5000) });
+        } catch {
+          return res.status(400).json({ error: "Failed to read Word document." });
+        }
+      }
+
+      return res.status(400).json({ error: "Unsupported file type. Please upload a PDF, image, Word document, or text file." });
+    } catch (error: any) {
+      console.error("Extract text error:", error?.message || error);
+      res.status(500).json({ error: error?.message || "Failed to extract text" });
+    }
+  });
+
   app.post("/api/generate-quiz", async (req, res) => {
     try {
       const { text, level, questionCount, quizType } = req.body;

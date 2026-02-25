@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,6 +28,11 @@ import {
   PenLine,
   MessageSquare,
   CheckSquare,
+  Upload,
+  Type,
+  ImageIcon,
+  X,
+  File,
 } from "lucide-react";
 
 type QuizType = "single_choice" | "multiple_choice" | "true_false" | "fill_blank" | "short_answer";
@@ -75,8 +80,16 @@ const LEVELS: { value: DifficultyLevel; label: string; color: string; desc: stri
   { value: "advanced", label: "Advanced", color: "from-red-500 to-rose-500", desc: "Critical thinking" },
 ];
 
+type SourceTab = "document" | "text" | "image";
+
 export default function QuizContent() {
+  const [sourceTab, setSourceTab] = useState<SourceTab>("document");
   const [sourceText, setSourceText] = useState("");
+  const [uploadedFile, setUploadedFile] = useState<{ name: string; size: number } | null>(null);
+  const [extracting, setExtracting] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const [quizType, setQuizType] = useState<QuizType>("single_choice");
   const [level, setLevel] = useState<DifficultyLevel>("intermediate");
   const [questionCount, setQuestionCount] = useState(10);
@@ -93,6 +106,48 @@ export default function QuizContent() {
   const [bestStreak, setBestStreak] = useState(0);
   const [finished, setFinished] = useState(false);
   const { toast } = useToast();
+
+  const handleFileUpload = useCallback(async (file: globalThis.File) => {
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast({ title: "File too large", description: "Maximum file size is 10MB", variant: "destructive" });
+      return;
+    }
+    setExtracting(true);
+    setUploadedFile({ name: file.name, size: file.size });
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const resp = await fetch("/api/extract-text", { method: "POST", body: formData });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "Failed to extract text");
+      setSourceText(data.text);
+      toast({ title: "Text extracted", description: `Extracted ${data.text.length} characters from ${file.name}` });
+    } catch (err: any) {
+      toast({ title: "Extraction failed", description: err.message || "Could not extract text from file", variant: "destructive" });
+      setUploadedFile(null);
+    } finally {
+      setExtracting(false);
+    }
+  }, [toast]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFileUpload(file);
+  }, [handleFileUpload]);
+
+  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleFileUpload(file);
+    e.target.value = "";
+  }, [handleFileUpload]);
+
+  const clearUpload = useCallback(() => {
+    setUploadedFile(null);
+    setSourceText("");
+  }, []);
 
   const generateMutation = useMutation({
     mutationFn: async () => {
@@ -211,6 +266,8 @@ export default function QuizContent() {
   const resetQuiz = () => {
     setQuiz(null);
     setSourceText("");
+    setUploadedFile(null);
+    setSourceTab("document");
     setCurrentIndex(0);
     setAnswers({});
     resetInputState();
@@ -255,14 +312,147 @@ export default function QuizContent() {
         <div className="space-y-5">
           <Card className="border-border/50">
             <CardContent className="p-5">
-              <Label className="text-sm font-medium mb-3 block">Paste your study material</Label>
-              <Textarea
-                placeholder="Paste your notes, textbook excerpts, or any text you want to study from..."
-                value={sourceText}
-                onChange={(e) => setSourceText(e.target.value)}
-                className="min-h-[160px] resize-none border-border/50"
-                data-testid="input-quiz-source"
-              />
+              <div className="flex items-center border-b border-border/50 mb-4 -mx-5 px-5">
+                {([
+                  { key: "document" as SourceTab, label: "Document", icon: FileText },
+                  { key: "text" as SourceTab, label: "Text", icon: Type },
+                  { key: "image" as SourceTab, label: "Image", icon: ImageIcon },
+                ]).map((tab) => {
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.key}
+                      onClick={() => { setSourceTab(tab.key); clearUpload(); }}
+                      className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                        sourceTab === tab.key
+                          ? "border-emerald-600 text-emerald-600"
+                          : "border-transparent text-muted-foreground hover:text-foreground"
+                      }`}
+                      data-testid={`tab-source-${tab.key}`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {sourceTab === "text" && (
+                <>
+                  <Label className="text-sm font-medium mb-3 block">Paste your study material</Label>
+                  <Textarea
+                    placeholder="Paste your notes, textbook excerpts, or any text you want to study from..."
+                    value={sourceText}
+                    onChange={(e) => setSourceText(e.target.value)}
+                    className="min-h-[160px] resize-none border-border/50"
+                    data-testid="input-quiz-source"
+                  />
+                </>
+              )}
+
+              {sourceTab === "document" && (
+                <>
+                  <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.doc,.docx,.txt" onChange={handleFileInputChange} data-testid="input-file-upload" />
+                  {!uploadedFile && !extracting ? (
+                    <div
+                      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                      onDragLeave={() => setDragOver(false)}
+                      onDrop={handleDrop}
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-colors ${
+                        dragOver ? "border-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/20" : "border-border/60 hover:border-emerald-300"
+                      }`}
+                      data-testid="dropzone-document"
+                    >
+                      <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mx-auto mb-4">
+                        <Upload className="w-6 h-6 text-emerald-600" />
+                      </div>
+                      <p className="font-medium mb-1">Drop your file here or click to browse</p>
+                      <p className="text-sm text-muted-foreground">Supports PDF, Word, and text files up to 10MB</p>
+                    </div>
+                  ) : extracting ? (
+                    <div className="border-2 border-dashed border-emerald-300 rounded-xl p-10 text-center bg-emerald-50/30 dark:bg-emerald-950/10">
+                      <Loader2 className="w-8 h-8 animate-spin text-emerald-600 mx-auto mb-3" />
+                      <p className="font-medium text-emerald-700 dark:text-emerald-300">Extracting text from {uploadedFile?.name}...</p>
+                      <p className="text-sm text-muted-foreground mt-1">This may take a moment for scanned documents</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 p-3 rounded-lg border border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20 dark:border-emerald-800">
+                        <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
+                          <File className="w-5 h-5 text-emerald-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{uploadedFile?.name}</p>
+                          <p className="text-xs text-muted-foreground">{sourceText.length} characters extracted</p>
+                        </div>
+                        <button onClick={(e) => { e.stopPropagation(); clearUpload(); }} className="p-1.5 rounded-md hover:bg-red-100 dark:hover:bg-red-900/20 text-muted-foreground hover:text-red-600 transition-colors" data-testid="button-clear-upload">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <Textarea
+                        value={sourceText}
+                        onChange={(e) => setSourceText(e.target.value)}
+                        className="min-h-[100px] resize-none border-border/50 text-sm"
+                        placeholder="Extracted text will appear here..."
+                        data-testid="input-extracted-text"
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+
+              {sourceTab === "image" && (
+                <>
+                  <input ref={imageInputRef} type="file" className="hidden" accept="image/*" onChange={handleFileInputChange} data-testid="input-image-upload" />
+                  {!uploadedFile && !extracting ? (
+                    <div
+                      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                      onDragLeave={() => setDragOver(false)}
+                      onDrop={handleDrop}
+                      onClick={() => imageInputRef.current?.click()}
+                      className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-colors ${
+                        dragOver ? "border-violet-400 bg-violet-50/50 dark:bg-violet-950/20" : "border-border/60 hover:border-violet-300"
+                      }`}
+                      data-testid="dropzone-image"
+                    >
+                      <div className="w-14 h-14 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center mx-auto mb-4">
+                        <ImageIcon className="w-6 h-6 text-violet-600" />
+                      </div>
+                      <p className="font-medium mb-1">Drop an image here or click to browse</p>
+                      <p className="text-sm text-muted-foreground">Upload a photo of your notes, textbook page, or whiteboard</p>
+                    </div>
+                  ) : extracting ? (
+                    <div className="border-2 border-dashed border-violet-300 rounded-xl p-10 text-center bg-violet-50/30 dark:bg-violet-950/10">
+                      <Loader2 className="w-8 h-8 animate-spin text-violet-600 mx-auto mb-3" />
+                      <p className="font-medium text-violet-700 dark:text-violet-300">Reading text from image...</p>
+                      <p className="text-sm text-muted-foreground mt-1">AI is extracting text from your image</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 p-3 rounded-lg border border-violet-200 bg-violet-50/50 dark:bg-violet-950/20 dark:border-violet-800">
+                        <div className="w-10 h-10 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center flex-shrink-0">
+                          <ImageIcon className="w-5 h-5 text-violet-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{uploadedFile?.name}</p>
+                          <p className="text-xs text-muted-foreground">{sourceText.length} characters extracted</p>
+                        </div>
+                        <button onClick={(e) => { e.stopPropagation(); clearUpload(); }} className="p-1.5 rounded-md hover:bg-red-100 dark:hover:bg-red-900/20 text-muted-foreground hover:text-red-600 transition-colors" data-testid="button-clear-image">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <Textarea
+                        value={sourceText}
+                        onChange={(e) => setSourceText(e.target.value)}
+                        className="min-h-[100px] resize-none border-border/50 text-sm"
+                        placeholder="Extracted text will appear here..."
+                        data-testid="input-extracted-image-text"
+                      />
+                    </div>
+                  )}
+                </>
+              )}
             </CardContent>
           </Card>
 
