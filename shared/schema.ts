@@ -16,6 +16,8 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
+
 export const usersRelations = relations(users, ({ many }) => ({
   submissions: many(submissions),
   evaluations: many(evaluations),
@@ -165,14 +167,6 @@ export interface QuestionObject {
   problemStatement: string;
   steps: StepObject[];
   answer: string;
-}
-
-export interface DashboardStats {
-  totalSubmissions: number;
-  pendingReview: number;
-  aiGraded: number;
-  teacherReviewed: number;
-  averageScore: number;
 }
 
 // Validation schemas for API
