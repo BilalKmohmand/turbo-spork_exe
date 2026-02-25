@@ -10,6 +10,9 @@ export const users = pgTable("users", {
   displayName: text("display_name").notNull(),
   password: text("password").notNull(),
   role: text("role").notNull().default("student"), // "student" | "teacher"
+  points: integer("points").notNull().default(0),
+  level: integer("level").notNull().default(1),
+  badges: text("badges").array().notNull().default(sql`'{}'::text[]`),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -105,6 +108,9 @@ export interface DashboardStats {
   quizzesSolvedToday: number;
   quizzesSolvedYesterday: number;
   totalQuizzesSolved: number;
+  points: number;
+  level: number;
+  nextLevelPoints: number;
 }
 
 export const insertSubmissionSchema = createInsertSchema(submissions).omit({ 

@@ -13,7 +13,11 @@ import {
   ArrowUpRight,
   Zap,
   Target,
-  BookOpen
+  BookOpen,
+  Star,
+  Trophy,
+  Award,
+  Medal,
 } from "lucide-react";
 import type { User } from "@/hooks/use-auth";
 
@@ -23,10 +27,26 @@ interface OverviewContentProps {
 }
 
 export default function OverviewContent({ user, onNavigate }: OverviewContentProps) {
-  const { data: stats, isLoading, error } = useQuery<{ totalSubmissions: number; pendingReview: number; teacherReviewed: number; averageScore: number }>({
+  const { data: stats, isLoading, error } = useQuery<{ 
+    totalSubmissions: number; 
+    pendingReview: number; 
+    teacherReviewed: number; 
+    averageScore: number;
+    totalQuizzesSolved: number;
+    points: number;
+    level: number;
+    nextLevelPoints: number;
+  }>({
     queryKey: ["/api/student/stats"],
     refetchInterval: 5000, // Refetch every 5 seconds to keep it updated
   });
+
+  const badges = [
+    { name: "Quick Learner", icon: Zap, color: "text-amber-500", bgColor: "bg-amber-50 dark:bg-amber-950/20" },
+    { name: "Quiz Master", icon: Trophy, color: "text-violet-500", bgColor: "bg-violet-50 dark:bg-violet-950/20" },
+    { name: "Top Student", icon: Award, color: "text-emerald-500", bgColor: "bg-emerald-50 dark:bg-emerald-950/20" },
+    { name: "Problem Solver", icon: Target, color: "text-blue-500", bgColor: "bg-blue-50 dark:bg-blue-950/20" },
+  ];
 
   if (error) {
     console.error("Error fetching stats:", error);
@@ -77,7 +97,7 @@ export default function OverviewContent({ user, onNavigate }: OverviewContentPro
     { 
       label: "Quizzes Completed", 
       value: stats?.totalQuizzesSolved || 0, 
-      icon: ListChecks, 
+      icon: CheckCircle, 
       color: "text-emerald-600"
     },
     { 
@@ -91,16 +111,41 @@ export default function OverviewContent({ user, onNavigate }: OverviewContentPro
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">
-            Welcome back, {user.displayName.split(" ")[0]}!
-          </h1>
-          <p className="text-muted-foreground mt-1">Here's what's happening with your learning</p>
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 flex flex-col items-center justify-center text-white shadow-lg shadow-violet-600/20">
+            <span className="text-[10px] uppercase font-bold opacity-70">Level</span>
+            <span className="text-2xl font-black leading-none">{stats?.level || 1}</span>
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">
+              Welcome back, {user.displayName.split(" ")[0]}!
+            </h1>
+            <div className="flex items-center gap-3 mt-1">
+              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-xs font-bold">
+                <Star className="w-3 h-3 fill-current" />
+                {stats?.points || 0} XP
+              </div>
+              <p className="text-muted-foreground text-sm">Keep up the great work!</p>
+            </div>
+          </div>
         </div>
         <Badge variant="secondary" className="gap-1.5">
           <Zap className="w-3 h-3" />
           Free Plan
         </Badge>
+      </div>
+
+      <div className="space-y-1.5">
+        <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-muted-foreground">
+          <span>Level Progress</span>
+          <span>{stats?.points || 0} / {stats?.nextLevelPoints || 1000} XP</span>
+        </div>
+        <div className="h-3 w-full bg-muted rounded-full overflow-hidden border border-border/50">
+          <div 
+            className="h-full bg-gradient-to-r from-violet-600 to-indigo-600 transition-all duration-1000" 
+            style={{ width: `${Math.min(100, (((stats?.points || 0) % 1000) / 10))}%` }}
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -111,12 +156,6 @@ export default function OverviewContent({ user, onNavigate }: OverviewContentPro
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${stat.color} bg-current/10`}>
                   <stat.icon className={`w-5 h-5 ${stat.color}`} />
                 </div>
-                {stat.change && (
-                  <Badge variant="secondary" className="text-xs gap-0.5 text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30">
-                    <ArrowUpRight className="w-3 h-3" />
-                    {stat.change}
-                  </Badge>
-                )}
               </div>
               <p className="text-3xl font-bold">{stat.value}</p>
               <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
@@ -124,6 +163,53 @@ export default function OverviewContent({ user, onNavigate }: OverviewContentPro
           </Card>
         ))}
       </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Your Badges</h2>
+          <Badge variant="outline" className="text-xs">Collect 'em all</Badge>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {badges.map((badge) => (
+            <Card key={badge.name} className={`border-border/50 ${badge.bgColor} border-0 overflow-hidden relative group`}>
+              <CardContent className="p-4 flex flex-col items-center text-center">
+                <div className="w-12 h-12 rounded-full bg-white dark:bg-background shadow-sm flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                  <badge.icon className={`w-6 h-6 ${badge.color}`} />
+                </div>
+                <p className="text-xs font-bold uppercase tracking-tight">{badge.name}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">AI Tools</h2>
+          <Badge variant="outline" className="text-xs">4 available</Badge>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {tools.map((tool) => (
+            <Card key={tool.title} className="border-border/50 hover-elevate cursor-pointer transition-all group" onClick={() => onNavigate(tool.id)}>
+              <CardContent className="p-4 flex items-center gap-4">
+                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${tool.color} flex items-center justify-center flex-shrink-0 shadow-lg`}>
+                  <tool.icon className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold">{tool.title}</h3>
+                    <ArrowUpRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">{tool.description}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
       <Card className="border-border/50 bg-gradient-to-br from-violet-600 to-indigo-600 text-white border-0">
         <CardContent className="p-6">

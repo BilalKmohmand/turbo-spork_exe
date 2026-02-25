@@ -150,6 +150,26 @@ export class DatabaseStorage implements IStorage {
       .set(updateData)
       .where(eq(submissions.id, id))
       .returning();
+
+    // Award points for AI solving if it just finished
+    if (updated && data.status === "ai_graded" && updated.studentId) {
+      const [user] = await db.select().from(users).where(eq(users.id, updated.studentId));
+      if (user) {
+        const pointsEarned = 50; // Flat 50 XP for solving a problem
+        const newPoints = user.points + pointsEarned;
+        const newLevel = Math.floor(newPoints / 1000) + 1;
+        
+        const badges = [...(user.badges || [])];
+        if (newLevel > user.level && !badges.includes("Level Up")) {
+          badges.push(`Level ${newLevel}`);
+        }
+        
+        await db.update(users)
+          .set({ points: newPoints, level: newLevel, badges })
+          .where(eq(users.id, user.id));
+      }
+    }
+
     return updated;
   }
 
@@ -214,6 +234,11 @@ export class DatabaseStorage implements IStorage {
     const quizzesToday = allQuizzes.filter(q => q.attemptedAt && q.attemptedAt >= today).length;
     const quizzesYesterday = allQuizzes.filter(q => q.attemptedAt && q.attemptedAt >= yesterday && q.attemptedAt < today).length;
 
+    const user = studentId ? await this.getUser(studentId) : undefined;
+    const points = user?.points || 0;
+    const level = user?.level || 1;
+    const nextLevelPoints = level * 1000;
+
     return {
       totalSubmissions: allSubmissions.length,
       pendingReview: allSubmissions.filter(s => s.status === "ai_graded").length,
@@ -223,11 +248,26 @@ export class DatabaseStorage implements IStorage {
       quizzesSolvedToday: quizzesToday,
       quizzesSolvedYesterday: quizzesYesterday,
       totalQuizzesSolved: allQuizzes.length,
+      points,
+      level,
+      nextLevelPoints,
     };
   }
 
   async createQuizAttempt(data: InsertQuizAttempt): Promise<QuizAttempt> {
     const [attempt] = await db.insert(quizAttempts).values(data).returning();
+    
+    // Add points for completing quiz: score * 2
+    const pointsEarned = data.score * 2;
+    const [user] = await db.select().from(users).where(eq(users.id, data.userId));
+    if (user) {
+      const newPoints = user.points + pointsEarned;
+      const newLevel = Math.floor(newPoints / 1000) + 1;
+      await db.update(users)
+        .set({ points: newPoints, level: newLevel })
+        .where(eq(users.id, data.userId));
+    }
+    
     return attempt;
   }
 
