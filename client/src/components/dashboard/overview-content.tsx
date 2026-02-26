@@ -27,18 +27,9 @@ interface OverviewContentProps {
 }
 
 export default function OverviewContent({ user, onNavigate }: OverviewContentProps) {
-  const { data: stats, isLoading, error } = useQuery<{ 
-    totalSubmissions: number; 
-    pendingReview: number; 
-    teacherReviewed: number; 
-    averageScore: number;
-    totalQuizzesSolved: number;
-    points: number;
-    level: number;
-    nextLevelPoints: number;
-  }>({
+  const { data: stats, isLoading, error } = useQuery<DashboardStats>({
     queryKey: ["/api/student/stats"],
-    refetchInterval: 5000, // Refetch every 5 seconds to keep it updated
+    refetchInterval: 1000, // Real-time refresh every second
   });
 
   const badges = [

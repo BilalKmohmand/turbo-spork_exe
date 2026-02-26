@@ -239,12 +239,31 @@ export class DatabaseStorage implements IStorage {
     const level = user?.level || 1;
     const nextLevelPoints = level * 1000;
 
+    // Calculate real-time average score from all graded submissions
+    const allScores = allSubmissions
+      .filter(s => s.status === "ai_graded" || s.status === "teacher_reviewed")
+      .map(s => {
+        // If it has a teacher evaluation, use that score
+        // Otherwise, we might need to parse it from the AI solution if we had one
+        // For now, let's use the scores from evaluations table which is more reliable
+        return 0; // Default if no evaluation
+      });
+
+    const evaluations = studentId ? await this.getEvaluationsByStudent(studentId) : [];
+    const evaluationScores = evaluations.map(e => e.score).filter((s): s is number => s !== null);
+    
+    const quizScores = allQuizzes.map(q => q.score);
+    const combinedScores = [...evaluationScores, ...quizScores];
+    const averageScore = combinedScores.length > 0 
+      ? Math.round(combinedScores.reduce((a, b) => a + b, 0) / combinedScores.length) 
+      : 0;
+
     return {
       totalSubmissions: allSubmissions.length,
-      pendingReview: allSubmissions.filter(s => s.status === "ai_graded").length,
+      pendingReview: allSubmissions.filter(s => s.status === "pending").length,
       aiGraded: allSubmissions.filter(s => s.status === "ai_graded").length,
       teacherReviewed: reviewed.length,
-      averageScore: scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0,
+      averageScore,
       quizzesSolvedToday: quizzesToday,
       quizzesSolvedYesterday: quizzesYesterday,
       totalQuizzesSolved: allQuizzes.length,
