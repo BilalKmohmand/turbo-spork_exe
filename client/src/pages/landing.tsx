@@ -7,6 +7,10 @@ import {
   Target, Zap, Shield, ChevronDown, Menu, X,
   GraduationCap, BookOpen, Lightbulb,
 } from "lucide-react";
+import studentHero from "@assets/stock_images/student_hero.jpg";
+import studentsGroup from "@assets/stock_images/students_group.jpg";
+import studentPhone from "@assets/stock_images/student_phone_homework.jpg";
+import studentNotes from "@assets/stock_images/student_notes.jpg";
 
 /* ─── Data ───────────────────────────────────────────────────── */
 const NAV_LINKS = ["Features", "How it works", "Testimonials", "Pricing"];
@@ -190,10 +194,8 @@ export default function Landing() {
 
       {/* ══ HERO ════════════════════════════════════════════════ */}
       <section className="relative min-h-[100svh] flex flex-col bg-[#F9F9F8] overflow-hidden">
-        {/* Subtle background accent */}
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-violet-300 to-transparent" />
-        <div className="absolute top-32 left-1/2 -translate-x-1/2 w-[700px] h-[500px] bg-violet-100/60 rounded-full blur-[120px] pointer-events-none" />
-        <div className="absolute top-48 left-1/4 w-[300px] h-[300px] bg-indigo-100/40 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute top-32 left-1/3 w-[600px] h-[500px] bg-violet-100/50 rounded-full blur-[120px] pointer-events-none" />
 
         <motion.div
           className="relative z-10 flex-1 flex flex-col justify-center"
@@ -201,75 +203,113 @@ export default function Landing() {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6 }}
         >
-          <div className="max-w-7xl mx-auto px-5 sm:px-8 py-28 w-full">
+          <div className="max-w-7xl mx-auto px-5 sm:px-8 py-28 w-full grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+            {/* Left — copy */}
+            <div>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5 }}
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-violet-200 bg-violet-50 text-violet-700 text-[12px] font-medium mb-8"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                AI-Powered Education · Free to start
+              </motion.div>
+
+              <motion.h1
+                initial={{ opacity: 0, y: 40 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+                className="text-5xl sm:text-6xl lg:text-[68px] xl:text-[76px] font-black tracking-tight leading-[0.92] text-[#111110]"
+              >
+                Make learning
+                <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 via-fuchsia-600 to-indigo-600">
+                  effortless.
+                </span>
+              </motion.h1>
+
+              <motion.p
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                className="mt-6 text-[17px] sm:text-lg text-[#666660] leading-relaxed"
+              >
+                The AI education platform that turns homework into understanding — instant solutions, step-by-step explanations, and personalized tutoring for every subject.
+              </motion.p>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+                className="mt-10 flex flex-wrap items-center gap-4"
+              >
+                <Link href="/auth?mode=register">
+                  <button
+                    className="flex items-center gap-2 px-6 py-3 bg-black hover:bg-[#222] text-white text-[15px] font-semibold rounded-xl shadow-xl shadow-black/10 transition-all hover:-translate-y-0.5"
+                    data-testid="button-hero-cta"
+                  >
+                    Start free trial
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </Link>
+                <Link href="/auth">
+                  <button
+                    className="flex items-center gap-2 px-6 py-3 text-[#666660] hover:text-[#111110] text-[15px] font-medium border border-[#E5E5E0] hover:border-[#999990] rounded-xl transition-all"
+                    data-testid="button-hero-login"
+                  >
+                    Sign in
+                  </button>
+                </Link>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.7 }}
+                className="mt-8 flex items-center gap-2 text-[12px] text-[#999990]"
+              >
+                <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+                No credit card required
+                <span className="mx-2 opacity-40">·</span>
+                <Shield className="w-3.5 h-3.5 text-emerald-500" />
+                Free forever plan available
+              </motion.div>
+            </div>
+
+            {/* Right — hero image */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-violet-200 bg-violet-50 text-violet-700 text-[12px] font-medium mb-8"
+              initial={{ opacity: 0, x: 40, scale: 0.96 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              transition={{ duration: 0.9, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              className="hidden lg:block relative"
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              AI-Powered Education · Free to start
-            </motion.div>
-
-            <motion.h1
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-              className="text-5xl sm:text-6xl lg:text-[80px] xl:text-[88px] font-black tracking-tight leading-[0.92] max-w-4xl text-[#111110]"
-            >
-              Make learning
-              <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 via-fuchsia-600 to-indigo-600">
-                effortless.
-              </span>
-            </motion.h1>
-
-            <motion.p
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
-              className="mt-6 text-[17px] sm:text-lg text-[#666660] max-w-xl leading-relaxed"
-            >
-              The AI education platform that turns homework into understanding — instant solutions, step-by-step explanations, and personalized tutoring for every subject.
-            </motion.p>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              className="mt-10 flex flex-wrap items-center gap-4"
-            >
-              <Link href="/auth?mode=register">
-                <button
-                  className="flex items-center gap-2 px-6 py-3 bg-black hover:bg-[#222] text-white text-[15px] font-semibold rounded-xl shadow-xl shadow-black/10 transition-all hover:-translate-y-0.5"
-                  data-testid="button-hero-cta"
-                >
-                  Start free trial
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </Link>
-              <Link href="/auth">
-                <button
-                  className="flex items-center gap-2 px-6 py-3 text-[#666660] hover:text-[#111110] text-[15px] font-medium border border-[#E5E5E0] hover:border-[#999990] rounded-xl transition-all"
-                  data-testid="button-hero-login"
-                >
-                  Sign in
-                </button>
-              </Link>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.7 }}
-              className="mt-8 flex items-center gap-2 text-[12px] text-[#999990]"
-            >
-              <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
-              No credit card required
-              <span className="mx-2 opacity-40">·</span>
-              <Shield className="w-3.5 h-3.5 text-emerald-500" />
-              Free forever plan available
+              <div className="relative rounded-[32px] overflow-hidden shadow-2xl shadow-violet-200/50 border border-white/60">
+                <img
+                  src={studentHero}
+                  alt="Student studying with Gradeio"
+                  className="w-full h-[520px] object-cover"
+                />
+                {/* Overlay gradient at bottom */}
+                <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/30 to-transparent" />
+                {/* Floating stat badge */}
+                <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between">
+                  <div className="bg-white/90 backdrop-blur-md rounded-2xl px-4 py-3 shadow-lg">
+                    <p className="text-[11px] font-bold text-[#999990] uppercase tracking-wider">AI solved</p>
+                    <p className="text-[22px] font-black text-[#111110] leading-none">4.5M+ problems</p>
+                  </div>
+                  <div className="bg-white/90 backdrop-blur-md rounded-2xl px-4 py-3 shadow-lg">
+                    <div className="flex gap-0.5 mb-1">
+                      {[...Array(5)].map((_, i) => <Star key={i} className="w-3 h-3 fill-amber-400 text-amber-400" />)}
+                    </div>
+                    <p className="text-[13px] font-bold text-[#111110]">4.8 / 5.0</p>
+                  </div>
+                </div>
+              </div>
+              {/* Decorative dot grid */}
+              <div className="absolute -top-6 -right-6 w-32 h-32 opacity-30"
+                style={{ backgroundImage: "radial-gradient(circle, #8B5CF6 1px, transparent 1px)", backgroundSize: "12px 12px" }}
+              />
             </motion.div>
           </div>
         </motion.div>
@@ -360,23 +400,41 @@ export default function Landing() {
             <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-[#111110]">Done in 3 steps.</h2>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {STEPS.map((step, i) => (
-              <motion.div key={step.n} {...fadeUp(i * 0.15)} className="relative flex flex-col items-center text-center">
-                {i < STEPS.length - 1 && (
-                  <div className="hidden md:block absolute top-10 left-[60%] right-[-40%] h-px border-t border-dashed border-[#E5E5E0]" />
-                )}
-                <div className="relative w-20 h-20 rounded-2xl bg-[#F9F9F8] border border-[#E5E5E0] flex items-center justify-center mb-6 group hover:border-violet-200 hover:bg-violet-50 transition-all">
-                  <step.icon className="w-8 h-8 text-violet-600" />
-                  <div className="absolute -top-3 -right-3 w-7 h-7 rounded-full bg-black border-2 border-white flex items-center justify-center text-[11px] font-black text-white">
-                    {i + 1}
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            {/* Steps */}
+            <div className="space-y-12">
+              {STEPS.map((step, i) => (
+                <motion.div key={step.n} {...fadeUp(i * 0.15)} className="flex items-start gap-6">
+                  <div className="relative w-16 h-16 rounded-2xl bg-[#F9F9F8] border border-[#E5E5E0] flex items-center justify-center shrink-0 group hover:border-violet-200 hover:bg-violet-50 transition-all">
+                    <step.icon className="w-7 h-7 text-violet-600" />
+                    <div className="absolute -top-2.5 -right-2.5 w-6 h-6 rounded-full bg-black border-2 border-white flex items-center justify-center text-[10px] font-black text-white">
+                      {i + 1}
+                    </div>
                   </div>
-                </div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-violet-600/60 mb-2">{step.n}</p>
-                <h3 className="text-[17px] font-bold text-[#111110] mb-2">{step.title}</h3>
-                <p className="text-[13px] text-[#666660] leading-relaxed max-w-xs">{step.desc}</p>
-              </motion.div>
-            ))}
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-violet-600/60 mb-1">{step.n}</p>
+                    <h3 className="text-[18px] font-bold text-[#111110] mb-2">{step.title}</h3>
+                    <p className="text-[14px] text-[#666660] leading-relaxed">{step.desc}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Photo */}
+            <motion.div {...fadeUp(0.2)} className="relative hidden lg:block">
+              <div className="rounded-[28px] overflow-hidden shadow-2xl shadow-violet-100/60 border border-[#E5E5E0]">
+                <img
+                  src={studentPhone}
+                  alt="Student using Gradeio to solve homework"
+                  className="w-full h-[480px] object-cover"
+                />
+              </div>
+              {/* Floating badge */}
+              <div className="absolute -bottom-5 -left-5 bg-white rounded-2xl shadow-xl border border-[#E5E5E0] px-5 py-4">
+                <p className="text-[11px] font-bold text-[#999990] uppercase tracking-wider mb-1">Avg. solve time</p>
+                <p className="text-[28px] font-black text-violet-600 leading-none">3 sec</p>
+              </div>
+            </motion.div>
           </div>
         </div>
       </section>
@@ -411,32 +469,33 @@ export default function Landing() {
               </div>
             </motion.div>
 
-            <motion.div {...fadeUp(0.15)}>
-              <div className="relative rounded-3xl border border-[#E5E5E0] bg-white p-8 overflow-hidden shadow-xl shadow-violet-50">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-violet-100 blur-[60px]" />
-                <div className="relative z-10 text-center mb-8">
-                  <div className="text-8xl font-black text-transparent bg-clip-text bg-gradient-to-b from-violet-600 to-fuchsia-600 mb-2">95%</div>
-                  <p className="text-[#666660] text-[15px]">Overall Accuracy Rate</p>
-                  <div className="flex justify-center gap-1 mt-3">
-                    {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />)}
-                    <span className="text-[#999990] text-[13px] ml-1.5">4.8 / 5.0</span>
-                  </div>
+            <motion.div {...fadeUp(0.15)} className="relative">
+              <div className="rounded-[28px] overflow-hidden shadow-2xl shadow-violet-100/60 border border-[#E5E5E0]">
+                <img
+                  src={studentNotes}
+                  alt="Student taking detailed notes"
+                  className="w-full h-[460px] object-cover"
+                />
+                <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/40 to-transparent" />
+              </div>
+              {/* Floating stat badges */}
+              <div className="absolute bottom-6 left-6 right-6 flex items-end justify-between gap-3">
+                <div className="bg-white/90 backdrop-blur-md rounded-2xl px-4 py-3 shadow-lg">
+                  <div className="text-[32px] font-black text-transparent bg-clip-text bg-gradient-to-b from-violet-600 to-fuchsia-600 leading-none">95%</div>
+                  <p className="text-[11px] text-[#666660] mt-0.5">AI Accuracy</p>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { value: "4.5M+", label: "Problems Solved", icon: Target },
-                    { value: "2M+",   label: "Happy Students",  icon: GraduationCap },
-                    { value: "50+",   label: "Subjects",        icon: BookOpen },
-                    { value: "24/7",  label: "Available",       icon: Zap },
-                  ].map((s, i) => (
-                    <div key={i} className="bg-[#F9F9F8] rounded-xl p-4 text-center border border-[#E5E5E0]">
-                      <s.icon className="w-4 h-4 text-violet-600 mx-auto mb-2" />
-                      <div className="text-[22px] font-bold text-[#111110]">{s.value}</div>
-                      <div className="text-[11px] text-[#999990] mt-0.5">{s.label}</div>
-                    </div>
-                  ))}
+                <div className="bg-white/90 backdrop-blur-md rounded-2xl px-4 py-3 shadow-lg text-right">
+                  <div className="flex gap-0.5 mb-1 justify-end">
+                    {[...Array(5)].map((_, i) => <Star key={i} className="w-3 h-3 fill-amber-400 text-amber-400" />)}
+                  </div>
+                  <p className="text-[13px] font-bold text-[#111110]">4.8 / 5.0</p>
+                  <p className="text-[11px] text-[#999990]">Student Rating</p>
                 </div>
               </div>
+              {/* Dot grid decoration */}
+              <div className="absolute -bottom-6 -right-6 w-32 h-32 opacity-20"
+                style={{ backgroundImage: "radial-gradient(circle, #8B5CF6 1px, transparent 1px)", backgroundSize: "12px 12px" }}
+              />
             </motion.div>
           </div>
         </div>
@@ -445,12 +504,28 @@ export default function Landing() {
       {/* ══ TESTIMONIALS ════════════════════════════════════════ */}
       <section className="py-28 bg-white" id="testimonials">
         <div className="max-w-7xl mx-auto px-5 sm:px-8">
-          <motion.div {...fadeUp()} className="text-center mb-16">
+          <motion.div {...fadeUp()} className="text-center mb-10">
             <span className="text-[11px] font-bold uppercase tracking-widest text-violet-600 mb-3 block">Testimonials</span>
             <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-[#111110]">
               Loved by students
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 to-fuchsia-600"> everywhere.</span>
             </h2>
+          </motion.div>
+
+          {/* Group photo banner */}
+          <motion.div {...fadeUp(0.1)} className="relative rounded-[28px] overflow-hidden mb-16 shadow-xl shadow-violet-100/40">
+            <img
+              src={studentsGroup}
+              alt="Students studying together at university"
+              className="w-full h-64 object-cover object-center"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/20 to-transparent" />
+            <div className="absolute inset-0 flex items-center px-10">
+              <div>
+                <p className="text-white/60 text-[12px] font-semibold uppercase tracking-widest mb-2">Community</p>
+                <p className="text-white text-3xl font-black leading-tight">2 million+ students<br/>learning smarter.</p>
+              </div>
+            </div>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-5">
