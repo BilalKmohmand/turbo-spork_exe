@@ -3,9 +3,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { renderMathText } from "@/components/math-display";
 import {
-  Send, Paperclip, Sparkles, Camera, BookOpen,
+  Send, Paperclip, Sparkles, BookOpen,
   Calculator, FlaskConical, Globe, Mic, MicOff,
   User, X, FileImage, FileText as FilePdf,
+  Atom, TestTube, Leaf, ChevronRight,
 } from "lucide-react";
 
 /* ─── Types ─────────────────────────────────────────────────────── */
@@ -15,11 +16,46 @@ interface ChatMessage {
   imagePreview?: string;
 }
 
+interface AIMode {
+  label: string;
+  color: string;
+  bg: string;
+  instruction: string;
+}
+
+/* ─── Science sub-topics ─────────────────────────────────────────── */
+const SCIENCE_MODES: { icon: any; label: string; color: string; bg: string; instruction: string; desc: string }[] = [
+  {
+    icon: Atom,
+    label: "Physics",
+    color: "text-blue-600",
+    bg: "bg-blue-50 dark:bg-blue-950/30",
+    desc: "Forces, energy, motion & waves",
+    instruction: "You are an expert Physics tutor. When explaining, always include relevant formulas with proper units, draw diagrams using text when helpful, break problems into clear steps, and highlight key physics principles involved.",
+  },
+  {
+    icon: TestTube,
+    label: "Chemistry",
+    color: "text-purple-600",
+    bg: "bg-purple-50 dark:bg-purple-950/30",
+    desc: "Reactions, elements & bonding",
+    instruction: "You are an expert Chemistry tutor. Always show balanced chemical equations when relevant, explain reaction mechanisms step by step, reference the periodic table when discussing elements, and explain bonding and molecular structures clearly.",
+  },
+  {
+    icon: Leaf,
+    label: "Biology",
+    color: "text-green-600",
+    bg: "bg-green-50 dark:bg-green-950/30",
+    desc: "Living systems & life processes",
+    instruction: "You are an expert Biology tutor. Explain biological processes with clear diagrams using text when helpful, relate concepts to real organisms and body systems, use proper scientific terminology while keeping explanations accessible, and connect cellular to organism-level concepts.",
+  },
+];
+
 const quickPrompts = [
-  { icon: Calculator,   label: "Math",      prompt: "Solve: ",          color: "text-blue-500" },
-  { icon: FlaskConical, label: "Science",    prompt: "Explain: ",        color: "text-emerald-500" },
-  { icon: BookOpen,     label: "History",   prompt: "Tell me about: ",  color: "text-orange-500" },
-  { icon: Globe,        label: "Languages", prompt: "Translate: ",       color: "text-violet-500" },
+  { icon: Calculator,   label: "Math",      prompt: "Solve: ",         color: "text-blue-500",    isScience: false },
+  { icon: FlaskConical, label: "Science",   prompt: "",                color: "text-emerald-500", isScience: true  },
+  { icon: BookOpen,     label: "History",   prompt: "Tell me about: ", color: "text-orange-500",  isScience: false },
+  { icon: Globe,        label: "Languages", prompt: "Translate: ",     color: "text-violet-500",  isScience: false },
 ];
 
 /* ─── Component ──────────────────────────────────────────────────── */
@@ -27,6 +63,8 @@ export default function SolverContent() {
   const [textProblem, setTextProblem]   = useState("");
   const [chatHistory, setChatHistory]   = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming]   = useState(false);
+  const [scienceOpen, setScienceOpen]   = useState(false);
+  const [activeMode, setActiveMode]     = useState<AIMode | null>(null);
 
   /* File attachment state */
   const [attachedFile, setAttachedFile]         = useState<{ name: string; base64: string; mimeType: string; preview?: string } | null>(null);
@@ -61,11 +99,16 @@ export default function SolverContent() {
     setTextProblem("");
     setAttachedFile(null);
 
+    /* Prepend mode instruction as a hidden context header */
+    const enrichedProblem = activeMode
+      ? `[TUTOR MODE: ${activeMode.instruction}]\n\nStudent question: ${problem}`
+      : problem;
+
     try {
       const response = await fetch("/api/solve-text-stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ problem, history: chatHistory }),
+        body: JSON.stringify({ problem: enrichedProblem, history: chatHistory }),
       });
       if (!response.ok) throw new Error("Failed to connect to AI");
 
@@ -244,21 +287,69 @@ export default function SolverContent() {
               <p className="text-[#666660] text-center mb-10 max-w-sm">
                 Ask any question, upload a photo of your homework, or speak directly.
               </p>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
                 {quickPrompts.map((item) => (
-                  <button
-                    key={item.label}
-                    onClick={() => setTextProblem(item.prompt)}
-                    className="flex items-center gap-3 p-4 rounded-xl border border-[#E5E5E0] dark:border-[#22221F] bg-white dark:bg-[#111110] hover:bg-[#F9F9F8] dark:hover:bg-[#1A1A1A] transition-all text-left group"
-                  >
-                    <div className="w-10 h-10 rounded-lg bg-[#F0F0F0] dark:bg-[#1A1A1A] flex items-center justify-center group-hover:scale-105 transition-transform">
-                      <item.icon className={`w-5 h-5 ${item.color}`} />
-                    </div>
-                    <div>
-                      <p className="text-[14px] font-semibold text-[#111110] dark:text-white">{item.label}</p>
-                      <p className="text-[12px] text-[#999990]">Ask a question</p>
-                    </div>
-                  </button>
+                  <div key={item.label} className="flex flex-col gap-2">
+                    <button
+                      onClick={() => {
+                        if (item.isScience) {
+                          setScienceOpen(v => !v);
+                        } else {
+                          setScienceOpen(false);
+                          setActiveMode(null);
+                          setTextProblem(item.prompt);
+                        }
+                      }}
+                      className={`flex items-center gap-3 p-4 rounded-xl border transition-all text-left group w-full ${
+                        item.isScience && scienceOpen
+                          ? "border-emerald-300 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-800"
+                          : "border-[#E5E5E0] dark:border-[#22221F] bg-white dark:bg-[#111110] hover:bg-[#F9F9F8] dark:hover:bg-[#1A1A1A]"
+                      }`}
+                    >
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform ${
+                        item.isScience && scienceOpen
+                          ? "bg-emerald-100 dark:bg-emerald-900"
+                          : "bg-[#F0F0F0] dark:bg-[#1A1A1A]"
+                      }`}>
+                        <item.icon className={`w-5 h-5 ${item.color}`} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[14px] font-semibold text-[#111110] dark:text-white">{item.label}</p>
+                        <p className="text-[12px] text-[#999990]">
+                          {item.isScience ? "Choose a subject" : "Ask a question"}
+                        </p>
+                      </div>
+                      {item.isScience && (
+                        <ChevronRight className={`w-4 h-4 text-[#999990] transition-transform ${scienceOpen ? "rotate-90" : ""}`} />
+                      )}
+                    </button>
+
+                    {/* Science sub-menu */}
+                    {item.isScience && scienceOpen && (
+                      <div className="ml-3 flex flex-col gap-2 border-l-2 border-emerald-200 dark:border-emerald-800 pl-3">
+                        {SCIENCE_MODES.map(mode => (
+                          <button
+                            key={mode.label}
+                            onClick={() => {
+                              setActiveMode({ label: mode.label, color: mode.color, bg: mode.bg, instruction: mode.instruction });
+                              setTextProblem("Explain: ");
+                              setScienceOpen(false);
+                            }}
+                            className={`flex items-start gap-3 p-3 rounded-xl border transition-all text-left group w-full ${mode.bg} border-transparent hover:border-current`}
+                          >
+                            <div className={`w-8 h-8 rounded-lg bg-white/60 dark:bg-black/20 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform`}>
+                              <mode.icon className={`w-4 h-4 ${mode.color}`} />
+                            </div>
+                            <div>
+                              <p className={`text-[13px] font-bold ${mode.color}`}>{mode.label}</p>
+                              <p className="text-[11px] text-[#666660] dark:text-[#888880]">{mode.desc}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
@@ -303,6 +394,21 @@ export default function SolverContent() {
       {/* Floating input bar */}
       <div className="absolute bottom-6 left-0 right-0 px-6">
         <div className="max-w-3xl mx-auto">
+          {/* Active science mode badge */}
+          {activeMode && (
+            <div className="mb-2 flex items-center gap-2">
+              <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold ${activeMode.bg} ${activeMode.color} border border-current/20`}>
+                <span>{activeMode.label} Tutor Mode</span>
+                <button
+                  onClick={() => setActiveMode(null)}
+                  className="ml-0.5 opacity-60 hover:opacity-100 transition-opacity"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Attached file preview */}
           {attachedFile && (
             <div className="mb-2 flex items-center gap-2 px-4 py-2 rounded-2xl bg-[#F0F0F0] dark:bg-[#1A1A1A] border border-[#E5E5E0] dark:border-[#22221F] w-fit max-w-full">
