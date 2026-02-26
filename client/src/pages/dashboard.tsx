@@ -7,7 +7,7 @@ import {
   MessageSquare, Mic, FileText, FileEdit, Brain,
   LogOut, LayoutDashboard, Sparkles, Settings,
   HelpCircle, Crown, ClipboardCheck, Search,
-  Bell, ChevronRight, X, Menu,
+  Bell, ChevronRight, X, Menu, PanelLeftClose, PanelLeftOpen
 } from "lucide-react";
 
 import SolverContent    from "@/components/dashboard/solver-content";
@@ -60,6 +60,8 @@ function Sidebar({
   logout,
   open,
   setOpen,
+  isCollapsed,
+  setIsCollapsed
 }: {
   active: string;
   setActive: (s: string) => void;
@@ -67,6 +69,8 @@ function Sidebar({
   logout: () => void;
   open: boolean;
   setOpen: (v: boolean) => void;
+  isCollapsed: boolean;
+  setIsCollapsed: (v: boolean) => void;
 }) {
   const sidebarRef = useRef<HTMLDivElement>(null);
 
@@ -93,10 +97,10 @@ function Sidebar({
 
   return (
     <>
-      {/* Overlay */}
+      {/* Mobile Overlay */}
       {open && (
         <div
-          className="fixed inset-0 z-30 bg-gray-900/40 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-30 bg-black/20 backdrop-blur-sm lg:hidden"
           onClick={() => setOpen(false)}
         />
       )}
@@ -104,37 +108,50 @@ function Sidebar({
       <aside
         ref={sidebarRef}
         className={`
-          fixed top-0 left-0 z-40 h-full w-[240px] flex flex-col
-          bg-white dark:bg-gray-900
-          border-r border-gray-200 dark:border-gray-800
-          shadow-lg lg:shadow-none
-          transition-transform duration-200 ease-in-out
+          fixed top-0 left-0 z-40 h-full flex flex-col
+          bg-[#F9F9F8] dark:bg-[#111110]
+          border-r border-[#E5E5E0] dark:border-[#22221F]
+          transition-all duration-300 ease-in-out
           lg:relative lg:translate-x-0 lg:z-auto lg:shrink-0
-          ${open ? "translate-x-0" : "-translate-x-full"}
+          ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+          ${isCollapsed ? "w-[72px]" : "w-[260px]"}
         `}
       >
-        {/* Logo */}
-        <div className="h-16 flex items-center gap-2.5 px-5 border-b border-gray-200 dark:border-gray-800 shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center shadow-sm shadow-violet-600/30">
-            <Sparkles className="w-4 h-4 text-white" />
-          </div>
-          <span className="font-bold text-[15px] text-gray-900 dark:text-white tracking-tight">Gradeio</span>
+        {/* Sidebar Header */}
+        <div className="h-[60px] flex items-center justify-between px-4 shrink-0">
+          {!isCollapsed && (
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-md bg-black dark:bg-white flex items-center justify-center">
+                <Sparkles className="w-4 h-4 text-white dark:text-black" />
+              </div>
+              <span className="font-semibold text-[15px] tracking-tight text-[#111110] dark:text-[#F9F9F8]">Gradeio</span>
+            </div>
+          )}
+          {isCollapsed && (
+            <div className="w-full flex justify-center">
+              <div className="w-7 h-7 rounded-md bg-black dark:bg-white flex items-center justify-center">
+                <Sparkles className="w-4 h-4 text-white dark:text-black" />
+              </div>
+            </div>
+          )}
           <button
-            onClick={() => setOpen(false)}
-            className="ml-auto lg:hidden p-1 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="hidden lg:flex p-1.5 rounded-md text-[#666660] hover:bg-[#E5E5E0] dark:hover:bg-[#22221F] transition-colors"
           >
-            <X className="w-4 h-4" />
+            {isCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
           </button>
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 overflow-y-auto no-scrollbar py-5 px-3 space-y-6">
+        {/* Nav Items */}
+        <nav className="flex-1 overflow-y-auto no-scrollbar py-4 px-3 space-y-6">
           {allGroups.map(group => (
             <div key={group.group}>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 px-3 mb-1">
-                {group.group}
-              </p>
-              <ul className="space-y-0.5">
+              {!isCollapsed && (
+                <p className="text-[11px] font-medium uppercase tracking-wider text-[#999990] px-3 mb-2">
+                  {group.group}
+                </p>
+              )}
+              <ul className="space-y-1">
                 {group.items.map(item => {
                   const isActive = active === item.id;
                   return (
@@ -142,27 +159,24 @@ function Sidebar({
                       <button
                         onClick={() => navigate(item.id)}
                         data-testid={`sidebar-${item.id}`}
+                        title={isCollapsed ? item.label : ""}
                         className={`
-                          w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium
-                          transition-all duration-150 group
+                          w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] font-medium
+                          transition-all duration-200
                           ${isActive
-                            ? "bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-400"
-                            : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200"
+                            ? "bg-[#E5E5E0] dark:bg-[#22221F] text-[#111110] dark:text-[#F9F9F8]"
+                            : "text-[#666660] hover:bg-[#E5E5E0]/50 dark:hover:bg-[#22221F]/50 hover:text-[#111110] dark:hover:text-[#F9F9F8]"
                           }
+                          ${isCollapsed ? "justify-center px-0" : ""}
                         `}
                       >
-                        <item.icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? "text-violet-600 dark:text-violet-400" : "text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300"}`} />
-                        <span className="flex-1 text-left">{item.label}</span>
-                        {"badge" in item && item.badge && (
-                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
-                            isActive
-                              ? "bg-violet-200 dark:bg-violet-900 text-violet-700 dark:text-violet-300"
-                              : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
-                          }`}>
+                        <item.icon className={`w-4 h-4 shrink-0 ${isActive ? "text-black dark:text-white" : ""}`} />
+                        {!isCollapsed && <span className="flex-1 text-left">{item.label}</span>}
+                        {!isCollapsed && "badge" in item && item.badge && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/5 dark:bg-white/5 text-[#666660]">
                             {item.badge}
                           </span>
                         )}
-                        {isActive && <ChevronRight className="w-3.5 h-3.5 text-violet-400 shrink-0" />}
                       </button>
                     </li>
                   );
@@ -170,49 +184,31 @@ function Sidebar({
               </ul>
             </div>
           ))}
-
-          {/* Upgrade banner */}
-          <div className="mx-1 p-3.5 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-500/20">
-            <div className="flex items-center gap-2 mb-1.5">
-              <Crown className="w-3.5 h-3.5 text-yellow-300" />
-              <span className="text-[12px] font-semibold">Free Plan</span>
-            </div>
-            <p className="text-[11px] text-violet-100/80 mb-3 leading-relaxed">
-              Upgrade for unlimited credits & premium features.
-            </p>
-            <button
-              onClick={() => window.open("/pricing", "_blank")}
-              data-testid="button-upgrade-now"
-              className="w-full h-7 text-[11px] font-semibold bg-white text-violet-700 rounded-lg hover:bg-violet-50 transition-colors"
-            >
-              Upgrade Now
-            </button>
-          </div>
         </nav>
 
-        {/* User footer */}
-        <div className="shrink-0 border-t border-gray-200 dark:border-gray-800 p-3">
-          <div className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group">
-            <Avatar className="w-8 h-8 shrink-0">
-              <AvatarFallback className="bg-violet-600 text-white text-[11px] font-bold">
+        {/* Footer */}
+        <div className="p-3 border-t border-[#E5E5E0] dark:border-[#22221F]">
+          <div className={`flex items-center gap-2.5 p-2 rounded-lg transition-colors ${isCollapsed ? "justify-center" : ""}`}>
+            <Avatar className="w-8 h-8 shrink-0 border border-[#E5E5E0] dark:border-[#22221F]">
+              <AvatarFallback className="bg-[#111110] text-white text-[11px] font-bold">
                 {initials(user.displayName)}
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-semibold text-gray-800 dark:text-gray-200 truncate leading-tight">{user.displayName}</p>
-              <p className="text-[11px] text-gray-400 dark:text-gray-500 truncate">{user.email}</p>
-            </div>
-            <div className="flex items-center gap-0.5">
-              <ThemeToggle />
+            {!isCollapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-semibold text-[#111110] dark:text-[#F9F9F8] truncate leading-tight">{user.displayName}</p>
+                <p className="text-[11px] text-[#999990] truncate">{user.email}</p>
+              </div>
+            )}
+            {!isCollapsed && (
               <button
                 onClick={logout}
-                data-testid="button-logout"
                 title="Sign out"
-                className="p-1.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                className="p-1.5 rounded-md text-[#666660] hover:bg-[#E5E5E0] dark:hover:bg-[#22221F] transition-colors"
               >
                 <LogOut className="w-3.5 h-3.5" />
               </button>
-            </div>
+            )}
           </div>
         </div>
       </aside>
@@ -232,118 +228,28 @@ function Header({
   onNavigate: (section: string) => void;
   userName: string;
 }) {
-  const [showNotifs, setShowNotifs] = useState(false);
-
-  function initials(name: string) {
-    return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
-  }
-
-  const notifications = [
-    { text: "AI Tutor is ready to help", time: "Just now", dot: "bg-violet-500" },
-    { text: "Your quiz results are in", time: "2 min ago", dot: "bg-emerald-500" },
-    { text: "New feature: Essay Writer updated", time: "1h ago", dot: "bg-amber-500" },
-  ];
-
   return (
-    <header className="sticky top-0 z-20 h-16 flex items-center justify-between px-4 sm:px-6
-      bg-white/80 dark:bg-gray-900/80 backdrop-blur-md
-      border-b border-gray-200 dark:border-gray-800 shrink-0">
-      {/* Left */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={onMenuClick}
-          className="lg:hidden p-1.5 rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-        >
+    <header className="h-[60px] flex items-center justify-between px-6 bg-white dark:bg-[#0A0A0A] border-b border-[#E5E5E0] dark:border-[#22221F] sticky top-0 z-20">
+      <div className="flex items-center gap-4">
+        <button onClick={onMenuClick} className="lg:hidden p-1.5 rounded-md text-[#666660] hover:bg-[#F0F0F0]">
           <Menu className="w-5 h-5" />
         </button>
-
-        <div>
-          <p className="text-[11px] text-gray-400 dark:text-gray-500 leading-none mb-0.5">Dashboard</p>
-          <h1 className="text-[15px] font-semibold text-gray-900 dark:text-white leading-none">{activeLabel}</h1>
-        </div>
+        <h1 className="text-[15px] font-semibold text-[#111110] dark:text-[#F9F9F8]">{activeLabel}</h1>
       </div>
 
-      {/* Right */}
-      <div className="flex items-center gap-1.5">
-        {/* Search — clicking goes to AI Tutor */}
-        <button
-          onClick={() => onNavigate("solver")}
-          data-testid="button-search"
-          className="hidden md:flex items-center gap-2 h-8 px-3 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[13px] text-gray-400 dark:text-gray-500 cursor-pointer hover:border-violet-300 dark:hover:border-violet-700 hover:text-gray-600 dark:hover:text-gray-300 transition-all"
-          title="Search (opens AI Tutor)"
-        >
-          <Search className="w-3.5 h-3.5 shrink-0" />
-          <span>Ask AI anything...</span>
-          <kbd className="ml-2 hidden sm:inline-flex items-center text-[10px] font-medium bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded px-1.5 py-0.5 text-gray-400">
-            ⌘K
-          </kbd>
-        </button>
-
-        {/* Notification */}
-        <div className="relative">
-          <button
-            onClick={() => setShowNotifs(v => !v)}
-            data-testid="button-notifications"
-            className="relative p-2 rounded-lg text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-          >
-            <Bell className="w-4 h-4" />
-            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-violet-500 ring-2 ring-white dark:ring-gray-900" />
-          </button>
-
-          {showNotifs && (
-            <div className="absolute right-0 mt-1 w-72 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl shadow-black/10 z-50 overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                <span className="text-[13px] font-semibold text-gray-900 dark:text-white">Notifications</span>
-                <button
-                  onClick={() => setShowNotifs(false)}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                {notifications.map((n, i) => (
-                  <div key={i} className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                    <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${n.dot}`} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] text-gray-800 dark:text-gray-200 leading-snug">{n.text}</p>
-                      <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">{n.time}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="px-4 py-2.5 border-t border-gray-100 dark:border-gray-800">
-                <button
-                  onClick={() => setShowNotifs(false)}
-                  className="text-[12px] text-violet-600 dark:text-violet-400 font-medium hover:underline"
-                >
-                  Mark all as read
-                </button>
-              </div>
-            </div>
-          )}
+      <div className="flex items-center gap-3">
+        <div className="hidden md:flex items-center gap-2 h-9 w-[300px] px-3 rounded-full bg-[#F0F0F0] dark:bg-[#1A1A1A] border border-transparent focus-within:border-[#E5E5E0] transition-all">
+          <Search className="w-4 h-4 text-[#999990]" />
+          <input 
+            type="text" 
+            placeholder="Search resources..." 
+            className="bg-transparent border-none focus:ring-0 text-[13px] w-full placeholder:text-[#999990] text-[#111110] dark:text-white"
+          />
         </div>
-
-        {/* Divider */}
-        <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
-
-        {/* AI status */}
-        <Badge variant="outline" className="hidden sm:flex gap-1.5 h-7 text-[11px] font-medium border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          AI Online
-        </Badge>
-
-        {/* Avatar */}
-        <button
-          onClick={() => onNavigate("settings")}
-          data-testid="button-header-avatar"
-          title="Settings"
-        >
-          <Avatar className="w-8 h-8 cursor-pointer ring-2 ring-gray-200 dark:ring-gray-700 hover:ring-violet-400 transition-all">
-            <AvatarFallback className="bg-violet-600 text-white text-[11px] font-bold">
-              {initials(userName)}
-            </AvatarFallback>
-          </Avatar>
+        <ThemeToggle />
+        <button className="p-2 rounded-full text-[#666660] hover:bg-[#F0F0F0] dark:hover:bg-[#1A1A1A] relative">
+          <Bell className="w-4.5 h-4.5" />
+          <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-orange-500 rounded-full border-2 border-white dark:border-black" />
         </button>
       </div>
     </header>
@@ -355,18 +261,14 @@ export default function Dashboard() {
   const { user, isLoading, logout } = useAuth(true);
   const [active, setActive]         = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
+      <div className="min-h-screen bg-[#F9F9F8] dark:bg-[#0A0A0A] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-violet-600 flex items-center justify-center shadow-lg shadow-violet-600/30 animate-pulse">
-            <Brain className="w-6 h-6 text-white" />
-          </div>
-          <div className="flex gap-1.5">
-            {[0, 120, 240].map(d => (
-              <div key={d} className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: `${d}ms` }} />
-            ))}
+          <div className="w-10 h-10 rounded-xl bg-black dark:bg-white flex items-center justify-center animate-pulse">
+            <Sparkles className="w-5 h-5 text-white dark:text-black" />
           </div>
         </div>
       </div>
@@ -383,7 +285,7 @@ export default function Dashboard() {
   const activeLabel = allItems.find(i => i.id === active)?.label ?? "Overview";
 
   return (
-    <div className="flex h-screen w-full bg-gray-50 dark:bg-gray-950 overflow-hidden">
+    <div className="flex h-screen w-full bg-white dark:bg-[#0A0A0A] text-[#111110] dark:text-[#F9F9F8] overflow-hidden selection:bg-black/5 dark:selection:bg-white/10">
       <Sidebar
         active={active}
         setActive={setActive}
@@ -391,25 +293,29 @@ export default function Dashboard() {
         logout={logout}
         open={sidebarOpen}
         setOpen={setSidebarOpen}
+        isCollapsed={isCollapsed}
+        setIsCollapsed={setIsCollapsed}
       />
 
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Header
-          activeLabel={activeLabel}
-          onMenuClick={() => setSidebarOpen(true)}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+        <Header 
+          activeLabel={activeLabel} 
+          onMenuClick={() => setSidebarOpen(true)} 
           onNavigate={setActive}
           userName={user.displayName}
         />
 
-        <main className="flex-1 overflow-y-auto">
-          {active === "overview"  && <OverviewContent user={user} onNavigate={setActive} />}
-          {active === "solver"    && <SolverContent />}
-          {active === "notes"     && <NotesContent />}
-          {active === "quiz"      && <QuizContent />}
-          {active === "essay"     && <EssayContent />}
-          {active === "evaluate"  && user.role === "teacher" && <EvaluateContent />}
-          {active === "help"      && <HelpContent />}
-          {active === "settings"  && <SettingsContent user={user} />}
+        <main className="flex-1 overflow-y-auto bg-[#FFFFFF] dark:bg-[#0A0A0A]">
+          <div className={`max-w-screen-xl mx-auto h-full ${active === 'solver' ? '' : 'p-6 lg:p-8'}`}>
+            {active === "overview"  && <OverviewContent user={user} onNavigate={setActive} />}
+            {active === "solver"    && <SolverContent />}
+            {active === "notes"     && <NotesContent />}
+            {active === "quiz"      && <QuizContent />}
+            {active === "essay"     && <EssayContent />}
+            {active === "evaluate"  && user.role === "teacher" && <EvaluateContent />}
+            {active === "help"      && <HelpContent />}
+            {active === "settings"  && <SettingsContent user={user} />}
+          </div>
         </main>
       </div>
     </div>

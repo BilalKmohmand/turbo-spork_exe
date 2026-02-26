@@ -15,29 +15,16 @@ export default function NotesContent() {
   const [transcriptChunks, setTranscriptChunks] = useState<TranscriptChunk[]>([]);
   const [liveTranscript, setLiveTranscript] = useState("");
   const [interimTranscript, setInterimTranscript] = useState("");
-  const [isTranscribing, setIsTranscribing] = useState(false);
   const [isGeneratingNotes, setIsGeneratingNotes] = useState(false);
   const [generatedNotes, setGeneratedNotes] = useState("");
   const [recordingTime, setRecordingTime] = useState(0);
   const [copied, setCopied] = useState(false);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const recognitionRef = useRef<any>(null);
   const isRecordingRef = useRef(false);
-  const interimTranscriptRef = useRef("");
-  const liveTranscriptRef = useRef("");
   const { toast } = useToast();
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-    };
-  }, []);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -50,21 +37,9 @@ export default function NotesContent() {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
 
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          audioChunksRef.current.push(e.data);
-        }
-      };
-
-      mediaRecorder.onstop = async () => {
+      mediaRecorder.onstop = () => {
         stream.getTracks().forEach(track => track.stop());
-        // Save the live transcript as a chunk when recording stops (use ref for latest value)
-        const currentTranscript = liveTranscriptRef.current;
-        if (currentTranscript && currentTranscript.trim()) {
-          setTranscriptChunks(prev => [...prev, { text: currentTranscript.trim(), timestamp: Date.now() }]);
-        }
       };
 
       mediaRecorder.start();
@@ -72,352 +47,160 @@ export default function NotesContent() {
       isRecordingRef.current = true;
       setRecordingTime(0);
       setLiveTranscript("");
-      liveTranscriptRef.current = "";
-      setInterimTranscript("");
-      interimTranscriptRef.current = "";
       
-      timerRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
+      timerRef.current = setInterval(() => setRecordingTime(prev => prev + 1), 1000);
 
-      // Start Web Speech API for real-time transcription
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognition) {
         const recognition = new SpeechRecognition();
         recognition.continuous = true;
         recognition.interimResults = true;
-        recognition.lang = "en-US";
-        
         recognition.onresult = (event: any) => {
           let interim = "";
           let final = "";
-          
           for (let i = event.resultIndex; i < event.results.length; i++) {
-            const transcript = event.results[i][0].transcript;
-            if (event.results[i].isFinal) {
-              final += transcript + " ";
-            } else {
-              interim += transcript;
-            }
+            if (event.results[i].isFinal) final += event.results[i][0].transcript + " ";
+            else interim += event.results[i][0].transcript;
           }
-          
           if (final) {
-            setLiveTranscript(prev => {
-              const newText = prev + final;
-              liveTranscriptRef.current = newText;
-              return newText;
-            });
-            setInterimTranscript("");
-            interimTranscriptRef.current = "";
-          } else {
-            setInterimTranscript(interim);
-            interimTranscriptRef.current = interim;
+            setLiveTranscript(prev => prev + final);
+            setTranscriptChunks(prev => [...prev, { text: final, timestamp: Date.now() }]);
           }
+          setInterimTranscript(interim);
         };
-        
-        recognition.onerror = (event: any) => {
-          console.log("Speech recognition error:", event.error);
-        };
-        
-        recognition.onend = () => {
-          // Restart if still recording (use ref to avoid closure issue)
-          if (isRecordingRef.current && recognitionRef.current) {
-            try {
-              recognitionRef.current.start();
-            } catch (e) {
-              // Already started or not allowed
-            }
-          }
-        };
-        
         recognitionRef.current = recognition;
         recognition.start();
-      } else {
-        toast({
-          title: "Live transcription not supported",
-          description: "Your browser doesn't support real-time transcription. Recording will still work.",
-        });
       }
-
     } catch (error) {
-      toast({
-        title: "Microphone access denied",
-        description: "Please allow microphone access to record lectures.",
-        variant: "destructive",
-      });
+      toast({ title: "Microphone error", description: "Could not access microphone.", variant: "destructive" });
     }
   };
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       isRecordingRef.current = false;
-      
-      // Commit any remaining interim transcript before stopping (use refs for latest value)
-      const currentInterim = interimTranscriptRef.current;
-      if (currentInterim) {
-        const newText = liveTranscriptRef.current + currentInterim;
-        setLiveTranscript(newText);
-        liveTranscriptRef.current = newText;
-      }
-      
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch (e) {
-          // Already stopped
-        }
-        recognitionRef.current = null;
-      }
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (recognitionRef.current) recognitionRef.current.stop();
       setInterimTranscript("");
-      interimTranscriptRef.current = "";
-    }
-  };
-
-  const transcribeAudio = async (audioBlob: Blob) => {
-    setIsTranscribing(true);
-    try {
-      const formData = new FormData();
-      formData.append("audio", audioBlob, "recording.webm");
-
-      const response = await fetch("/api/transcribe", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) throw new Error("Transcription failed");
-
-      const data = await response.json();
-      if (data.text) {
-        setTranscriptChunks(prev => [...prev, { text: data.text, timestamp: Date.now() }]);
-      }
-    } catch (error) {
-      toast({
-        title: "Transcription failed",
-        description: "Could not transcribe audio. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsTranscribing(false);
     }
   };
 
   const generateNotes = async () => {
     const fullTranscript = transcriptChunks.map(c => c.text).join(" ");
     if (!fullTranscript.trim()) return;
-
     setIsGeneratingNotes(true);
-    setGeneratedNotes("");
-
     try {
       const response = await fetch("/api/generate-notes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ transcript: fullTranscript }),
       });
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => null);
-        throw new Error(errData?.error || "Failed to generate notes");
-      }
-
       const data = await response.json();
       setGeneratedNotes(data.notes || "");
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error?.message || "Failed to generate notes. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to generate notes.", variant: "destructive" });
     } finally {
       setIsGeneratingNotes(false);
     }
   };
 
-  const copyNotes = async () => {
-    await navigator.clipboard.writeText(generatedNotes);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    toast({ title: "Copied!", description: "Notes copied to clipboard." });
-  };
-
-  const downloadNotes = () => {
-    const blob = new Blob([generatedNotes], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "lecture-notes.txt";
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const fullTranscript = transcriptChunks.map(c => c.text).join(" ");
-
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <div className="text-center mb-8">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-600 to-purple-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-violet-600/20">
-          <Mic className="w-7 h-7 text-white" />
+    <div className="max-w-5xl mx-auto py-8 px-6">
+      <header className="mb-12 text-center">
+        <div className="w-16 h-16 rounded-[22px] bg-[#111110] dark:bg-white flex items-center justify-center mx-auto mb-6">
+          <Mic className="w-8 h-8 text-white dark:text-black" />
         </div>
-        <h1 className="text-2xl font-bold mb-2">AI Lecture Notes</h1>
-        <p className="text-muted-foreground">Record your lectures and get AI-generated study notes</p>
-      </div>
+        <h2 className="text-3xl font-bold tracking-tight mb-2">Lecture Notes</h2>
+        <p className="text-[#666660]">Record audio and let AI generate structured study notes</p>
+      </header>
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        <Card className="border-border/50">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
-                <Mic className="w-5 h-5 text-violet-600" />
-                <h3 className="font-semibold">Recording</h3>
-              </div>
-              {isRecording && (
-                <Badge variant="destructive" className="gap-1 animate-pulse">
-                  <span className="w-1.5 h-1.5 rounded-full bg-white" />
-                  Recording
-                </Badge>
-              )}
-            </div>
-
-            <div className="flex flex-col items-center gap-6 py-4">
-              {isRecording && (
-                <>
-                  <div className="text-5xl font-mono font-bold text-violet-600 tabular-nums">
-                    {formatTime(recordingTime)}
+      <div className="grid lg:grid-cols-12 gap-8">
+        <div className="lg:col-span-7">
+          <Card className="border-[#E5E5E0] dark:border-[#22221F] rounded-[32px] overflow-hidden">
+            <CardContent className="p-8 lg:p-10 text-center">
+              <div className="mb-10">
+                {isRecording ? (
+                  <div className="space-y-4">
+                    <div className="text-6xl font-mono font-bold tracking-tighter tabular-nums">{formatTime(recordingTime)}</div>
+                    <p className="text-red-500 font-bold uppercase tracking-widest text-[11px] animate-pulse">Live Recording</p>
                   </div>
-                  
-                  {(liveTranscript || interimTranscript) && (
-                    <div className="w-full max-h-40 overflow-y-auto bg-muted/50 rounded-xl p-4 text-sm">
-                      <p className="text-foreground">
-                        {liveTranscript}
-                        <span className="text-muted-foreground italic">{interimTranscript}</span>
-                      </p>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="text-6xl font-mono font-bold tracking-tighter text-[#999990]">00:00</div>
+                    <p className="text-[#999990] uppercase tracking-widest text-[11px] font-bold">Ready to record</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-center mb-10">
+                {!isRecording ? (
+                  <button 
+                    onClick={startRecording}
+                    className="w-24 h-24 rounded-full bg-black dark:bg-white flex items-center justify-center shadow-xl shadow-black/10 transition-transform hover:scale-110 active:scale-95 group"
+                  >
+                    <Mic className="w-10 h-10 text-white dark:text-black" />
+                  </button>
+                ) : (
+                  <button 
+                    onClick={stopRecording}
+                    className="w-24 h-24 rounded-full bg-red-500 flex items-center justify-center shadow-xl shadow-red-500/20 transition-transform hover:scale-110 active:scale-95"
+                  >
+                    <Square className="w-8 h-8 text-white" />
+                  </button>
+                )}
+              </div>
+
+              <div className="text-left bg-[#F9F9F8] dark:bg-[#111110] rounded-2xl p-6 min-h-[200px] border border-[#E5E5E0] dark:border-[#22221F]">
+                <p className="text-[13px] font-bold uppercase tracking-widest text-[#999990] mb-3">Live Transcript</p>
+                <p className="text-[16px] leading-relaxed">
+                  {liveTranscript}
+                  <span className="text-[#999990] italic">{interimTranscript}</span>
+                  {!liveTranscript && !interimTranscript && <span className="text-[#999990]">Your transcript will appear here as you speak...</span>}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="lg:col-span-5">
+          <Card className="border-[#E5E5E0] dark:border-[#22221F] rounded-[32px] h-full bg-[#F9F9F8] dark:bg-[#111110]">
+            <CardContent className="p-8 flex flex-col h-full">
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-[13px] font-bold uppercase tracking-widest text-[#999990]">AI Study Notes</h3>
+                  <Sparkles className="w-4 h-4 text-[#999990]" />
+                </div>
+                
+                <div className="space-y-6">
+                  {generatedNotes ? (
+                    <div className="prose prose-sm dark:prose-invert">
+                      <div className="whitespace-pre-wrap text-[15px] leading-relaxed text-[#111110] dark:text-[#E5E5E0]">
+                        {generatedNotes}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-20">
+                      <Wand2 className="w-12 h-12 text-[#E5E5E0] dark:text-[#22221F] mx-auto mb-4" />
+                      <p className="text-sm text-[#666660]">Complete your recording to generate notes</p>
                     </div>
                   )}
-                  
-                  {!liveTranscript && !interimTranscript && (
-                    <p className="text-sm text-muted-foreground animate-pulse">
-                      Listening... Start speaking to see live transcription
-                    </p>
-                  )}
-                </>
-              )}
-              
-              {!isRecording ? (
-                <Button
-                  onClick={startRecording}
-                  size="lg"
-                  className="gap-2 bg-violet-600 hover:bg-violet-700 h-14 px-8 rounded-2xl shadow-lg shadow-violet-600/20"
-                  disabled={isTranscribing}
-                  data-testid="button-start-recording"
-                >
-                  <Mic className="w-5 h-5" />
-                  Start Recording
-                </Button>
-              ) : (
-                <Button
-                  onClick={stopRecording}
-                  size="lg"
-                  variant="destructive"
-                  className="gap-2 h-14 px-8 rounded-2xl"
-                  data-testid="button-stop-recording"
-                >
-                  <Square className="w-5 h-5" />
-                  Stop Recording
-                </Button>
-              )}
-
-              {isTranscribing && (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="text-sm">Transcribing audio...</span>
                 </div>
-              )}
-            </div>
-
-            <div className="mt-6">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-sm font-medium">Transcript</h4>
-                {transcriptChunks.length > 0 && (
-                  <Badge variant="secondary" className="text-xs">
-                    {transcriptChunks.length} segment{transcriptChunks.length !== 1 ? "s" : ""}
-                  </Badge>
-                )}
               </div>
-              <div 
-                className="h-40 overflow-y-auto bg-muted/50 rounded-xl p-4 text-sm border border-border/50"
-                data-testid="transcript-display"
-              >
-                {transcriptChunks.length === 0 ? (
-                  <p className="text-muted-foreground italic text-center py-8">
-                    Start recording to see transcript here...
-                  </p>
-                ) : (
-                  <p className="leading-relaxed">{fullTranscript}</p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
-        <Card className="border-border/50">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <Wand2 className="w-5 h-5 text-indigo-600" />
-              <h3 className="font-semibold">AI Notes</h3>
-            </div>
-
-            <Button
-              onClick={generateNotes}
-              disabled={!fullTranscript.trim() || isGeneratingNotes}
-              className="w-full gap-2 mb-6 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700"
-              data-testid="button-generate-notes"
-            >
-              {isGeneratingNotes ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Generating Notes...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4" />
-                  Generate Study Notes
-                </>
-              )}
-            </Button>
-
-            <div 
-              className="h-52 overflow-y-auto bg-muted/50 rounded-xl p-4 text-sm whitespace-pre-wrap border border-border/50"
-              data-testid="notes-display"
-            >
-              {generatedNotes ? (
-                <p className="leading-relaxed">{generatedNotes}</p>
-              ) : (
-                <p className="text-muted-foreground italic text-center py-16">
-                  AI-generated notes will appear here...
-                </p>
-              )}
-            </div>
-
-            {generatedNotes && (
-              <div className="flex gap-2 mt-4">
-                <Button variant="outline" size="sm" onClick={copyNotes} className="flex-1 gap-2">
-                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  {copied ? "Copied!" : "Copy"}
-                </Button>
-                <Button variant="outline" size="sm" onClick={downloadNotes} className="flex-1 gap-2">
-                  <Download className="w-4 h-4" />
-                  Download
+              <div className="mt-8 pt-8 border-t border-[#E5E5E0] dark:border-[#22221F]">
+                <Button 
+                  onClick={generateNotes}
+                  disabled={isRecording || transcriptChunks.length === 0 || isGeneratingNotes}
+                  className="w-full h-14 rounded-2xl bg-black dark:bg-white text-white dark:text-black font-bold"
+                >
+                  {isGeneratingNotes ? <Loader2 className="w-5 h-5 animate-spin" /> : "Generate Notes"}
                 </Button>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

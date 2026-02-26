@@ -19,11 +19,10 @@ interface EssayResult {
 }
 
 const essayTypes = [
-  { value: "argumentative", label: "Argumentative", description: "Present and defend a position" },
+  { value: "argumentative", label: "Argumentative", description: "Defend a position" },
   { value: "persuasive", label: "Persuasive", description: "Convince the reader" },
-  { value: "expository", label: "Expository", description: "Explain a topic clearly" },
+  { value: "expository", label: "Expository", description: "Explain clearly" },
   { value: "narrative", label: "Narrative", description: "Tell a story" },
-  { value: "descriptive", label: "Descriptive", description: "Paint a picture with words" },
 ];
 
 export default function EssayContent() {
@@ -45,15 +44,9 @@ export default function EssayContent() {
       });
       return response.json();
     },
-    onSuccess: (data) => {
-      setResult(data);
-    },
+    onSuccess: (data) => setResult(data),
     onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to generate essay",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message || "Failed to generate essay", variant: "destructive" });
     },
   });
 
@@ -65,176 +58,129 @@ export default function EssayContent() {
     toast({ title: "Copied!", description: "Essay copied to clipboard." });
   };
 
-  const downloadEssay = () => {
-    if (!result) return;
-    const blob = new Blob([`${result.title}\n\n${result.essay}`], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${result.title.replace(/\s+/g, "-").toLowerCase()}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const resetForm = () => {
-    setResult(null);
-    setTopic("");
-    setAdditionalNotes("");
-  };
-
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <div className="text-center mb-8">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-600 to-amber-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-orange-600/20">
-          <FileEdit className="w-7 h-7 text-white" />
+    <div className="max-w-5xl mx-auto py-8 px-6">
+      <header className="mb-12 text-center">
+        <div className="w-16 h-16 rounded-[22px] bg-[#111110] dark:bg-white flex items-center justify-center mx-auto mb-6">
+          <FileEdit className="w-8 h-8 text-white dark:text-black" />
         </div>
-        <h1 className="text-2xl font-bold mb-2">AI Essay Writer</h1>
-        <p className="text-muted-foreground">Generate well-structured essays on any topic</p>
-      </div>
+        <h2 className="text-3xl font-bold tracking-tight mb-2">Essay Writer</h2>
+        <p className="text-[#666660]">Generate structured, high-quality academic writing</p>
+      </header>
 
       {!result ? (
-        <Card className="border-border/50">
-          <CardContent className="p-6 space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="topic" className="text-sm font-medium">Essay Topic</Label>
-              <Input
-                id="topic"
-                placeholder="e.g., The impact of social media on modern communication"
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-                className="border-border/50"
-                data-testid="input-essay-topic"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Essay Type</Label>
-                <Select value={essayType} onValueChange={setEssayType}>
-                  <SelectTrigger className="border-border/50" data-testid="select-essay-type">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {essayTypes.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        <div>
-                          <span className="font-medium">{type.label}</span>
-                          <span className="text-muted-foreground text-xs ml-2">- {type.description}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Length</Label>
-                <Select value={wordCount} onValueChange={setWordCount}>
-                  <SelectTrigger className="border-border/50" data-testid="select-word-count">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="250">Short (~250 words)</SelectItem>
-                    <SelectItem value="500">Medium (~500 words)</SelectItem>
-                    <SelectItem value="750">Long (~750 words)</SelectItem>
-                    <SelectItem value="1000">Extended (~1000 words)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="notes" className="text-sm font-medium">Additional Notes (optional)</Label>
-              <Textarea
-                id="notes"
-                placeholder="Any specific points to include, thesis ideas, required sources, etc..."
-                value={additionalNotes}
-                onChange={(e) => setAdditionalNotes(e.target.value)}
-                className="min-h-[100px] resize-none border-border/50"
-              />
-            </div>
-
-            <Button
-              onClick={() => generateMutation.mutate()}
-              disabled={!topic.trim() || generateMutation.isPending}
-              className="w-full gap-2 bg-orange-600 hover:bg-orange-700"
-              data-testid="button-generate-essay"
-            >
-              {generateMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Generating Essay...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4" />
-                  Generate Essay
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">{result.title}</h2>
-              <div className="flex items-center gap-2 mt-1">
-                <Badge variant="secondary" className="text-xs gap-1">
-                  <AlignLeft className="w-3 h-3" />
-                  {result.wordCount} {result.wordCount === 1 ? "word" : "words"}
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  {essayTypes.find(t => t.value === essayType)?.label}
-                </Badge>
-              </div>
-            </div>
-            <Button variant="outline" size="sm" onClick={resetForm} className="gap-2">
-              <RotateCcw className="w-4 h-4" />
-              New Essay
-            </Button>
-          </div>
-
-          {result.outline && result.outline.length > 0 && (
-            <Card className="border-border/50">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <BookOpen className="w-4 h-4 text-orange-600" />
-                  <h3 className="text-sm font-medium">Outline</h3>
+        <div className="grid lg:grid-cols-12 gap-8">
+          <div className="lg:col-span-7">
+            <Card className="border-[#E5E5E0] dark:border-[#22221F] rounded-[32px] overflow-hidden">
+              <CardContent className="p-8 lg:p-10 space-y-8">
+                <div className="space-y-3">
+                  <Label className="text-[13px] font-bold uppercase tracking-widest text-[#999990]">Topic or Prompt</Label>
+                  <Textarea
+                    placeholder="Describe your essay topic in detail..."
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    className="min-h-[160px] border-none focus-visible:ring-0 p-0 text-xl placeholder:text-[#999990] no-scrollbar resize-none"
+                  />
                 </div>
-                <ul className="space-y-1.5">
-                  {result.outline.map((point, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm">
-                      <span className="w-5 h-5 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 flex items-center justify-center text-xs font-medium flex-shrink-0 mt-0.5">
-                        {i + 1}
-                      </span>
-                      <span className="text-muted-foreground">{point}</span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="space-y-3">
+                  <Label className="text-[13px] font-bold uppercase tracking-widest text-[#999990]">Additional Notes</Label>
+                  <Textarea
+                    placeholder="Add specific points or requirements..."
+                    value={additionalNotes}
+                    onChange={(e) => setAdditionalNotes(e.target.value)}
+                    className="min-h-[100px] bg-[#F9F9F8] dark:bg-[#111110] border-[#E5E5E0] dark:border-[#22221F] rounded-2xl p-4 text-[15px]"
+                  />
+                </div>
               </CardContent>
             </Card>
-          )}
+          </div>
 
-          <Card className="border-border/50">
-            <CardContent className="p-6">
-              <div className="prose prose-sm dark:prose-invert max-w-none">
-                <div className="whitespace-pre-wrap leading-relaxed text-sm">
-                  {result.essay}
+          <div className="lg:col-span-5">
+            <Card className="border-[#E5E5E0] dark:border-[#22221F] rounded-[32px] bg-[#F9F9F8] dark:bg-[#111110]">
+              <CardContent className="p-8 space-y-8">
+                <div>
+                  <Label className="text-[13px] font-bold uppercase tracking-widest text-[#999990] mb-4 block">Style & Format</Label>
+                  <div className="space-y-2">
+                    {essayTypes.map(t => (
+                      <button
+                        key={t.value}
+                        onClick={() => setEssayType(t.value)}
+                        className={`w-full flex flex-col p-4 rounded-2xl border transition-all text-left ${essayType === t.value ? "bg-black dark:bg-white text-white dark:text-black border-black dark:border-white" : "bg-white dark:bg-[#1A1A1A] text-[#111110] dark:text-white border-[#E5E5E0] dark:border-[#22221F]"}`}
+                      >
+                        <span className="text-sm font-semibold">{t.label}</span>
+                        <span className={`text-[11px] opacity-60 ${essayType === t.value ? 'text-white/80 dark:text-black/80' : 'text-[#666660]'}`}>{t.description}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
 
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={copyEssay} className="flex-1 gap-2">
-              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              {copied ? "Copied!" : "Copy Essay"}
+                <div>
+                  <Label className="text-[13px] font-bold uppercase tracking-widest text-[#999990] mb-4 block">Length</Label>
+                  <Select value={wordCount} onValueChange={setWordCount}>
+                    <SelectTrigger className="h-12 rounded-xl bg-white dark:bg-[#1A1A1A] border-[#E5E5E0] dark:border-[#22221F]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="250">Short (250 words)</SelectItem>
+                      <SelectItem value="500">Medium (500 words)</SelectItem>
+                      <SelectItem value="1000">Long (1000 words)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Button 
+                  onClick={() => generateMutation.mutate()}
+                  disabled={!topic.trim() || generateMutation.isPending}
+                  className="w-full h-16 rounded-2xl bg-black dark:bg-white text-white dark:text-black font-bold text-lg"
+                >
+                  {generateMutation.isPending ? <Loader2 className="w-6 h-6 animate-spin" /> : "Draft Essay"}
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex items-center justify-between">
+            <h3 className="text-2xl font-bold">{result.title}</h3>
+            <Button variant="ghost" onClick={() => setResult(null)} className="rounded-full h-10 px-4 hover:bg-[#F0F0F0]">
+              <RotateCcw className="w-4 h-4 mr-2" /> Start New
             </Button>
-            <Button variant="outline" onClick={downloadEssay} className="flex-1 gap-2">
-              <Download className="w-4 h-4" />
-              Download
-            </Button>
+          </div>
+          
+          <div className="grid lg:grid-cols-12 gap-8">
+            <div className="lg:col-span-8">
+              <Card className="border-[#E5E5E0] dark:border-[#22221F] rounded-[32px]">
+                <CardContent className="p-8 lg:p-12">
+                  <div className="prose prose-lg dark:prose-invert max-w-none">
+                    <div className="whitespace-pre-wrap leading-[1.8] text-[17px] text-[#111110] dark:text-[#E5E5E0]">
+                      {result.essay}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            <div className="lg:col-span-4 space-y-6">
+              <Card className="border-[#E5E5E0] dark:border-[#22221F] rounded-[24px] bg-[#F9F9F8] dark:bg-[#111110]">
+                <CardContent className="p-6">
+                  <h4 className="text-[13px] font-bold uppercase tracking-widest text-[#999990] mb-4">Structure</h4>
+                  <ul className="space-y-4">
+                    {result.outline.map((o, i) => (
+                      <li key={i} className="flex gap-3 text-sm font-medium">
+                        <span className="w-6 h-6 rounded bg-black dark:bg-white text-white dark:text-black flex items-center justify-center text-[10px] shrink-0 mt-0.5">{i+1}</span>
+                        <span className="text-[#666660]">{o}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+              <div className="flex gap-2">
+                <Button onClick={copyEssay} className="flex-1 h-12 rounded-xl bg-black dark:bg-white text-white dark:text-black">
+                  {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
+                  {copied ? "Copied" : "Copy"}
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}
