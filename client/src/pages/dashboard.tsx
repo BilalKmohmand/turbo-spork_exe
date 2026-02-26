@@ -6,8 +6,8 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import {
   MessageSquare, Mic, FileText, FileEdit, Brain,
   LogOut, LayoutDashboard, Sparkles, Settings,
-  HelpCircle, Crown, ClipboardCheck, Search,
-  Bell, ChevronRight, X, Menu, PanelLeftClose, PanelLeftOpen
+  HelpCircle, Crown, ClipboardCheck,
+  Menu, PanelLeftClose, PanelLeftOpen
 } from "lucide-react";
 
 import SolverContent    from "@/components/dashboard/solver-content";
@@ -220,13 +220,9 @@ function Sidebar({
 function Header({
   activeLabel,
   onMenuClick,
-  onNavigate,
-  userName,
 }: {
   activeLabel: string;
   onMenuClick: () => void;
-  onNavigate: (section: string) => void;
-  userName: string;
 }) {
   return (
     <header className="h-[60px] flex items-center justify-between px-6 bg-white dark:bg-[#0A0A0A] border-b border-[#E5E5E0] dark:border-[#22221F] sticky top-0 z-20">
@@ -237,20 +233,8 @@ function Header({
         <h1 className="text-[15px] font-semibold text-[#111110] dark:text-[#F9F9F8]">{activeLabel}</h1>
       </div>
 
-      <div className="flex items-center gap-3">
-        <div className="hidden md:flex items-center gap-2 h-9 w-[300px] px-3 rounded-full bg-[#F0F0F0] dark:bg-[#1A1A1A] border border-transparent focus-within:border-[#E5E5E0] transition-all">
-          <Search className="w-4 h-4 text-[#999990]" />
-          <input 
-            type="text" 
-            placeholder="Search resources..." 
-            className="bg-transparent border-none focus:ring-0 text-[13px] w-full placeholder:text-[#999990] text-[#111110] dark:text-white"
-          />
-        </div>
+      <div className="flex items-center gap-2">
         <ThemeToggle />
-        <button className="p-2 rounded-full text-[#666660] hover:bg-[#F0F0F0] dark:hover:bg-[#1A1A1A] relative">
-          <Bell className="w-4.5 h-4.5" />
-          <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-orange-500 rounded-full border-2 border-white dark:border-black" />
-        </button>
       </div>
     </header>
   );
@@ -301,8 +285,6 @@ export default function Dashboard() {
         <Header 
           activeLabel={activeLabel} 
           onMenuClick={() => setSidebarOpen(true)} 
-          onNavigate={setActive}
-          userName={user.displayName}
         />
 
         <main className="flex-1 overflow-y-auto bg-[#FFFFFF] dark:bg-[#0A0A0A]">
