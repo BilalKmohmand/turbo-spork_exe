@@ -1,7 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
-import { BackgroundVideo } from "@/components/background-video";
 import {
   ArrowRight, Sparkles, Brain, Camera, MessageSquare,
   FileText, Mic, FileEdit, CheckCircle, Star,
@@ -24,49 +23,43 @@ const FEATURES = [
     icon: Camera,
     label: "Photo Solver",
     desc: "Snap a photo of any problem — handwritten or printed — and get an instant, step-by-step solution.",
-    span: "col-span-1 row-span-1",
-    accent: "from-violet-500/20 to-indigo-500/10",
-    iconColor: "text-violet-400",
+    iconBg: "bg-violet-50",
+    iconColor: "text-violet-600",
   },
   {
     icon: MessageSquare,
     label: "AI Tutor",
-    desc: "Chat naturally with our AI tutor across Math, Science, History, Languages and more. Ask follow-up questions until everything clicks.",
-    span: "col-span-1 row-span-1 md:col-span-2",
-    accent: "from-fuchsia-500/20 to-violet-500/10",
-    iconColor: "text-fuchsia-400",
+    desc: "Chat naturally with our AI tutor across Math, Science, History, Languages and more.",
+    iconBg: "bg-fuchsia-50",
+    iconColor: "text-fuchsia-600",
   },
   {
     icon: FileText,
     label: "Quiz Generator",
     desc: "Turn any notes or textbook into personalized quizzes with difficulty levels and instant scoring.",
-    span: "col-span-1 row-span-1 md:col-span-2",
-    accent: "from-emerald-500/20 to-teal-500/10",
-    iconColor: "text-emerald-400",
+    iconBg: "bg-emerald-50",
+    iconColor: "text-emerald-600",
   },
   {
     icon: Mic,
     label: "Lecture Notes",
     desc: "Record any lecture and get AI-generated, structured study notes in seconds.",
-    span: "col-span-1 row-span-1",
-    accent: "from-sky-500/20 to-cyan-500/10",
-    iconColor: "text-sky-400",
+    iconBg: "bg-sky-50",
+    iconColor: "text-sky-600",
   },
   {
     icon: FileEdit,
     label: "Essay Writer",
     desc: "AI-powered outlines, drafts and feedback to help you write better essays faster.",
-    span: "col-span-1 row-span-1",
-    accent: "from-amber-500/20 to-orange-500/10",
-    iconColor: "text-amber-400",
+    iconBg: "bg-amber-50",
+    iconColor: "text-amber-600",
   },
   {
     icon: GraduationCap,
     label: "Teacher Tools",
     desc: "Grade submissions, give feedback and track student progress — all in one dashboard.",
-    span: "col-span-1 row-span-1",
-    accent: "from-pink-500/20 to-rose-500/10",
-    iconColor: "text-pink-400",
+    iconBg: "bg-pink-50",
+    iconColor: "text-pink-600",
   },
 ];
 
@@ -103,13 +96,8 @@ const fadeUp = (delay = 0) => ({
 
 /* ─── Landing ────────────────────────────────────────────────── */
 export default function Landing() {
-  const heroRef = useRef<HTMLElement>(null);
-  const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.6], [1, 0]);
-  const heroY       = useTransform(scrollYProgress, [0, 1], [0, 80]);
-
-  const [menuOpen, setMenuOpen]   = useState(false);
-  const [scrolled, setScrolled]   = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 20);
@@ -118,30 +106,30 @@ export default function Landing() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-white overflow-x-hidden">
+    <div className="min-h-screen bg-white text-[#111110] overflow-x-hidden">
 
       {/* ══ NAVBAR ══════════════════════════════════════════════ */}
       <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
-        scrolled ? "bg-[#09090b]/90 backdrop-blur-md border-b border-white/10 shadow-lg shadow-black/20" : ""
+        scrolled
+          ? "bg-white/90 backdrop-blur-md border-b border-[#E5E5E0] shadow-sm"
+          : "bg-transparent"
       }`}>
         <div className="max-w-7xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
-          {/* Logo */}
           <Link href="/">
             <div className="flex items-center gap-2.5 cursor-pointer">
-              <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center shadow-md shadow-violet-600/40">
+              <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center">
                 <Sparkles className="w-4 h-4 text-white" />
               </div>
-              <span className="font-bold text-[15px] tracking-tight">Gradeio</span>
+              <span className="font-bold text-[15px] tracking-tight text-[#111110]">Gradeio</span>
             </div>
           </Link>
 
-          {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-7">
             {NAV_LINKS.map(link => (
               <a
                 key={link}
                 href={link === "Pricing" ? "/pricing" : `#${link.toLowerCase().replace(" ", "-")}`}
-                className="text-[13px] text-white/50 hover:text-white/90 transition-colors"
+                className="text-[13px] text-[#666660] hover:text-[#111110] transition-colors"
                 data-testid={`link-${link.toLowerCase().replace(" ", "-")}`}
               >
                 {link}
@@ -149,16 +137,15 @@ export default function Landing() {
             ))}
           </nav>
 
-          {/* Actions */}
           <div className="hidden md:flex items-center gap-3">
             <Link href="/auth">
-              <button className="text-[13px] text-white/60 hover:text-white transition-colors px-3 py-1.5" data-testid="button-login">
+              <button className="text-[13px] text-[#666660] hover:text-[#111110] transition-colors px-3 py-1.5" data-testid="button-login">
                 Sign in
               </button>
             </Link>
             <Link href="/auth?mode=register">
               <button
-                className="flex items-center gap-1.5 text-[13px] font-semibold bg-violet-600 hover:bg-violet-500 text-white px-4 py-1.5 rounded-lg transition-colors shadow-md shadow-violet-600/30"
+                className="flex items-center gap-1.5 text-[13px] font-semibold bg-black hover:bg-[#222] text-white px-4 py-1.5 rounded-lg transition-colors"
                 data-testid="button-signup"
               >
                 Get started free
@@ -167,33 +154,31 @@ export default function Landing() {
             </Link>
           </div>
 
-          {/* Mobile hamburger */}
-          <button className="md:hidden p-2 text-white/60 hover:text-white" onClick={() => setMenuOpen(v => !v)}>
+          <button className="md:hidden p-2 text-[#666660] hover:text-[#111110]" onClick={() => setMenuOpen(v => !v)}>
             {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
 
-        {/* Mobile menu */}
         <AnimatePresence>
           {menuOpen && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
-              className="md:hidden border-t border-white/10 bg-[#09090b]/95 backdrop-blur-md overflow-hidden"
+              className="md:hidden border-t border-[#E5E5E0] bg-white overflow-hidden"
             >
               <div className="px-5 py-4 flex flex-col gap-4">
                 {NAV_LINKS.map(link => (
-                  <a key={link} href={`#${link.toLowerCase()}`} className="text-[14px] text-white/60 hover:text-white" onClick={() => setMenuOpen(false)}>
+                  <a key={link} href={`#${link.toLowerCase()}`} className="text-[14px] text-[#666660] hover:text-[#111110]" onClick={() => setMenuOpen(false)}>
                     {link}
                   </a>
                 ))}
-                <hr className="border-white/10" />
+                <hr className="border-[#E5E5E0]" />
                 <Link href="/auth">
-                  <button className="w-full text-left text-[14px] text-white/60 hover:text-white">Sign in</button>
+                  <button className="w-full text-left text-[14px] text-[#666660] hover:text-[#111110]">Sign in</button>
                 </Link>
                 <Link href="/auth?mode=register">
-                  <button className="w-full flex items-center justify-center gap-2 text-[14px] font-semibold bg-violet-600 text-white py-2.5 rounded-lg">
+                  <button className="w-full flex items-center justify-center gap-2 text-[14px] font-semibold bg-black text-white py-2.5 rounded-lg">
                     Get started free <ArrowRight className="w-4 h-4" />
                   </button>
                 </Link>
@@ -204,54 +189,51 @@ export default function Landing() {
       </header>
 
       {/* ══ HERO ════════════════════════════════════════════════ */}
-      <section ref={heroRef} className="relative min-h-[100svh] flex flex-col overflow-hidden">
-        <BackgroundVideo video="library" overlay="darkest" />
-
-        {/* Glow orbs */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-violet-600/20 rounded-full blur-[120px] pointer-events-none" />
-        <div className="absolute top-1/3 left-1/4 w-[300px] h-[300px] bg-indigo-600/15 rounded-full blur-[100px] pointer-events-none" />
+      <section className="relative min-h-[100svh] flex flex-col bg-[#F9F9F8] overflow-hidden">
+        {/* Subtle background accent */}
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-violet-300 to-transparent" />
+        <div className="absolute top-32 left-1/2 -translate-x-1/2 w-[700px] h-[500px] bg-violet-100/60 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute top-48 left-1/4 w-[300px] h-[300px] bg-indigo-100/40 rounded-full blur-[100px] pointer-events-none" />
 
         <motion.div
           className="relative z-10 flex-1 flex flex-col justify-center"
-          style={{ opacity: heroOpacity, y: heroY }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6 }}
         >
           <div className="max-w-7xl mx-auto px-5 sm:px-8 py-28 w-full">
-            {/* Pill badge */}
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5 }}
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-violet-500/30 bg-violet-500/10 text-violet-300 text-[12px] font-medium mb-8"
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-violet-200 bg-violet-50 text-violet-700 text-[12px] font-medium mb-8"
             >
               <Sparkles className="w-3.5 h-3.5" />
               AI-Powered Education · Free to start
             </motion.div>
 
-            {/* Headline */}
             <motion.h1
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-              className="text-5xl sm:text-6xl lg:text-[80px] xl:text-[88px] font-black tracking-tight leading-[0.92] max-w-4xl"
+              className="text-5xl sm:text-6xl lg:text-[80px] xl:text-[88px] font-black tracking-tight leading-[0.92] max-w-4xl text-[#111110]"
             >
               Make learning
               <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-fuchsia-400 to-indigo-400">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 via-fuchsia-600 to-indigo-600">
                 effortless.
               </span>
             </motion.h1>
 
-            {/* Subtext */}
             <motion.p
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
-              className="mt-6 text-[17px] sm:text-lg text-white/50 max-w-xl leading-relaxed"
+              className="mt-6 text-[17px] sm:text-lg text-[#666660] max-w-xl leading-relaxed"
             >
               The AI education platform that turns homework into understanding — instant solutions, step-by-step explanations, and personalized tutoring for every subject.
             </motion.p>
 
-            {/* CTAs */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -260,7 +242,7 @@ export default function Landing() {
             >
               <Link href="/auth?mode=register">
                 <button
-                  className="flex items-center gap-2 px-6 py-3 bg-violet-600 hover:bg-violet-500 text-white text-[15px] font-semibold rounded-xl shadow-xl shadow-violet-600/30 transition-all hover:shadow-violet-500/40 hover:-translate-y-0.5"
+                  className="flex items-center gap-2 px-6 py-3 bg-black hover:bg-[#222] text-white text-[15px] font-semibold rounded-xl shadow-xl shadow-black/10 transition-all hover:-translate-y-0.5"
                   data-testid="button-hero-cta"
                 >
                   Start free trial
@@ -269,7 +251,7 @@ export default function Landing() {
               </Link>
               <Link href="/auth">
                 <button
-                  className="flex items-center gap-2 px-6 py-3 text-white/70 hover:text-white text-[15px] font-medium border border-white/15 hover:border-white/30 rounded-xl transition-all"
+                  className="flex items-center gap-2 px-6 py-3 text-[#666660] hover:text-[#111110] text-[15px] font-medium border border-[#E5E5E0] hover:border-[#999990] rounded-xl transition-all"
                   data-testid="button-hero-login"
                 >
                   Sign in
@@ -277,23 +259,21 @@ export default function Landing() {
               </Link>
             </motion.div>
 
-            {/* Micro trust */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.7 }}
-              className="mt-8 flex items-center gap-2 text-[12px] text-white/30"
+              className="mt-8 flex items-center gap-2 text-[12px] text-[#999990]"
             >
               <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
               No credit card required
-              <span className="mx-2 opacity-30">·</span>
+              <span className="mx-2 opacity-40">·</span>
               <Shield className="w-3.5 h-3.5 text-emerald-500" />
               Free forever plan available
             </motion.div>
           </div>
         </motion.div>
 
-        {/* Scroll cue */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -303,19 +283,19 @@ export default function Landing() {
           <motion.div
             animate={{ y: [0, 6, 0] }}
             transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            className="text-white/20"
+            className="text-[#CCCCCC]"
           >
             <ChevronDown className="w-6 h-6" />
           </motion.div>
         </motion.div>
 
         {/* Universities bar */}
-        <div className="relative z-10 border-t border-white/8 bg-white/3 backdrop-blur-sm py-5">
+        <div className="relative z-10 border-t border-[#E5E5E0] bg-white/60 backdrop-blur-sm py-5">
           <div className="max-w-7xl mx-auto px-5 sm:px-8 flex flex-col sm:flex-row items-center gap-4 sm:gap-10">
-            <span className="text-[11px] text-white/30 font-medium shrink-0">Trusted by students at</span>
+            <span className="text-[11px] text-[#999990] font-medium shrink-0">Trusted by students at</span>
             <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2">
               {UNIVERSITIES.map(u => (
-                <span key={u} className="text-[12px] font-semibold text-white/20 hover:text-white/40 transition-colors">{u}</span>
+                <span key={u} className="text-[12px] font-semibold text-[#C0C0BB] hover:text-[#666660] transition-colors">{u}</span>
               ))}
             </div>
           </div>
@@ -323,14 +303,13 @@ export default function Landing() {
       </section>
 
       {/* ══ STATS ═══════════════════════════════════════════════ */}
-      <section className="relative py-24 overflow-hidden" id="features">
-        <BackgroundVideo video="math" overlay="darkest" />
-        <div className="relative z-10 max-w-7xl mx-auto px-5 sm:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-0 md:divide-x divide-white/10">
+      <section className="py-20 border-b border-[#E5E5E0] bg-white" id="features">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-0 divide-x divide-[#E5E5E0]">
             {STATS.map((s, i) => (
-              <motion.div key={s.label} {...fadeUp(i * 0.1)} className="flex flex-col items-center text-center py-4 md:px-8">
-                <span className="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-violet-300 to-fuchsia-300 mb-2">{s.value}</span>
-                <span className="text-[13px] text-white/40 font-medium">{s.label}</span>
+              <motion.div key={s.label} {...fadeUp(i * 0.1)} className="flex flex-col items-center text-center py-4 px-8">
+                <span className="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-violet-600 to-fuchsia-600 mb-2">{s.value}</span>
+                <span className="text-[13px] text-[#999990] font-medium">{s.label}</span>
               </motion.div>
             ))}
           </div>
@@ -338,37 +317,34 @@ export default function Landing() {
       </section>
 
       {/* ══ FEATURES BENTO GRID ═════════════════════════════════ */}
-      <section className="relative py-28 overflow-hidden" id="features">
-        <BackgroundVideo video="typing" overlay="darkest" />
-        <div className="relative z-10 max-w-7xl mx-auto px-5 sm:px-8">
+      <section className="py-28 bg-[#F9F9F8]" id="features">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8">
           <motion.div {...fadeUp()} className="text-center mb-16">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-violet-400/80 mb-3 block">Everything you need</span>
-            <h2 className="text-4xl sm:text-5xl font-black tracking-tight">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-violet-600 mb-3 block">Everything you need</span>
+            <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-[#111110]">
               One platform,
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400"> every subject.</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 to-fuchsia-600"> every subject.</span>
             </h2>
-            <p className="mt-4 text-[15px] text-white/40 max-w-xl mx-auto leading-relaxed">
+            <p className="mt-4 text-[15px] text-[#666660] max-w-xl mx-auto leading-relaxed">
               From instant problem solving to lecture notes — Gradeio has every tool you need to go from stuck to confident.
             </p>
           </motion.div>
 
-          {/* Bento */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {FEATURES.map((f, i) => (
               <motion.div
                 key={f.label}
                 {...fadeUp(i * 0.08)}
-                className={`group relative rounded-2xl border border-white/10 bg-white/3 backdrop-blur-sm p-6 hover:border-white/20 hover:bg-white/5 transition-all duration-300 overflow-hidden ${f.span}`}
+                className="group relative rounded-2xl border border-[#E5E5E0] bg-white p-6 hover:border-violet-200 hover:shadow-lg hover:shadow-violet-50 transition-all duration-300 overflow-hidden"
                 data-testid={`card-feature-${i}`}
               >
-                {/* Gradient bg */}
-                <div className={`absolute inset-0 bg-gradient-to-br ${f.accent} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+                <div className="absolute inset-0 bg-gradient-to-br from-violet-50/0 to-fuchsia-50/0 group-hover:from-violet-50/40 group-hover:to-fuchsia-50/20 transition-all duration-500" />
                 <div className="relative z-10">
-                  <div className={`w-10 h-10 rounded-xl bg-white/8 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
+                  <div className={`w-10 h-10 rounded-xl ${f.iconBg} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
                     <f.icon className={`w-5 h-5 ${f.iconColor}`} />
                   </div>
-                  <h3 className="text-[15px] font-semibold text-white mb-2" data-testid={`text-feature-title-${i}`}>{f.label}</h3>
-                  <p className="text-[13px] text-white/45 leading-relaxed">{f.desc}</p>
+                  <h3 className="text-[15px] font-semibold text-[#111110] mb-2" data-testid={`text-feature-title-${i}`}>{f.label}</h3>
+                  <p className="text-[13px] text-[#666660] leading-relaxed">{f.desc}</p>
                 </div>
               </motion.div>
             ))}
@@ -377,31 +353,28 @@ export default function Landing() {
       </section>
 
       {/* ══ HOW IT WORKS ════════════════════════════════════════ */}
-      <section className="relative py-28 overflow-hidden" id="how-it-works">
-        <BackgroundVideo video="neural" overlay="darkest" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-violet-700/15 rounded-full blur-[100px] pointer-events-none" />
-        <div className="relative z-10 max-w-7xl mx-auto px-5 sm:px-8">
+      <section className="py-28 bg-white" id="how-it-works">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8">
           <motion.div {...fadeUp()} className="text-center mb-20">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-violet-400/80 mb-3 block">Process</span>
-            <h2 className="text-4xl sm:text-5xl font-black tracking-tight">Done in 3 steps.</h2>
+            <span className="text-[11px] font-bold uppercase tracking-widest text-violet-600 mb-3 block">Process</span>
+            <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-[#111110]">Done in 3 steps.</h2>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-8">
             {STEPS.map((step, i) => (
               <motion.div key={step.n} {...fadeUp(i * 0.15)} className="relative flex flex-col items-center text-center">
-                {/* Connector line */}
                 {i < STEPS.length - 1 && (
-                  <div className="hidden md:block absolute top-10 left-[60%] right-[-40%] h-px border-t border-dashed border-white/15" />
+                  <div className="hidden md:block absolute top-10 left-[60%] right-[-40%] h-px border-t border-dashed border-[#E5E5E0]" />
                 )}
-                <div className="relative w-20 h-20 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-6 group hover:border-violet-500/40 hover:bg-violet-500/5 transition-all">
-                  <step.icon className="w-8 h-8 text-violet-400" />
-                  <div className="absolute -top-3 -right-3 w-7 h-7 rounded-full bg-violet-600 border-2 border-[#09090b] flex items-center justify-center text-[11px] font-black text-white">
+                <div className="relative w-20 h-20 rounded-2xl bg-[#F9F9F8] border border-[#E5E5E0] flex items-center justify-center mb-6 group hover:border-violet-200 hover:bg-violet-50 transition-all">
+                  <step.icon className="w-8 h-8 text-violet-600" />
+                  <div className="absolute -top-3 -right-3 w-7 h-7 rounded-full bg-black border-2 border-white flex items-center justify-center text-[11px] font-black text-white">
                     {i + 1}
                   </div>
                 </div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400/60 mb-2">{step.n}</p>
-                <h3 className="text-[17px] font-bold text-white mb-2">{step.title}</h3>
-                <p className="text-[13px] text-white/40 leading-relaxed max-w-xs">{step.desc}</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-violet-600/60 mb-2">{step.n}</p>
+                <h3 className="text-[17px] font-bold text-[#111110] mb-2">{step.title}</h3>
+                <p className="text-[13px] text-[#666660] leading-relaxed max-w-xs">{step.desc}</p>
               </motion.div>
             ))}
           </div>
@@ -409,30 +382,28 @@ export default function Landing() {
       </section>
 
       {/* ══ COMPARISON / PERKS ══════════════════════════════════ */}
-      <section className="relative py-28 overflow-hidden">
-        <BackgroundVideo video="classroom" overlay="darkest" />
-        <div className="relative z-10 max-w-7xl mx-auto px-5 sm:px-8">
+      <section className="py-28 bg-[#F9F9F8]">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
-            {/* Left */}
             <motion.div {...fadeUp()}>
-              <span className="text-[11px] font-bold uppercase tracking-widest text-violet-400/80 mb-3 block">Why Gradeio</span>
-              <h2 className="text-4xl sm:text-5xl font-black tracking-tight mb-8">
+              <span className="text-[11px] font-bold uppercase tracking-widest text-violet-600 mb-3 block">Why Gradeio</span>
+              <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-[#111110] mb-8">
                 Smarter than
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400"> generic AI chatbots.</span>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 to-fuchsia-600"> generic AI chatbots.</span>
               </h2>
               <div className="space-y-4">
                 {PERKS.map((perk, i) => (
                   <motion.div key={i} {...fadeUp(i * 0.07)} className="flex items-center gap-3.5">
-                    <div className="w-5 h-5 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
-                      <CheckCircle className="w-3 h-3 text-emerald-400" />
+                    <div className="w-5 h-5 rounded-full bg-emerald-100 border border-emerald-200 flex items-center justify-center shrink-0">
+                      <CheckCircle className="w-3 h-3 text-emerald-600" />
                     </div>
-                    <span className="text-[14px] text-white/65">{perk}</span>
+                    <span className="text-[14px] text-[#444440]">{perk}</span>
                   </motion.div>
                 ))}
               </div>
               <div className="mt-10">
                 <Link href="/auth?mode=register">
-                  <button className="flex items-center gap-2 px-6 py-3 bg-violet-600 hover:bg-violet-500 text-white text-[14px] font-semibold rounded-xl transition-all shadow-lg shadow-violet-600/25">
+                  <button className="flex items-center gap-2 px-6 py-3 bg-black hover:bg-[#222] text-white text-[14px] font-semibold rounded-xl transition-all shadow-lg shadow-black/10">
                     Try it free
                     <ArrowRight className="w-4 h-4" />
                   </button>
@@ -440,16 +411,15 @@ export default function Landing() {
               </div>
             </motion.div>
 
-            {/* Right — stat card */}
             <motion.div {...fadeUp(0.15)}>
-              <div className="relative rounded-3xl border border-white/10 bg-white/3 backdrop-blur-md p-8 overflow-hidden">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-violet-600/20 blur-[60px]" />
+              <div className="relative rounded-3xl border border-[#E5E5E0] bg-white p-8 overflow-hidden shadow-xl shadow-violet-50">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-violet-100 blur-[60px]" />
                 <div className="relative z-10 text-center mb-8">
-                  <div className="text-8xl font-black text-transparent bg-clip-text bg-gradient-to-b from-violet-300 to-fuchsia-300 mb-2">95%</div>
-                  <p className="text-white/40 text-[15px]">Overall Accuracy Rate</p>
+                  <div className="text-8xl font-black text-transparent bg-clip-text bg-gradient-to-b from-violet-600 to-fuchsia-600 mb-2">95%</div>
+                  <p className="text-[#666660] text-[15px]">Overall Accuracy Rate</p>
                   <div className="flex justify-center gap-1 mt-3">
                     {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />)}
-                    <span className="text-white/40 text-[13px] ml-1.5">4.8 / 5.0</span>
+                    <span className="text-[#999990] text-[13px] ml-1.5">4.8 / 5.0</span>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -459,10 +429,10 @@ export default function Landing() {
                     { value: "50+",   label: "Subjects",        icon: BookOpen },
                     { value: "24/7",  label: "Available",       icon: Zap },
                   ].map((s, i) => (
-                    <div key={i} className="bg-white/5 rounded-xl p-4 text-center border border-white/8">
-                      <s.icon className="w-4 h-4 text-violet-400 mx-auto mb-2" />
-                      <div className="text-[22px] font-bold text-white">{s.value}</div>
-                      <div className="text-[11px] text-white/35 mt-0.5">{s.label}</div>
+                    <div key={i} className="bg-[#F9F9F8] rounded-xl p-4 text-center border border-[#E5E5E0]">
+                      <s.icon className="w-4 h-4 text-violet-600 mx-auto mb-2" />
+                      <div className="text-[22px] font-bold text-[#111110]">{s.value}</div>
+                      <div className="text-[11px] text-[#999990] mt-0.5">{s.label}</div>
                     </div>
                   ))}
                 </div>
@@ -473,14 +443,13 @@ export default function Landing() {
       </section>
 
       {/* ══ TESTIMONIALS ════════════════════════════════════════ */}
-      <section className="relative py-28 overflow-hidden" id="testimonials">
-        <BackgroundVideo video="library" overlay="darkest" />
-        <div className="relative z-10 max-w-7xl mx-auto px-5 sm:px-8">
+      <section className="py-28 bg-white" id="testimonials">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8">
           <motion.div {...fadeUp()} className="text-center mb-16">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-violet-400/80 mb-3 block">Testimonials</span>
-            <h2 className="text-4xl sm:text-5xl font-black tracking-tight">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-violet-600 mb-3 block">Testimonials</span>
+            <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-[#111110]">
               Loved by students
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400"> everywhere.</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 to-fuchsia-600"> everywhere.</span>
             </h2>
           </motion.div>
 
@@ -489,23 +458,22 @@ export default function Landing() {
               <motion.div
                 key={i}
                 {...fadeUp(i * 0.1)}
-                className="relative rounded-2xl border border-white/10 bg-white/3 backdrop-blur-sm p-7 hover:border-white/20 hover:bg-white/5 transition-all flex flex-col"
+                className="relative rounded-2xl border border-[#E5E5E0] bg-[#F9F9F8] p-7 hover:border-violet-200 hover:bg-white hover:shadow-lg hover:shadow-violet-50/50 transition-all flex flex-col"
                 data-testid={`card-testimonial-${i}`}
               >
-                {/* Stars */}
                 <div className="flex gap-0.5 mb-5">
                   {[...Array(t.rating)].map((_, j) => <Star key={j} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />)}
                 </div>
-                <p className="text-[14px] text-white/60 leading-relaxed flex-1 mb-6" data-testid={`text-testimonial-${i}`}>
+                <p className="text-[14px] text-[#444440] leading-relaxed flex-1 mb-6" data-testid={`text-testimonial-${i}`}>
                   "{t.text}"
                 </p>
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-violet-600/30 border border-violet-500/30 flex items-center justify-center text-[11px] font-bold text-violet-300">
+                  <div className="w-9 h-9 rounded-full bg-violet-100 border border-violet-200 flex items-center justify-center text-[11px] font-bold text-violet-700">
                     {t.avatar}
                   </div>
                   <div>
-                    <p className="text-[13px] font-semibold text-white" data-testid={`text-author-${i}`}>{t.name}</p>
-                    <p className="text-[11px] text-white/35">{t.school}</p>
+                    <p className="text-[13px] font-semibold text-[#111110]" data-testid={`text-author-${i}`}>{t.name}</p>
+                    <p className="text-[11px] text-[#999990]">{t.school}</p>
                   </div>
                 </div>
               </motion.div>
@@ -515,9 +483,7 @@ export default function Landing() {
       </section>
 
       {/* ══ CTA BANNER ══════════════════════════════════════════ */}
-      <section className="relative py-28 overflow-hidden">
-        <BackgroundVideo video="math" overlay="darkest" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-violet-900/10 to-transparent pointer-events-none" />
+      <section className="py-28 bg-[#111110] text-white overflow-hidden relative">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-violet-700/20 rounded-full blur-[120px] pointer-events-none" />
 
         <div className="relative z-10 max-w-3xl mx-auto px-5 sm:px-8 text-center">
@@ -532,13 +498,13 @@ export default function Landing() {
                 your studies?
               </span>
             </h2>
-            <p className="text-[15px] text-white/40 mb-10 max-w-lg mx-auto leading-relaxed">
+            <p className="text-[15px] text-white/50 mb-10 max-w-lg mx-auto leading-relaxed">
               Join over 2 million students who study smarter with Gradeio every day. Free to start, no credit card needed.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4">
               <Link href="/auth?mode=register">
                 <button
-                  className="flex items-center gap-2 px-7 py-3.5 bg-violet-600 hover:bg-violet-500 text-white text-[15px] font-semibold rounded-xl shadow-2xl shadow-violet-600/30 hover:shadow-violet-500/40 transition-all hover:-translate-y-0.5"
+                  className="flex items-center gap-2 px-7 py-3.5 bg-white hover:bg-[#F9F9F8] text-black text-[15px] font-semibold rounded-xl shadow-2xl transition-all hover:-translate-y-0.5"
                   data-testid="button-cta-bottom"
                 >
                   Start free trial
@@ -557,26 +523,23 @@ export default function Landing() {
       </section>
 
       {/* ══ FOOTER ══════════════════════════════════════════════ */}
-      <footer className="relative border-t border-white/8 py-16 overflow-hidden">
-        <BackgroundVideo video="typing" overlay="darkest" />
-        <div className="relative z-10 max-w-7xl mx-auto px-5 sm:px-8">
+      <footer className="border-t border-[#E5E5E0] py-16 bg-[#F9F9F8]">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
-            {/* Brand */}
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center">
                   <Sparkles className="w-4 h-4 text-white" />
                 </div>
-                <span className="font-bold text-[15px]">Gradeio</span>
+                <span className="font-bold text-[15px] text-[#111110]">Gradeio</span>
               </div>
-              <p className="text-[13px] text-white/30 leading-relaxed max-w-xs">
+              <p className="text-[13px] text-[#999990] leading-relaxed max-w-xs">
                 AI-powered homework help and learning tools for students of all levels, available 24/7.
               </p>
             </div>
 
-            {/* Product */}
             <div>
-              <h4 className="text-[12px] font-semibold uppercase tracking-wider text-white/40 mb-4">Product</h4>
+              <h4 className="text-[12px] font-semibold uppercase tracking-wider text-[#999990] mb-4">Product</h4>
               <div className="space-y-3">
                 {[
                   { label: "AI Tutor",       href: "/solver" },
@@ -585,36 +548,34 @@ export default function Landing() {
                   { label: "Lecture Notes",  href: "/notes" },
                 ].map(l => (
                   <Link key={l.label} href={l.href}>
-                    <p className="text-[13px] text-white/35 hover:text-white/70 transition-colors cursor-pointer">{l.label}</p>
+                    <p className="text-[13px] text-[#666660] hover:text-[#111110] transition-colors cursor-pointer">{l.label}</p>
                   </Link>
                 ))}
               </div>
             </div>
 
-            {/* Tools */}
             <div>
-              <h4 className="text-[12px] font-semibold uppercase tracking-wider text-white/40 mb-4">Tools</h4>
+              <h4 className="text-[12px] font-semibold uppercase tracking-wider text-[#999990] mb-4">Tools</h4>
               <div className="space-y-3">
                 {["Math Solver", "Photo Solver", "Equation Solver", "Science Tutor"].map(t => (
                   <Link key={t} href="/solver">
-                    <p className="text-[13px] text-white/35 hover:text-white/70 transition-colors cursor-pointer">{t}</p>
+                    <p className="text-[13px] text-[#666660] hover:text-[#111110] transition-colors cursor-pointer">{t}</p>
                   </Link>
                 ))}
               </div>
             </div>
 
-            {/* Company */}
             <div>
-              <h4 className="text-[12px] font-semibold uppercase tracking-wider text-white/40 mb-4">Company</h4>
+              <h4 className="text-[12px] font-semibold uppercase tracking-wider text-[#999990] mb-4">Company</h4>
               <div className="space-y-3">
                 {["About", "Pricing", "Privacy", "Terms"].map(t => (
-                  <a key={t} href={t === "Pricing" ? "/pricing" : "#"} className="block text-[13px] text-white/35 hover:text-white/70 transition-colors">{t}</a>
+                  <a key={t} href={t === "Pricing" ? "/pricing" : "#"} className="block text-[13px] text-[#666660] hover:text-[#111110] transition-colors">{t}</a>
                 ))}
               </div>
             </div>
           </div>
 
-          <div className="pt-8 border-t border-white/8 flex flex-col sm:flex-row items-center justify-between gap-4 text-[12px] text-white/20">
+          <div className="pt-8 border-t border-[#E5E5E0] flex flex-col sm:flex-row items-center justify-between gap-4 text-[12px] text-[#999990]">
             <p>© 2025 Gradeio. All rights reserved.</p>
             <div className="flex items-center gap-1.5">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
