@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,9 @@ import { apiRequest } from "@/lib/queryClient";
 
 export default function AuthPage() {
   const [, setLocation] = useLocation();
+  const search = useSearch();
+  const params = new URLSearchParams(search);
+  const defaultTab = params.get("mode") === "register" ? "register" : "login";
   const [role, setRole] = useState<"student" | "teacher">("student");
   const [loginError, setLoginError] = useState<string | null>(null);
   const [registerError, setRegisterError] = useState<string | null>(null);
@@ -86,7 +89,7 @@ export default function AuthPage() {
 
         <Card className="border-[#E5E5E0] rounded-[32px] shadow-sm overflow-hidden bg-white">
           <CardContent className="p-8">
-            <Tabs defaultValue="login" className="w-full">
+            <Tabs defaultValue={defaultTab} className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-8 bg-[#F0F0F0] p-1 rounded-xl h-11">
                 <TabsTrigger
                   value="login"

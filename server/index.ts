@@ -10,6 +10,9 @@ import rateLimit from "express-rate-limit";
 
 const app = express();
 
+// Trust the first proxy (Replit's environment)
+app.set("trust proxy", 1);
+
 // Security headers with helmet
 app.use(helmet({
   contentSecurityPolicy: false, // Disable CSP for development flexibility

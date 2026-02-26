@@ -2,10 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   MessageSquare, Mic, FileText, FileEdit,
-  TrendingUp, CheckCircle, ArrowUpRight,
-  Zap, Target, Star, Trophy, Award, BookOpen,
-  BarChart2, Sparkles, ArrowUp, ArrowDown,
-  Clock, Layout, Plus, Search
+  ArrowUpRight, Zap, Sparkles, Plus, CheckCircle, XCircle,
 } from "lucide-react";
 import type { User } from "@/hooks/use-auth";
 
@@ -23,9 +20,30 @@ interface DashboardStats {
   nextLevelPoints: number;
 }
 
+interface QuizAttempt {
+  id: string;
+  topic: string;
+  score: number;
+  totalQuestions: number;
+  correctCount: number;
+  difficulty: string;
+  quizType: string;
+  attemptedAt: string;
+}
+
 interface OverviewContentProps {
   user: User;
   onNavigate: (section: string) => void;
+}
+
+function timeAgo(date: string) {
+  const diff = Date.now() - new Date(date).getTime();
+  const mins  = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days  = Math.floor(diff / 86400000);
+  if (mins < 60)  return `${mins}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  return `${days}d ago`;
 }
 
 export default function OverviewContent({ user, onNavigate }: OverviewContentProps) {
@@ -33,6 +51,12 @@ export default function OverviewContent({ user, onNavigate }: OverviewContentPro
     queryKey: ["/api/student/stats"],
     refetchInterval: 5000,
   });
+
+  const { data: quizAttempts = [] } = useQuery<QuizAttempt[]>({
+    queryKey: ["/api/quiz-attempts"],
+  });
+
+  const recentQuizzes = quizAttempts.slice(0, 3);
 
   const xp        = stats?.points ?? 0;
   const level     = stats?.level ?? 1;
@@ -141,31 +165,54 @@ export default function OverviewContent({ user, onNavigate }: OverviewContentPro
         </div>
       </section>
 
-      {/* Recent Activity Mini-Table */}
+      {/* Recent Quizzes — real data */}
       <section className="p-6 rounded-[24px] border border-[#E5E5E0] dark:border-[#22221F] bg-white dark:bg-[#0A0A0A]">
         <div className="flex items-center justify-between mb-6">
           <h3 className="font-semibold text-[15px]">Recent Quizzes</h3>
           <button onClick={() => onNavigate('quiz')} className="text-[13px] text-[#666660] hover:text-black dark:hover:text-white transition-colors">View all</button>
         </div>
-        <div className="space-y-4">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="flex items-center justify-between py-3 border-b border-[#F0F0F0] dark:border-[#1A1A1A] last:border-0">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-[#F9F9F8] dark:bg-[#111110] flex items-center justify-center">
-                  <FileText className="w-4 h-4 text-[#666660]" />
+        {recentQuizzes.length === 0 ? (
+          <div className="text-center py-10">
+            <FileText className="w-8 h-8 text-[#CCCCCC] mx-auto mb-3" />
+            <p className="text-[14px] text-[#999990]">No quizzes yet. Generate your first quiz!</p>
+            <button
+              onClick={() => onNavigate("quiz")}
+              className="mt-4 text-[13px] font-semibold text-black dark:text-white underline"
+            >
+              Go to Quiz Generator →
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {recentQuizzes.map(q => {
+              const passed = q.score >= 60;
+              return (
+                <div key={q.id} className="flex items-center justify-between py-3 border-b border-[#F0F0F0] dark:border-[#1A1A1A] last:border-0">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${passed ? "bg-emerald-50 dark:bg-emerald-950/30" : "bg-red-50 dark:bg-red-950/30"}`}>
+                      {passed
+                        ? <CheckCircle className="w-4 h-4 text-emerald-500" />
+                        : <XCircle    className="w-4 h-4 text-red-400" />
+                      }
+                    </div>
+                    <div>
+                      <p className="text-[14px] font-medium truncate max-w-[180px]">{q.topic}</p>
+                      <p className="text-[11px] text-[#999990]">{q.correctCount}/{q.totalQuestions} correct · {timeAgo(q.attemptedAt)}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className={`text-[15px] font-bold ${q.score >= 80 ? "text-emerald-600" : q.score >= 60 ? "text-amber-600" : "text-red-500"}`}>
+                      {q.score}%
+                    </span>
+                    <div className={`px-2 py-0.5 rounded text-[10px] font-bold ${passed ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400" : "bg-red-50 dark:bg-red-950/30 text-red-500"}`}>
+                      {passed ? "PASS" : "FAIL"}
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[14px] font-medium">Calculus II Practice</p>
-                  <p className="text-[11px] text-[#999990]">2 hours ago</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="text-[14px] font-semibold">85%</span>
-                <div className="px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold">PASS</div>
-              </div>
-            </div>
-          ))}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </section>
     </div>
   );
