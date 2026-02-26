@@ -180,7 +180,11 @@ function Sidebar({
             <p className="text-[11px] text-violet-100/80 mb-3 leading-relaxed">
               Upgrade for unlimited credits & premium features.
             </p>
-            <button className="w-full h-7 text-[11px] font-semibold bg-white text-violet-700 rounded-lg hover:bg-violet-50 transition-colors">
+            <button
+              onClick={() => window.open("/pricing", "_blank")}
+              data-testid="button-upgrade-now"
+              className="w-full h-7 text-[11px] font-semibold bg-white text-violet-700 rounded-lg hover:bg-violet-50 transition-colors"
+            >
               Upgrade Now
             </button>
           </div>
@@ -220,10 +224,26 @@ function Sidebar({
 function Header({
   activeLabel,
   onMenuClick,
+  onNavigate,
+  userName,
 }: {
   activeLabel: string;
   onMenuClick: () => void;
+  onNavigate: (section: string) => void;
+  userName: string;
 }) {
+  const [showNotifs, setShowNotifs] = useState(false);
+
+  function initials(name: string) {
+    return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+  }
+
+  const notifications = [
+    { text: "AI Tutor is ready to help", time: "Just now", dot: "bg-violet-500" },
+    { text: "Your quiz results are in", time: "2 min ago", dot: "bg-emerald-500" },
+    { text: "New feature: Essay Writer updated", time: "1h ago", dot: "bg-amber-500" },
+  ];
+
   return (
     <header className="sticky top-0 z-20 h-16 flex items-center justify-between px-4 sm:px-6
       bg-white/80 dark:bg-gray-900/80 backdrop-blur-md
@@ -245,20 +265,64 @@ function Header({
 
       {/* Right */}
       <div className="flex items-center gap-1.5">
-        {/* Search */}
-        <div className="hidden md:flex items-center gap-2 h-8 px-3 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[13px] text-gray-400 dark:text-gray-500 cursor-text hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
+        {/* Search — clicking goes to AI Tutor */}
+        <button
+          onClick={() => onNavigate("solver")}
+          data-testid="button-search"
+          className="hidden md:flex items-center gap-2 h-8 px-3 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[13px] text-gray-400 dark:text-gray-500 cursor-pointer hover:border-violet-300 dark:hover:border-violet-700 hover:text-gray-600 dark:hover:text-gray-300 transition-all"
+          title="Search (opens AI Tutor)"
+        >
           <Search className="w-3.5 h-3.5 shrink-0" />
-          <span>Search...</span>
-          <kbd className="ml-2 hidden sm:inline-flex items-center gap-0.5 text-[10px] font-medium bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded px-1.5 py-0.5 text-gray-400">
+          <span>Ask AI anything...</span>
+          <kbd className="ml-2 hidden sm:inline-flex items-center text-[10px] font-medium bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded px-1.5 py-0.5 text-gray-400">
             ⌘K
           </kbd>
-        </div>
+        </button>
 
         {/* Notification */}
-        <button className="relative p-2 rounded-lg text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-          <Bell className="w-4.5 h-4.5" />
-          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-violet-500 ring-2 ring-white dark:ring-gray-900" />
-        </button>
+        <div className="relative">
+          <button
+            onClick={() => setShowNotifs(v => !v)}
+            data-testid="button-notifications"
+            className="relative p-2 rounded-lg text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          >
+            <Bell className="w-4 h-4" />
+            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-violet-500 ring-2 ring-white dark:ring-gray-900" />
+          </button>
+
+          {showNotifs && (
+            <div className="absolute right-0 mt-1 w-72 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl shadow-black/10 z-50 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                <span className="text-[13px] font-semibold text-gray-900 dark:text-white">Notifications</span>
+                <button
+                  onClick={() => setShowNotifs(false)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                {notifications.map((n, i) => (
+                  <div key={i} className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                    <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${n.dot}`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] text-gray-800 dark:text-gray-200 leading-snug">{n.text}</p>
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">{n.time}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="px-4 py-2.5 border-t border-gray-100 dark:border-gray-800">
+                <button
+                  onClick={() => setShowNotifs(false)}
+                  className="text-[12px] text-violet-600 dark:text-violet-400 font-medium hover:underline"
+                >
+                  Mark all as read
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Divider */}
         <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
@@ -270,9 +334,17 @@ function Header({
         </Badge>
 
         {/* Avatar */}
-        <Avatar className="w-8 h-8 cursor-pointer ring-2 ring-gray-200 dark:ring-gray-700 hover:ring-violet-400 transition-all">
-          <AvatarFallback className="bg-violet-600 text-white text-[11px] font-bold">G</AvatarFallback>
-        </Avatar>
+        <button
+          onClick={() => onNavigate("settings")}
+          data-testid="button-header-avatar"
+          title="Settings"
+        >
+          <Avatar className="w-8 h-8 cursor-pointer ring-2 ring-gray-200 dark:ring-gray-700 hover:ring-violet-400 transition-all">
+            <AvatarFallback className="bg-violet-600 text-white text-[11px] font-bold">
+              {initials(userName)}
+            </AvatarFallback>
+          </Avatar>
+        </button>
       </div>
     </header>
   );
@@ -322,7 +394,12 @@ export default function Dashboard() {
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Header activeLabel={activeLabel} onMenuClick={() => setSidebarOpen(true)} />
+        <Header
+          activeLabel={activeLabel}
+          onMenuClick={() => setSidebarOpen(true)}
+          onNavigate={setActive}
+          userName={user.displayName}
+        />
 
         <main className="flex-1 overflow-y-auto">
           {active === "overview"  && <OverviewContent user={user} onNavigate={setActive} />}

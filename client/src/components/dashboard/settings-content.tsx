@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,14 +7,16 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   Settings, 
   User, 
   Bell, 
-  Palette,
   Shield,
   Crown,
-  Check
+  Check,
+  Loader2,
+  Download,
 } from "lucide-react";
 import type { User as UserType } from "@/hooks/use-auth";
 
@@ -27,14 +30,42 @@ export default function SettingsContent({ user }: SettingsContentProps) {
   const [notifications, setNotifications] = useState(true);
   const [emailUpdates, setEmailUpdates] = useState(false);
 
-  const handleSaveProfile = () => {
-    const stored = localStorage.getItem("user");
-    if (stored) {
-      const userData = JSON.parse(stored);
-      userData.displayName = displayName;
-      localStorage.setItem("user", JSON.stringify(userData));
-      toast({ title: "Profile updated", description: "Your changes have been saved." });
-    }
+  const updateProfileMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("PATCH", "/api/auth/profile", { displayName });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to update profile");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      toast({ title: "Profile updated", description: "Your display name has been saved." });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const handleDownloadData = () => {
+    const data = {
+      user: {
+        displayName: user.displayName,
+        email: user.email,
+        role: user.role,
+      },
+      exportedAt: new Date().toISOString(),
+      note: "This export contains your Gradeio account data.",
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "gradeio-my-data.json";
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: "Download started", description: "Your data has been exported as JSON." });
   };
 
   return (
@@ -61,6 +92,7 @@ export default function SettingsContent({ user }: SettingsContentProps) {
               id="displayName"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="Your name"
               data-testid="input-display-name"
             />
           </div>
@@ -81,8 +113,19 @@ export default function SettingsContent({ user }: SettingsContentProps) {
             </div>
             <Badge variant="secondary" className="capitalize">{user.role}</Badge>
           </div>
-          <Button onClick={handleSaveProfile} data-testid="button-save-profile">
-            Save Changes
+          <Button
+            onClick={() => updateProfileMutation.mutate()}
+            disabled={updateProfileMutation.isPending || displayName.trim() === user.displayName}
+            data-testid="button-save-profile"
+          >
+            {updateProfileMutation.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save Changes"
+            )}
           </Button>
         </CardContent>
       </Card>
@@ -135,24 +178,28 @@ export default function SettingsContent({ user }: SettingsContentProps) {
             </div>
             <Badge className="bg-emerald-600">Active</Badge>
           </div>
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Check className="w-4 h-4 text-emerald-500" />
-              Unlimited AI Tutor queries
-            </div>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Check className="w-4 h-4 text-emerald-500" />
-              Lecture notes transcription
-            </div>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Check className="w-4 h-4 text-emerald-500" />
-              Quiz generation
-            </div>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Check className="w-4 h-4 text-emerald-500" />
-              Essay writing assistance
-            </div>
+          <div className="space-y-2 text-sm mb-4">
+            {[
+              "Unlimited AI Tutor queries",
+              "Lecture notes transcription",
+              "Quiz generation",
+              "Essay writing assistance",
+            ].map((f) => (
+              <div key={f} className="flex items-center gap-2 text-muted-foreground">
+                <Check className="w-4 h-4 text-emerald-500" />
+                {f}
+              </div>
+            ))}
           </div>
+          <Button
+            variant="outline"
+            className="w-full border-violet-300 dark:border-violet-800 text-violet-700 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-950/30"
+            onClick={() => window.open("/pricing", "_blank")}
+            data-testid="button-upgrade"
+          >
+            <Crown className="w-4 h-4 mr-2 text-amber-500" />
+            View Upgrade Options
+          </Button>
         </CardContent>
       </Card>
 
@@ -167,7 +214,13 @@ export default function SettingsContent({ user }: SettingsContentProps) {
           <p className="text-sm text-muted-foreground">
             Your data is encrypted and securely stored. We never share your personal information with third parties.
           </p>
-          <Button variant="outline" size="sm">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadData}
+            data-testid="button-download-data"
+          >
+            <Download className="w-4 h-4 mr-2" />
             Download My Data
           </Button>
         </CardContent>

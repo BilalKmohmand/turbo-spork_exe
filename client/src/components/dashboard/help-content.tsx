@@ -98,7 +98,11 @@ export default function HelpContent() {
           <p className="text-sm text-muted-foreground mb-4">
             Contact our support team for personalized assistance
           </p>
-          <Button variant="outline">
+          <Button
+            variant="outline"
+            onClick={() => window.open("mailto:support@gradeio.com?subject=Help%20Request", "_blank")}
+            data-testid="button-contact-support"
+          >
             Contact Support
           </Button>
         </CardContent>

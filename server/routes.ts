@@ -571,6 +571,24 @@ export async function registerRoutes(
     res.json({ user: safeUser });
   });
 
+  app.patch("/api/auth/profile", async (req, res) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+    const { displayName } = req.body;
+    if (!displayName || typeof displayName !== "string" || displayName.trim().length < 1) {
+      return res.status(400).json({ error: "Invalid display name" });
+    }
+    try {
+      const updated = await storage.updateUser(req.session.userId, { displayName: displayName.trim() });
+      if (!updated) return res.status(404).json({ error: "User not found" });
+      const { password: _, ...safeUser } = updated;
+      res.json({ user: safeUser });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update profile" });
+    }
+  });
+
   // Teacher routes
   app.get("/api/teacher/stats", async (req, res) => {
     try {

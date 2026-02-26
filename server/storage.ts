@@ -34,6 +34,7 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: string, data: { displayName?: string }): Promise<User | undefined>;
   
   // Submission operations
   createSubmission(data: Partial<InsertSubmission> & { content: string; studentName: string; title: string }): Promise<Submission>;
@@ -46,6 +47,7 @@ export interface IStorage {
   // Evaluation operations
   createEvaluation(data: InsertEvaluation): Promise<Evaluation>;
   getEvaluationBySubmission(submissionId: string): Promise<Evaluation | undefined>;
+  getEvaluationsByStudent(studentId: string): Promise<Evaluation[]>;
   
   // Stats
   getStudentStats(studentId?: string): Promise<DashboardStats>;
@@ -89,6 +91,11 @@ export class DatabaseStorage implements IStorage {
       password: insertUser.password,
       role: insertUser.role || "student",
     }).returning();
+    return user;
+  }
+
+  async updateUser(id: string, data: { displayName?: string }): Promise<User | undefined> {
+    const [user] = await db.update(users).set(data).where(eq(users.id, id)).returning();
     return user;
   }
 
@@ -196,6 +203,17 @@ export class DatabaseStorage implements IStorage {
       .from(evaluations)
       .where(eq(evaluations.submissionId, submissionId));
     return evaluation;
+  }
+
+  async getEvaluationsByStudent(studentId: string): Promise<Evaluation[]> {
+    const studentSubmissions = await db.select()
+      .from(submissions)
+      .where(eq(submissions.studentId, studentId));
+    if (studentSubmissions.length === 0) return [];
+    const submissionIds = studentSubmissions.map(s => s.id);
+    return await db.select()
+      .from(evaluations)
+      .where(inArray(evaluations.submissionId, submissionIds));
   }
 
   async getStudentStats(studentId?: string): Promise<DashboardStats> {

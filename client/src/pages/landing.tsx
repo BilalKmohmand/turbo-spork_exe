@@ -224,7 +224,7 @@ export default function Landing() {
               className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-violet-500/30 bg-violet-500/10 text-violet-300 text-[12px] font-medium mb-8"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              Powered by GPT-4o · Free to start
+              AI-Powered Education · Free to start
             </motion.div>
 
             {/* Headline */}
@@ -418,7 +418,7 @@ export default function Landing() {
               <span className="text-[11px] font-bold uppercase tracking-widest text-violet-400/80 mb-3 block">Why Gradeio</span>
               <h2 className="text-4xl sm:text-5xl font-black tracking-tight mb-8">
                 Smarter than
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400"> just asking ChatGPT.</span>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400"> generic AI chatbots.</span>
               </h2>
               <div className="space-y-4">
                 {PERKS.map((perk, i) => (
