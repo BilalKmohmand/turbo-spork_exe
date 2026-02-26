@@ -2,36 +2,27 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { 
-  Sidebar, 
-  SidebarContent, 
-  SidebarGroup, 
-  SidebarGroupContent,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarProvider,
-  SidebarHeader,
-  SidebarFooter,
-  SidebarTrigger
-} from "@/components/ui/sidebar";
-import { 
-  MessageSquare, 
-  Mic, 
-  FileText, 
-  FileEdit, 
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { ThemeToggle } from "@/components/theme-toggle";
+import {
+  MessageSquare,
+  Mic,
+  FileText,
+  FileEdit,
   Brain,
   LogOut,
   LayoutDashboard,
-  ChevronRight,
   Sparkles,
   Settings,
   HelpCircle,
-  Crown
+  Crown,
+  ClipboardCheck,
+  Search,
+  Bell,
+  ChevronDown,
 } from "lucide-react";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
 
 import SolverContent from "@/components/dashboard/solver-content";
 import NotesContent from "@/components/dashboard/notes-content";
@@ -41,14 +32,13 @@ import OverviewContent from "@/components/dashboard/overview-content";
 import HelpContent from "@/components/dashboard/help-content";
 import SettingsContent from "@/components/dashboard/settings-content";
 import EvaluateContent from "@/components/dashboard/evaluate-content";
-import { ClipboardCheck } from "lucide-react";
 
-const menuItems = [
-  { id: "overview", label: "Overview", icon: LayoutDashboard, badge: null },
+const navItems = [
+  { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "solver", label: "AI Tutor", icon: MessageSquare, badge: "Popular" },
-  { id: "notes", label: "Lecture Notes", icon: Mic, badge: null },
-  { id: "quiz", label: "Quiz Generator", icon: FileText, badge: null },
-  { id: "essay", label: "Essay Writer", icon: FileEdit, badge: null },
+  { id: "notes", label: "Lecture Notes", icon: Mic },
+  { id: "quiz", label: "Quiz Generator", icon: FileText },
+  { id: "essay", label: "Essay Writer", icon: FileEdit },
 ];
 
 const teacherItems = [
@@ -56,253 +46,238 @@ const teacherItems = [
 ];
 
 const supportItems = [
-  { id: "help", label: "Help Center", icon: HelpCircle },
   { id: "settings", label: "Settings", icon: Settings },
+  { id: "help", label: "Help Center", icon: HelpCircle },
 ];
+
+function getInitials(name: string) {
+  return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+}
 
 export default function Dashboard() {
   const { user, isLoading, logout } = useAuth(true);
-  const { toast } = useToast();
-  const [activeSection, setActiveSection] = useState("solver");
+  const [activeSection, setActiveSection] = useState("overview");
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center animate-pulse">
-            <Brain className="w-6 h-6 text-white" />
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center animate-pulse">
+            <Brain className="w-5 h-5 text-primary-foreground" />
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-violet-600 animate-bounce" style={{ animationDelay: "0ms" }} />
-            <div className="w-2 h-2 rounded-full bg-violet-600 animate-bounce" style={{ animationDelay: "150ms" }} />
-            <div className="w-2 h-2 rounded-full bg-violet-600 animate-bounce" style={{ animationDelay: "300ms" }} />
+          <div className="flex gap-1.5">
+            {[0, 150, 300].map(d => (
+              <div key={d} className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: `${d}ms` }} />
+            ))}
           </div>
         </div>
       </div>
     );
   }
 
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
-  const sidebarStyle = {
-    "--sidebar-width": "260px",
-    "--sidebar-width-icon": "56px",
-  };
-
-  const getInitials = (name: string) => {
-    return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
-  };
+  const allItems = [...navItems, ...teacherItems, ...supportItems];
+  const activeItem = allItems.find(i => i.id === activeSection);
 
   return (
-    <SidebarProvider style={sidebarStyle as React.CSSProperties}>
-      <div className="flex h-screen w-full bg-muted/30">
-        <Sidebar className="border-r border-border/50">
-          <SidebarHeader className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-600/20">
-                <Sparkles className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h2 className="font-bold text-base">Gradeio</h2>
-                <p className="text-[11px] text-muted-foreground">AI Learning Platform</p>
-              </div>
+    <div className="flex h-screen w-full bg-background overflow-hidden">
+      {/* Sidebar */}
+      <aside className="w-[220px] shrink-0 flex flex-col border-r border-border bg-sidebar h-full">
+        {/* Logo */}
+        <div className="h-14 flex items-center gap-2.5 px-4 border-b border-sidebar-border shrink-0">
+          <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
+            <Sparkles className="w-3.5 h-3.5 text-primary-foreground" />
+          </div>
+          <span className="font-semibold text-[15px] tracking-tight">Gradeio</span>
+        </div>
+
+        {/* Nav */}
+        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-5">
+          {/* Main */}
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-2 mb-1.5">Menu</p>
+            <ul className="space-y-0.5">
+              {navItems.map(item => (
+                <li key={item.id}>
+                  <button
+                    onClick={() => setActiveSection(item.id)}
+                    data-testid={`sidebar-${item.id}`}
+                    className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium transition-colors ${
+                      activeSection === item.id
+                        ? "bg-primary text-primary-foreground"
+                        : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                    }`}
+                  >
+                    <item.icon className="w-[15px] h-[15px] shrink-0" />
+                    <span className="flex-1 text-left">{item.label}</span>
+                    {item.badge && (
+                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-sm ${
+                        activeSection === item.id
+                          ? "bg-white/20 text-white"
+                          : "bg-primary/10 text-primary"
+                      }`}>
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Teacher */}
+          {user.role === "teacher" && (
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-2 mb-1.5">Teacher</p>
+              <ul className="space-y-0.5">
+                {teacherItems.map(item => (
+                  <li key={item.id}>
+                    <button
+                      onClick={() => setActiveSection(item.id)}
+                      data-testid={`sidebar-${item.id}`}
+                      className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium transition-colors ${
+                        activeSection === item.id
+                          ? "bg-emerald-600 text-white"
+                          : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                      }`}
+                    >
+                      <item.icon className="w-[15px] h-[15px] shrink-0" />
+                      <span className="flex-1 text-left">{item.label}</span>
+                      {item.badge && (
+                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-sm ${
+                          activeSection === item.id
+                            ? "bg-white/20 text-white"
+                            : "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                        }`}>
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </div>
-          </SidebarHeader>
+          )}
 
-          <SidebarContent className="px-3 py-2">
-            <SidebarGroup>
-              <p className="px-3 py-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-                Main Menu
-              </p>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {menuItems.map((item) => (
-                    <SidebarMenuItem key={item.id}>
-                      <SidebarMenuButton
-                        onClick={() => setActiveSection(item.id)}
-                        isActive={activeSection === item.id}
-                        className={`w-full justify-start gap-3 h-10 px-3 rounded-lg transition-all ${
-                          activeSection === item.id 
-                            ? "bg-violet-600 text-white hover:bg-violet-600 hover:text-white" 
-                            : "hover:bg-muted"
-                        }`}
-                        data-testid={`sidebar-${item.id}`}
-                      >
-                        <item.icon className="w-4 h-4" />
-                        <span className="font-medium text-sm">{item.label}</span>
-                        {item.badge && (
-                          <Badge 
-                            variant="secondary" 
-                            className={`ml-auto text-[10px] px-1.5 py-0 ${
-                              activeSection === item.id 
-                                ? "bg-white/20 text-white" 
-                                : "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300"
-                            }`}
-                          >
-                            {item.badge}
-                          </Badge>
-                        )}
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+          {/* Support */}
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-2 mb-1.5">Support</p>
+            <ul className="space-y-0.5">
+              {supportItems.map(item => (
+                <li key={item.id}>
+                  <button
+                    onClick={() => setActiveSection(item.id)}
+                    data-testid={`sidebar-${item.id}`}
+                    className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium transition-colors ${
+                      activeSection === item.id
+                        ? "bg-primary text-primary-foreground"
+                        : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                    }`}
+                  >
+                    <item.icon className="w-[15px] h-[15px] shrink-0" />
+                    <span>{item.label}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
 
-            {user.role === "teacher" && (
-              <SidebarGroup className="mt-4">
-                <p className="px-3 py-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-                  Teacher Tools
-                </p>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {teacherItems.map((item) => (
-                      <SidebarMenuItem key={item.id}>
-                        <SidebarMenuButton
-                          onClick={() => setActiveSection(item.id)}
-                          isActive={activeSection === item.id}
-                          className={`w-full justify-start gap-3 h-10 px-3 rounded-lg transition-all ${
-                            activeSection === item.id 
-                              ? "bg-emerald-600 text-white hover:bg-emerald-600 hover:text-white" 
-                              : "hover:bg-muted"
-                          }`}
-                          data-testid={`sidebar-${item.id}`}
-                        >
-                          <item.icon className="w-4 h-4" />
-                          <span className="font-medium text-sm">{item.label}</span>
-                          {item.badge && (
-                            <Badge 
-                              variant="secondary" 
-                              className={`ml-auto text-[10px] px-1.5 py-0 ${
-                                activeSection === item.id 
-                                  ? "bg-white/20 text-white" 
-                                  : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
-                              }`}
-                            >
-                              {item.badge}
-                            </Badge>
-                          )}
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
+          {/* Upgrade card */}
+          <div className="mx-0.5 p-3 rounded-lg border border-primary/20 bg-primary/5">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Crown className="w-3.5 h-3.5 text-amber-500" />
+              <span className="text-xs font-semibold">Free Plan</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground mb-2.5 leading-relaxed">
+              Upgrade for unlimited AI credits and features.
+            </p>
+            <Button size="sm" className="w-full h-7 text-xs">
+              Upgrade
+            </Button>
+          </div>
+        </nav>
+
+        {/* User Footer */}
+        <div className="shrink-0 border-t border-sidebar-border p-3">
+          <div className="flex items-center gap-2.5">
+            <Avatar className="w-8 h-8 shrink-0">
+              <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
+                {getInitials(user.displayName)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate leading-none mb-0.5">{user.displayName}</p>
+              <p className="text-[11px] text-muted-foreground truncate">{user.email}</p>
+            </div>
+            <div className="flex items-center gap-1">
+              <ThemeToggle />
+              <button
+                onClick={logout}
+                data-testid="button-logout"
+                className="p-1.5 rounded-md hover:bg-sidebar-accent text-muted-foreground hover:text-foreground transition-colors"
+                title="Sign out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Topbar */}
+        <header className="h-14 shrink-0 border-b border-border flex items-center justify-between px-5 bg-background">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Dashboard</span>
+            {activeSection !== "overview" && (
+              <>
+                <span className="text-muted-foreground/40">/</span>
+                <span className="font-medium">{activeItem?.label}</span>
+              </>
             )}
+          </div>
 
-            <SidebarGroup className="mt-4">
-              <p className="px-3 py-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-                Support
-              </p>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {supportItems.map((item) => (
-                    <SidebarMenuItem key={item.id}>
-                      <SidebarMenuButton
-                        onClick={() => setActiveSection(item.id)}
-                        isActive={activeSection === item.id}
-                        className={`w-full justify-start gap-3 h-10 px-3 rounded-lg transition-all ${
-                          activeSection === item.id 
-                            ? "bg-violet-600 text-white hover:bg-violet-600 hover:text-white" 
-                            : "hover:bg-muted"
-                        }`}
-                        data-testid={`sidebar-${item.id}`}
-                      >
-                        <item.icon className="w-4 h-4" />
-                        <span className="font-medium text-sm">{item.label}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-
-            <div className="mt-4 mx-2 p-3 rounded-xl bg-gradient-to-br from-violet-600/10 to-indigo-600/10 border border-violet-200/50 dark:border-violet-800/30">
-              <div className="flex items-center gap-2 mb-2">
-                <Crown className="w-4 h-4 text-amber-500" />
-                <span className="text-xs font-semibold">Free Plan</span>
-              </div>
-              <p className="text-[11px] text-muted-foreground mb-3">
-                Upgrade for unlimited AI credits
-              </p>
-              <Button size="sm" className="w-full h-8 text-xs bg-violet-600 hover:bg-violet-700">
-                Upgrade Now
-              </Button>
+          <div className="flex items-center gap-2">
+            <div className="relative hidden md:block">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Search..."
+                className="h-8 pl-8 w-44 text-sm bg-muted/50 border-transparent focus:border-border focus:bg-background"
+              />
             </div>
-          </SidebarContent>
-
-          <SidebarFooter className="p-3 border-t border-border/50">
-            <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors cursor-pointer">
-              <Avatar className="w-8 h-8">
-                <AvatarFallback className="bg-gradient-to-br from-violet-500 to-indigo-500 text-white text-xs font-medium">
+            <button className="relative p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground">
+              <Bell className="w-4 h-4" />
+              <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-primary" />
+            </button>
+            <div className="flex items-center gap-2 pl-2 border-l border-border">
+              <Badge variant="outline" className="text-[10px] gap-1 h-6 font-normal">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                AI Online
+              </Badge>
+              <Avatar className="w-7 h-7">
+                <AvatarFallback className="bg-primary text-primary-foreground text-[11px] font-semibold">
                   {getInitials(user.displayName)}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm truncate">{user.displayName}</p>
-                <p className="text-[11px] text-muted-foreground truncate">{user.email}</p>
-              </div>
+              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
             </div>
-            <div className="flex items-center gap-2 mt-2">
-              <ThemeToggle />
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="flex-1 gap-2 h-8 text-xs text-muted-foreground hover:text-foreground"
-                onClick={logout}
-                data-testid="button-logout"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                Sign Out
-              </Button>
-            </div>
-          </SidebarFooter>
-        </Sidebar>
-
-        <main className="flex-1 flex flex-col overflow-hidden">
-          <header className="h-14 border-b border-border/50 flex items-center justify-between px-4 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
-            <div className="flex items-center gap-3">
-              <SidebarTrigger className="text-muted-foreground hover:text-foreground" data-testid="button-sidebar-toggle" />
-              <div className="h-5 w-px bg-border" />
-              {(() => {
-                const allItems = [...menuItems, ...teacherItems, ...supportItems];
-                const active = allItems.find(m => m.id === activeSection);
-                const isTeacher = teacherItems.some(t => t.id === activeSection);
-                const Icon = active?.icon || LayoutDashboard;
-                return (
-                  <div className="flex items-center gap-2">
-                    <div className={`w-6 h-6 rounded-md flex items-center justify-center ${isTeacher ? "bg-emerald-100 dark:bg-emerald-900/30" : "bg-violet-100 dark:bg-violet-900/30"}`}>
-                      <Icon className={`w-3.5 h-3.5 ${isTeacher ? "text-emerald-600 dark:text-emerald-400" : "text-violet-600 dark:text-violet-400"}`} />
-                    </div>
-                    <h1 className="font-semibold text-sm">
-                      {active?.label || "Dashboard"}
-                    </h1>
-                  </div>
-                );
-              })()}
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-xs gap-1 font-normal">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                AI Online
-              </Badge>
-            </div>
-          </header>
-
-          <div className="flex-1 overflow-auto bg-muted/30">
-            {activeSection === "overview" && <OverviewContent user={user} onNavigate={setActiveSection} />}
-            {activeSection === "solver" && <SolverContent />}
-            {activeSection === "notes" && <NotesContent />}
-            {activeSection === "quiz" && <QuizContent />}
-            {activeSection === "essay" && <EssayContent />}
-            {activeSection === "evaluate" && user.role === "teacher" && <EvaluateContent />}
-            {activeSection === "help" && <HelpContent />}
-            {activeSection === "settings" && <SettingsContent user={user} />}
           </div>
+        </header>
+
+        {/* Page Content */}
+        <main className="flex-1 overflow-auto bg-muted/30 dark:bg-background">
+          {activeSection === "overview" && <OverviewContent user={user} onNavigate={setActiveSection} />}
+          {activeSection === "solver" && <SolverContent />}
+          {activeSection === "notes" && <NotesContent />}
+          {activeSection === "quiz" && <QuizContent />}
+          {activeSection === "essay" && <EssayContent />}
+          {activeSection === "evaluate" && user.role === "teacher" && <EvaluateContent />}
+          {activeSection === "help" && <HelpContent />}
+          {activeSection === "settings" && <SettingsContent user={user} />}
         </main>
       </div>
-    </SidebarProvider>
+    </div>
   );
 }
