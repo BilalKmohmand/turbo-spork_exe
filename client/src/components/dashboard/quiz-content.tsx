@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -149,6 +149,35 @@ export default function QuizContent() {
     setUploadedFile(null);
     setSourceText("");
   }, []);
+
+  const [topicAnalysis, setTopicAnalysis] = useState<{ topic: string; subtopics: string[]; possibleQuestions: string[]; questionCount: number } | null>(null);
+  const [analyzingTopics, setAnalyzingTopics] = useState(false);
+  const analyzeTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (sourceTab !== "text") return;
+    if (analyzeTimerRef.current) clearTimeout(analyzeTimerRef.current);
+    if (sourceText.trim().length < 80) {
+      setTopicAnalysis(null);
+      return;
+    }
+    analyzeTimerRef.current = setTimeout(async () => {
+      setAnalyzingTopics(true);
+      try {
+        const res = await fetch("/api/analyze-topics", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: sourceText }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setTopicAnalysis(data);
+        }
+      } catch {}
+      finally { setAnalyzingTopics(false); }
+    }, 1000);
+    return () => { if (analyzeTimerRef.current) clearTimeout(analyzeTimerRef.current); };
+  }, [sourceText, sourceTab]);
 
   const { data: dashboardStats } = useQuery<DashboardStats>({
     queryKey: ["/api/student/stats"],
@@ -452,6 +481,39 @@ export default function QuizContent() {
                     className="min-h-[160px] resize-none border-border/50"
                     data-testid="input-quiz-source"
                   />
+                  {analyzingTopics && (
+                    <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+                      Analyzing your text...
+                    </div>
+                  )}
+                  {topicAnalysis && !analyzingTopics && (
+                    <div className="mt-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-emerald-600" />
+                          <p className="text-sm font-semibold">Topic: <span className="text-emerald-600">{topicAnalysis.topic}</span></p>
+                        </div>
+                        <Badge variant="outline" className="text-xs">Up to {topicAnalysis.questionCount} questions possible</Badge>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {topicAnalysis.subtopics.map((sub) => (
+                          <span key={sub} className="text-[11px] px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 rounded-full font-medium border border-emerald-200 dark:border-emerald-800">
+                            {sub}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="rounded-xl border border-border/50 divide-y divide-border/40 overflow-hidden">
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-3 py-2 bg-muted/30">Sample questions that can be generated</p>
+                        {topicAnalysis.possibleQuestions.map((q, i) => (
+                          <div key={i} className="flex items-start gap-2.5 px-3 py-2.5 hover:bg-muted/20 transition-colors">
+                            <span className="text-[11px] font-bold text-muted-foreground mt-0.5 w-4 shrink-0">{i + 1}.</span>
+                            <p className="text-sm text-muted-foreground">{q}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
 

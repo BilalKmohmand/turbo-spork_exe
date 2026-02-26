@@ -1565,6 +1565,36 @@ RULES:
     }
   });
 
+  app.post("/api/analyze-topics", async (req, res) => {
+    try {
+      const { text } = req.body;
+      if (!text || typeof text !== "string" || text.trim().length < 50) {
+        return res.status(400).json({ error: "Please provide more text to analyze" });
+      }
+      const trimmed = text.trim().slice(0, 2000);
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        max_completion_tokens: 400,
+        messages: [
+          {
+            role: "system",
+            content: `Analyze the educational text and return JSON only:
+{"topic":"main topic name","subtopics":["subtopic1","subtopic2","subtopic3"],"possibleQuestions":["Sample question 1?","Sample question 2?","Sample question 3?","Sample question 4?","Sample question 5?"],"questionCount":20}
+Rules: 3-6 subtopics, 5 possible questions as examples of what can be tested, questionCount is realistic max questions from this content. JSON only.`
+          },
+          { role: "user", content: trimmed }
+        ],
+      });
+      let raw = response.choices[0]?.message?.content || "";
+      const match = raw.match(/\{[\s\S]*\}/);
+      if (match) raw = match[0];
+      const result = JSON.parse(raw);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to analyze topics" });
+    }
+  });
+
   app.post("/api/generate-quiz", async (req, res) => {
     try {
       const { text, level, questionCount, quizType } = req.body;
@@ -1619,15 +1649,29 @@ RULES:
       async function generateBatch(batchCount: number, batchIndex: number): Promise<any> {
         const resp = await openai.chat.completions.create({
           model: "gpt-4o-mini",
-          max_completion_tokens: Math.min(4000, batchCount * 250 + 200),
+          max_completion_tokens: Math.min(4000, batchCount * 300 + 300),
           messages: [
             {
               role: "system",
-              content: `Generate exactly ${batchCount} ${typePrompt} quiz questions as JSON. Difficulty: ${difficultyMap[validLevel]}.
-Format: ${formatPrompt}
-Rules: Exactly ${batchCount} questions. Difficulty must be ${difficultyMap[validLevel]}. Brief explanations (1 sentence). No duplicates${batchIndex > 0 ? ", different from previous batches" : ""}. Output ONLY valid JSON, no markdown.`
+              content: `You are an expert educator creating high-quality quiz questions. Generate exactly ${batchCount} ${typePrompt} questions.
+
+DIFFICULTY: ${difficultyMap[validLevel]}
+${validLevel === "basic" ? "- Test recall, definitions, key terms, and simple facts from the text" : ""}
+${validLevel === "intermediate" ? "- Test understanding, application, cause-and-effect, and connections between concepts" : ""}
+${validLevel === "advanced" ? "- Test deep analysis, evaluation, synthesis, edge cases, and nuanced reasoning" : ""}
+
+QUALITY RULES:
+- Each question must be clearly answerable from the provided text
+- Questions must be distinct - no repetition or near-duplicates
+- Explanations must be informative (2 sentences: why correct + why others wrong)
+- Options must be plausible distractors (not obviously wrong)
+- Cover different aspects/subtopics of the text, not just one section
+${batchIndex > 0 ? "- These are additional questions - ensure they cover DIFFERENT aspects from previous batches" : ""}
+
+OUTPUT FORMAT (JSON only, no markdown):
+${formatPrompt}`
             },
-            { role: "user", content: `Quiz from:\n\n${trimmedText}` }
+            { role: "user", content: `Generate ${batchCount} quiz questions from this content:\n\n${trimmedText}` }
           ],
         });
         let rt = resp.choices[0]?.message?.content || "";
