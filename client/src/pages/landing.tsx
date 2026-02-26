@@ -617,10 +617,9 @@ export default function Landing() {
               <h4 className="text-[12px] font-semibold uppercase tracking-wider text-[#999990] mb-4">Product</h4>
               <div className="space-y-3">
                 {[
-                  { label: "AI Tutor",       href: "/solver" },
-                  { label: "Quiz Generator", href: "/quiz" },
-                  { label: "Essay Writer",   href: "/essay" },
-                  { label: "Lecture Notes",  href: "/notes" },
+                  { label: "Features", href: "#features" },
+                  { label: "How it works", href: "#how-it-works" },
+                  { label: "Pricing", href: "/pricing" },
                 ].map(l => (
                   <Link key={l.label} href={l.href}>
                     <p className="text-[13px] text-[#666660] hover:text-[#111110] transition-colors cursor-pointer">{l.label}</p>
@@ -630,28 +629,22 @@ export default function Landing() {
             </div>
 
             <div>
-              <h4 className="text-[12px] font-semibold uppercase tracking-wider text-[#999990] mb-4">Tools</h4>
+              <h4 className="text-[12px] font-semibold uppercase tracking-wider text-[#999990] mb-4">Support</h4>
               <div className="space-y-3">
-                {["Math Solver", "Photo Solver", "Equation Solver", "Science Tutor"].map(t => (
-                  <Link key={t} href="/solver">
-                    <p className="text-[13px] text-[#666660] hover:text-[#111110] transition-colors cursor-pointer">{t}</p>
+                {[
+                  { label: "Sign in", href: "/auth" },
+                  { label: "Testimonials", href: "#testimonials" },
+                ].map(l => (
+                  <Link key={l.label} href={l.href}>
+                    <p className="text-[13px] text-[#666660] hover:text-[#111110] transition-colors cursor-pointer">{l.label}</p>
                   </Link>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <h4 className="text-[12px] font-semibold uppercase tracking-wider text-[#999990] mb-4">Company</h4>
-              <div className="space-y-3">
-                {["About", "Pricing", "Privacy", "Terms"].map(t => (
-                  <a key={t} href={t === "Pricing" ? "/pricing" : "#"} className="block text-[13px] text-[#666660] hover:text-[#111110] transition-colors">{t}</a>
                 ))}
               </div>
             </div>
           </div>
 
           <div className="pt-8 border-t border-[#E5E5E0] flex flex-col sm:flex-row items-center justify-between gap-4 text-[12px] text-[#999990]">
-            <p>© 2025 Gradeio. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} Gradeio. All rights reserved.</p>
             <div className="flex items-center gap-1.5">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
               All systems operational
