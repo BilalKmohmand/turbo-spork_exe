@@ -12,11 +12,16 @@ Preferred communication style: Simple, everyday language.
 
 ### Current Status: Production-Ready
 - **Database**: PostgreSQL with Drizzle ORM (DatabaseStorage class)
-- **Sessions**: Server-side sessions with express-session + connect-pg-simple
-- **Authentication**: Bcrypt password hashing (10 rounds)
+- **Sessions**: Server-side sessions with express-session + connect-pg-simple (session cookie name: "gid", pruning every hour)
+- **Authentication**: Bcrypt password hashing (10 rounds), autocomplete attributes on all form inputs
 - **Payments**: Stripe integration available but not configured (user dismissed setup)
-- **Security**: Helmet security headers, rate limiting on all API endpoints
-- **Error Handling**: Client-side error boundaries, centralized server error handler
+- **Security**: Helmet security headers (full CSP in production), rate limiting on all API endpoints
+- **Compression**: gzip via `compression` middleware (SSE streams excluded)
+- **Health Check**: GET /health returns { status, timestamp, uptime, env }
+- **Graceful Shutdown**: SIGTERM/SIGINT handlers close HTTP server then DB pool, 10s forced exit
+- **Error Handling**: Global error handler (no re-throw), API 404 handler, uncaughtException/unhandledRejection handlers
+- **Voice Input (AI Tutor)**: Continuous SpeechRecognition with auto-restart on silence, proper baseText+finalized+interim tracking, cleanup on unmount
+- **Lecture Notes Mic**: Audio level analyser for waveform visualisation, auto-restart recognition on silence, download notes as .txt
 
 ### To Add Stripe Payments Later
 1. Use the Replit integrations to set up Stripe connector

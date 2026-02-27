@@ -114,6 +114,7 @@ export default function AuthPage() {
                     <Input
                       name="email"
                       type="email"
+                      autoComplete="email"
                       required
                       placeholder="name@school.edu"
                       className="h-12 rounded-xl border-[#E5E5E0] focus-visible:ring-0 focus-visible:border-black transition-all"
@@ -125,6 +126,7 @@ export default function AuthPage() {
                     <Input
                       name="password"
                       type="password"
+                      autoComplete="current-password"
                       required
                       placeholder="••••••••"
                       className="h-12 rounded-xl border-[#E5E5E0] focus-visible:ring-0 focus-visible:border-black transition-all"
@@ -156,6 +158,7 @@ export default function AuthPage() {
                     <Label className="text-[13px] font-semibold text-[#111110]">Full Name</Label>
                     <Input
                       name="displayName"
+                      autoComplete="name"
                       required
                       placeholder="Alex Johnson"
                       className="h-12 rounded-xl border-[#E5E5E0] focus-visible:ring-0 focus-visible:border-black transition-all"
@@ -167,6 +170,7 @@ export default function AuthPage() {
                     <Input
                       name="email"
                       type="email"
+                      autoComplete="email"
                       required
                       placeholder="name@school.edu"
                       className="h-12 rounded-xl border-[#E5E5E0] focus-visible:ring-0 focus-visible:border-black transition-all"
@@ -178,6 +182,7 @@ export default function AuthPage() {
                     <Input
                       name="password"
                       type="password"
+                      autoComplete="new-password"
                       required
                       placeholder="••••••••"
                       className="h-12 rounded-xl border-[#E5E5E0] focus-visible:ring-0 focus-visible:border-black transition-all"

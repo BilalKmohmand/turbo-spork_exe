@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { renderMathText } from "@/components/math-display";
@@ -6,7 +6,8 @@ import {
   Send, Paperclip, Sparkles, BookOpen,
   Calculator, FlaskConical, Globe, Mic, MicOff,
   User, X, FileImage, FileText as FilePdf,
-  Atom, TestTube, Leaf, ChevronRight,
+  Atom, TestTube, Leaf, ChevronRight, Copy, Check,
+  Trash2,
 } from "lucide-react";
 
 /* ─── Types ─────────────────────────────────────────────────────── */
@@ -58,6 +59,24 @@ const quickPrompts = [
   { icon: Globe,        label: "Languages", prompt: "Translate: ",     color: "text-violet-500",  isScience: false },
 ];
 
+/* ─── Waveform bars animation while listening ─────────────────── */
+function VoiceWaveform() {
+  return (
+    <span className="inline-flex items-end gap-[3px] h-4 ml-1">
+      {[0, 0.15, 0.3, 0.15, 0].map((delay, i) => (
+        <span
+          key={i}
+          className="w-[3px] rounded-full bg-red-500"
+          style={{
+            animation: `voiceBar 0.8s ease-in-out ${delay}s infinite alternate`,
+            height: `${8 + i * 2}px`,
+          }}
+        />
+      ))}
+    </span>
+  );
+}
+
 /* ─── Component ──────────────────────────────────────────────────── */
 export default function SolverContent() {
   const [textProblem, setTextProblem]   = useState("");
@@ -65,6 +84,7 @@ export default function SolverContent() {
   const [isStreaming, setIsStreaming]   = useState(false);
   const [scienceOpen, setScienceOpen]   = useState(false);
   const [activeMode, setActiveMode]     = useState<AIMode | null>(null);
+  const [copiedIdx, setCopiedIdx]       = useState<number | null>(null);
 
   /* File attachment state */
   const [attachedFile, setAttachedFile]         = useState<{ name: string; base64: string; mimeType: string; preview?: string } | null>(null);
@@ -74,9 +94,22 @@ export default function SolverContent() {
   /* Voice / speech-to-text state */
   const [isListening, setIsListening]   = useState(false);
   const recognitionRef                  = useRef<any>(null);
+  const listeningRef                    = useRef(false);      // sync ref for callbacks
+  const baseTextRef                     = useRef("");          // text in box before voice started
+  const finalizedRef                    = useRef("");          // speech API finalized text
+  const interimRef                      = useRef("");          // speech API interim (in-progress)
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const { toast }        = useToast();
+
+  /* Clean up recognition on unmount */
+  useEffect(() => {
+    return () => {
+      listeningRef.current = false;
+      recognitionRef.current?.stop();
+      recognitionRef.current?.abort?.();
+    };
+  }, []);
 
   /* Auto-scroll --------------------------------------------------- */
   const scrollToBottom = () => {
@@ -99,7 +132,6 @@ export default function SolverContent() {
     setTextProblem("");
     setAttachedFile(null);
 
-    /* Prepend mode instruction as a hidden context header */
     const enrichedProblem = activeMode
       ? `[TUTOR MODE: ${activeMode.instruction}]\n\nStudent question: ${problem}`
       : problem;
@@ -177,6 +209,10 @@ export default function SolverContent() {
   /* Handle submit -------------------------------------------------- */
   const handleSubmit = () => {
     if (isStreaming || isUploadingSolving) return;
+
+    /* Stop listening before submitting */
+    if (listeningRef.current) stopVoice();
+
     if (attachedFile) {
       solveImage(attachedFile.base64, attachedFile.mimeType, attachedFile.preview || "", attachedFile.name);
     } else if (textProblem.trim()) {
@@ -196,7 +232,7 @@ export default function SolverContent() {
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      toast({ title: "File too large", description: "Max 10 MB", variant: "destructive" });
+      toast({ title: "File too large", description: "Max file size is 10 MB.", variant: "destructive" });
       return;
     }
 
@@ -210,7 +246,81 @@ export default function SolverContent() {
     reader.readAsDataURL(file);
   };
 
-  /* Voice input ---------------------------------------------------- */
+  /* ── Voice input (production-grade) ─────────────────────────── */
+  const startRecognition = useCallback(() => {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+
+    const recognition         = new SpeechRecognition();
+    recognition.continuous    = true;       // keep going across pauses
+    recognition.interimResults = true;      // show live transcription
+    recognition.lang          = "en-US";
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      listeningRef.current = true;
+    };
+
+    recognition.onresult = (event: any) => {
+      let newFinal   = "";
+      let newInterim = "";
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const t = event.results[i][0].transcript;
+        if (event.results[i].isFinal) newFinal   += t;
+        else                          newInterim   = t;
+      }
+
+      if (newFinal) {
+        finalizedRef.current += newFinal + " ";
+      }
+      interimRef.current = newInterim;
+
+      /* Update textarea: base + all finalized + current interim */
+      setTextProblem(
+        (baseTextRef.current + finalizedRef.current + interimRef.current).trimStart()
+      );
+    };
+
+    recognition.onerror = (event: any) => {
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        toast({
+          title: "Microphone blocked",
+          description: "Please allow microphone access in your browser settings.",
+          variant: "destructive",
+        });
+        listeningRef.current = false;
+        setIsListening(false);
+      }
+      /* For aborted/no-speech errors, let onend handle restart */
+    };
+
+    recognition.onend = () => {
+      /* Chrome stops recognition after silence — restart automatically if still "listening" */
+      if (listeningRef.current) {
+        try { recognition.start(); } catch {}
+      } else {
+        setIsListening(false);
+        interimRef.current = "";
+        /* Keep finalizedRef in textarea — don't wipe user's text */
+      }
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  }, [toast]);
+
+  const stopVoice = useCallback(() => {
+    listeningRef.current = false;
+    setIsListening(false);
+    interimRef.current = "";
+    try { recognitionRef.current?.stop(); } catch {}
+    recognitionRef.current = null;
+    /* Leave textarea as-is — keep whatever was spoken */
+  }, []);
+
   const toggleVoice = () => {
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -218,46 +328,37 @@ export default function SolverContent() {
     if (!SpeechRecognition) {
       toast({
         title: "Not supported",
-        description: "Voice input isn't supported in this browser. Try Chrome or Edge.",
+        description: "Voice input needs Chrome, Edge, or Safari. Your browser doesn't support it.",
         variant: "destructive",
       });
       return;
     }
 
-    if (isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
-      return;
+    if (listeningRef.current) {
+      stopVoice();
+    } else {
+      /* Save the current box contents as the base, reset finalized/interim */
+      baseTextRef.current  = textProblem ? textProblem.trimEnd() + " " : "";
+      finalizedRef.current = "";
+      interimRef.current   = "";
+      startRecognition();
     }
+  };
 
-    const recognition         = new SpeechRecognition();
-    recognition.continuous    = false;
-    recognition.interimResults = true;
-    recognition.lang          = "en-US";
+  /* Copy message to clipboard -------------------------------------- */
+  const copyMessage = async (text: string, idx: number) => {
+    await navigator.clipboard.writeText(text);
+    setCopiedIdx(idx);
+    setTimeout(() => setCopiedIdx(null), 2000);
+  };
 
-    recognition.onstart = () => setIsListening(true);
-
-    recognition.onresult = (event: any) => {
-      let interim = "";
-      let final   = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (event.results[i].isFinal) final   += event.results[i][0].transcript;
-        else                          interim += event.results[i][0].transcript;
-      }
-      setTextProblem(prev => (prev + " " + (final || interim)).trim());
-    };
-
-    recognition.onerror = (event: any) => {
-      if (event.error === "not-allowed") {
-        toast({ title: "Microphone blocked", description: "Please allow microphone access in your browser.", variant: "destructive" });
-      }
-      setIsListening(false);
-    };
-
-    recognition.onend = () => setIsListening(false);
-
-    recognitionRef.current = recognition;
-    recognition.start();
+  /* Clear conversation -------------------------------------------- */
+  const clearChat = () => {
+    setChatHistory([]);
+    setTextProblem("");
+    setAttachedFile(null);
+    setActiveMode(null);
+    setScienceOpen(false);
   };
 
   const canSend = (!isStreaming && !isUploadingSolving) && (!!textProblem.trim() || !!attachedFile);
@@ -265,6 +366,14 @@ export default function SolverContent() {
   /* ── Render ────────────────────────────────────────────────────── */
   return (
     <div className="flex flex-col h-full bg-white dark:bg-[#0A0A0A] relative">
+      {/* Waveform keyframes */}
+      <style>{`
+        @keyframes voiceBar {
+          0%   { transform: scaleY(0.4); }
+          100% { transform: scaleY(1.1); }
+        }
+      `}</style>
+
       {/* Hidden file input */}
       <input
         ref={fileInputRef}
@@ -273,6 +382,20 @@ export default function SolverContent() {
         className="hidden"
         onChange={handleFileChange}
       />
+
+      {/* Top bar — clear button when there's history */}
+      {chatHistory.length > 0 && (
+        <div className="flex justify-end px-6 pt-3 pb-0">
+          <button
+            onClick={clearChat}
+            className="flex items-center gap-1.5 text-[12px] text-[#999990] hover:text-red-500 transition-colors px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20"
+            title="Clear conversation"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Clear chat
+          </button>
+        </div>
+      )}
 
       {/* Scrollable chat area */}
       <div ref={chatContainerRef} className="flex-1 overflow-y-auto no-scrollbar pt-4 pb-36">
@@ -338,7 +461,7 @@ export default function SolverContent() {
                             }}
                             className={`flex items-start gap-3 p-3 rounded-xl border transition-all text-left group w-full ${mode.bg} border-transparent hover:border-current`}
                           >
-                            <div className={`w-8 h-8 rounded-lg bg-white/60 dark:bg-black/20 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform`}>
+                            <div className="w-8 h-8 rounded-lg bg-white/60 dark:bg-black/20 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
                               <mode.icon className={`w-4 h-4 ${mode.color}`} />
                             </div>
                             <div>
@@ -352,24 +475,42 @@ export default function SolverContent() {
                   </div>
                 ))}
               </div>
+
+              {/* Voice hint */}
+              <p className="mt-8 text-[12px] text-[#BBBBBB] dark:text-[#444440] text-center">
+                Tip: Click the mic icon to speak your question hands-free
+              </p>
             </div>
           ) : (
             /* ── Chat messages ── */
             <div className="space-y-8 py-4">
               {chatHistory.map((msg, idx) => (
-                <div key={idx} className={`flex gap-5 ${msg.role === "user" ? "justify-end" : ""}`}>
+                <div key={idx} className={`flex gap-5 group ${msg.role === "user" ? "justify-end" : ""}`}>
                   {msg.role === "assistant" && (
                     <div className="w-8 h-8 rounded-lg bg-[#111110] dark:bg-white flex items-center justify-center flex-shrink-0 mt-1">
                       <Sparkles className="w-4 h-4 text-white dark:text-black" />
                     </div>
                   )}
-                  <div className={`max-w-[85%] ${msg.role === "user" ? "bg-[#F0F0F0] dark:bg-[#1A1A1A] px-4 py-3 rounded-2xl text-[#111110] dark:text-white" : "text-[#111110] dark:text-[#E5E5E0]"}`}>
+                  <div className={`max-w-[85%] relative ${msg.role === "user" ? "bg-[#F0F0F0] dark:bg-[#1A1A1A] px-4 py-3 rounded-2xl text-[#111110] dark:text-white" : "text-[#111110] dark:text-[#E5E5E0]"}`}>
                     {msg.imagePreview && (
                       <img src={msg.imagePreview} alt="attachment" className="max-w-[240px] rounded-xl mb-2 border border-[#E5E5E0]" />
                     )}
                     <div className="text-[15px] leading-[1.6]">
                       {msg.role === "assistant" ? renderMathText(msg.content) : msg.content}
                     </div>
+                    {/* Copy button */}
+                    {msg.content && (
+                      <button
+                        onClick={() => copyMessage(msg.content, idx)}
+                        className={`absolute -bottom-6 ${msg.role === "user" ? "right-0" : "left-0"} opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-[11px] text-[#999990] hover:text-[#444440] dark:hover:text-[#BBBBBB] py-0.5 px-2 rounded`}
+                        title="Copy message"
+                      >
+                        {copiedIdx === idx
+                          ? <><Check className="w-3 h-3 text-emerald-500" /><span className="text-emerald-500">Copied</span></>
+                          : <><Copy className="w-3 h-3" />Copy</>
+                        }
+                      </button>
+                    )}
                   </div>
                   {msg.role === "user" && (
                     <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-950 flex items-center justify-center flex-shrink-0 mt-1 border border-violet-200 dark:border-violet-900">
@@ -383,7 +524,14 @@ export default function SolverContent() {
                   <div className="w-8 h-8 rounded-lg bg-[#111110] dark:bg-white flex items-center justify-center flex-shrink-0 mt-1 animate-pulse">
                     <Sparkles className="w-4 h-4 text-white dark:text-black" />
                   </div>
-                  <div className="text-[#666660] text-[15px] italic">Thinking…</div>
+                  <div className="flex items-center gap-2 text-[#666660] text-[15px] italic">
+                    <span>Thinking</span>
+                    <span className="flex gap-0.5">
+                      <span className="w-1 h-1 rounded-full bg-[#999990] animate-bounce" style={{ animationDelay: "0ms" }} />
+                      <span className="w-1 h-1 rounded-full bg-[#999990] animate-bounce" style={{ animationDelay: "150ms" }} />
+                      <span className="w-1 h-1 rounded-full bg-[#999990] animate-bounce" style={{ animationDelay: "300ms" }} />
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
@@ -409,6 +557,16 @@ export default function SolverContent() {
             </div>
           )}
 
+          {/* Live voice indicator banner */}
+          {isListening && (
+            <div className="mb-2 flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 w-fit">
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
+              <span className="text-[12px] font-semibold text-red-600 dark:text-red-400">Listening</span>
+              <VoiceWaveform />
+              <span className="text-[11px] text-red-400 ml-1">Speak now — tap mic to stop</span>
+            </div>
+          )}
+
           {/* Attached file preview */}
           {attachedFile && (
             <div className="mb-2 flex items-center gap-2 px-4 py-2 rounded-2xl bg-[#F0F0F0] dark:bg-[#1A1A1A] border border-[#E5E5E0] dark:border-[#22221F] w-fit max-w-full">
@@ -429,13 +587,27 @@ export default function SolverContent() {
           {/* Input box */}
           <div className="relative group">
             <div className="absolute inset-0 bg-black/5 dark:bg-white/5 rounded-[24px] blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
-            <div className="relative bg-white dark:bg-[#111110] border border-[#E5E5E0] dark:border-[#22221F] rounded-[24px] shadow-2xl overflow-hidden focus-within:border-[#111110] dark:focus-within:border-[#F9F9F8] transition-all">
+            <div className={`relative bg-white dark:bg-[#111110] border rounded-[24px] shadow-2xl overflow-hidden transition-all ${
+              isListening
+                ? "border-red-300 dark:border-red-800 shadow-red-100 dark:shadow-red-950/20"
+                : "border-[#E5E5E0] dark:border-[#22221F] focus-within:border-[#111110] dark:focus-within:border-[#F9F9F8]"
+            }`}>
               <Textarea
                 value={textProblem}
-                onChange={(e) => setTextProblem(e.target.value)}
+                onChange={(e) => {
+                  /* If user manually edits while listening, update base so voice appends correctly */
+                  if (listeningRef.current) {
+                    baseTextRef.current  = e.target.value;
+                    finalizedRef.current = "";
+                    interimRef.current   = "";
+                  }
+                  setTextProblem(e.target.value);
+                }}
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSubmit())}
-                placeholder={isListening ? "Listening… speak now" : "Message Gradeio, or attach a photo of your homework…"}
-                className={`w-full min-h-[60px] max-h-48 p-4 pt-5 pb-12 bg-transparent border-none focus-visible:ring-0 text-[15px] resize-none no-scrollbar placeholder:text-[#999990] ${isListening ? "placeholder:text-red-400" : ""}`}
+                placeholder={isListening ? "Speak now — I'm listening…" : "Message Gradeio, or attach a photo of your homework…"}
+                className={`w-full min-h-[60px] max-h-48 p-4 pt-5 pb-12 bg-transparent border-none focus-visible:ring-0 text-[15px] resize-none no-scrollbar ${
+                  isListening ? "placeholder:text-red-400" : "placeholder:text-[#999990]"
+                }`}
               />
 
               {/* Bottom toolbar */}
@@ -444,7 +616,8 @@ export default function SolverContent() {
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   title="Attach image or PDF"
-                  className="p-2 rounded-lg text-[#666660] hover:bg-[#F0F0F0] dark:hover:bg-[#1A1A1A] hover:text-[#111110] dark:hover:text-white transition-colors"
+                  disabled={isListening}
+                  className="p-2 rounded-lg text-[#666660] hover:bg-[#F0F0F0] dark:hover:bg-[#1A1A1A] hover:text-[#111110] dark:hover:text-white transition-colors disabled:opacity-40"
                   data-testid="button-attach-file"
                 >
                   <Paperclip className="w-4 h-4" />
@@ -453,16 +626,23 @@ export default function SolverContent() {
                 {/* Mic — voice to text */}
                 <button
                   onClick={toggleVoice}
-                  title={isListening ? "Stop listening" : "Voice input"}
-                  className={`p-2 rounded-lg transition-colors ${
+                  title={isListening ? "Stop listening (tap to finish)" : "Start voice input"}
+                  className={`p-2 rounded-lg transition-all ${
                     isListening
-                      ? "text-red-500 bg-red-50 dark:bg-red-950/30 animate-pulse"
+                      ? "text-red-500 bg-red-50 dark:bg-red-950/30 ring-2 ring-red-200 dark:ring-red-800"
                       : "text-[#666660] hover:bg-[#F0F0F0] dark:hover:bg-[#1A1A1A] hover:text-[#111110] dark:hover:text-white"
                   }`}
                   data-testid="button-voice-input"
                 >
                   {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                 </button>
+
+                {/* Char counter when getting long */}
+                {textProblem.length > 200 && (
+                  <span className={`text-[11px] ml-1 font-mono ${textProblem.length > 1800 ? "text-red-500" : "text-[#BBBBBB]"}`}>
+                    {textProblem.length}/2000
+                  </span>
+                )}
               </div>
 
               {/* Send button */}
@@ -478,6 +658,11 @@ export default function SolverContent() {
               </div>
             </div>
           </div>
+
+          {/* Keyboard hint */}
+          <p className="text-center text-[11px] text-[#CCCCCC] dark:text-[#333330] mt-2">
+            Press <kbd className="font-mono bg-[#F0F0F0] dark:bg-[#1A1A1A] px-1 py-0.5 rounded text-[10px] text-[#666660]">Enter</kbd> to send · <kbd className="font-mono bg-[#F0F0F0] dark:bg-[#1A1A1A] px-1 py-0.5 rounded text-[10px] text-[#666660]">Shift+Enter</kbd> for new line
+          </p>
         </div>
       </div>
     </div>

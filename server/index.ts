@@ -7,49 +7,69 @@ import connectPgSimple from "connect-pg-simple";
 import { pool } from "./db";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import compression from "compression";
 
 const app = express();
+const IS_PROD = process.env.NODE_ENV === "production";
 
-// Trust the first proxy (Replit's environment)
+/* ── Trust proxy (Replit) ────────────────────────────────────────── */
 app.set("trust proxy", 1);
 
-// Security headers with helmet
-app.use(helmet({
-  contentSecurityPolicy: false, // Disable CSP for development flexibility
-  crossOriginEmbedderPolicy: false,
+/* ── Compression ─────────────────────────────────────────────────── */
+app.use(compression({
+  filter: (req, res) => {
+    /* Don't compress SSE streams */
+    if (res.getHeader("Content-Type")?.toString().includes("text/event-stream")) return false;
+    return compression.filter(req, res);
+  },
+  level: 6,
 }));
 
-// General API rate limiter
+/* ── Security headers ────────────────────────────────────────────── */
+app.use(helmet({
+  contentSecurityPolicy: IS_PROD ? {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "blob:"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+      imgSrc: ["'self'", "data:", "blob:", "https:"],
+      connectSrc: ["'self'", "wss:", "ws:"],
+      mediaSrc: ["'self'", "blob:"],
+      workerSrc: ["'self'", "blob:"],
+    },
+  } : false,
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+}));
+
+/* ── Rate limiters ───────────────────────────────────────────────── */
 const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // 500 requests per 15 minutes
+  windowMs: 15 * 60 * 1000,
+  max: 500,
   message: { error: "Too many requests, please try again later" },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.path === "/health",
 });
 
-// Stricter rate limiter for AI endpoints (expensive operations)
 const aiLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 20, // 20 AI requests per minute
+  windowMs: 60 * 1000,
+  max: 20,
   message: { error: "Too many AI requests, please slow down" },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-// Auth rate limiter (prevent brute force)
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // 10 login attempts per 15 minutes
+  windowMs: 15 * 60 * 1000,
+  max: 10,
   message: { error: "Too many login attempts, please try again later" },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-// Apply general rate limiting to all API routes
 app.use("/api", generalLimiter);
-
-// Apply stricter rate limiting to AI endpoints
 app.use("/api/solve-text", aiLimiter);
 app.use("/api/solve-text-stream", aiLimiter);
 app.use("/api/solve-image", aiLimiter);
@@ -59,34 +79,42 @@ app.use("/api/generate-quiz", aiLimiter);
 app.use("/api/generate-essay", aiLimiter);
 app.use("/api/generate-notes", aiLimiter);
 app.use("/api/transcribe", aiLimiter);
-
-// Apply auth rate limiting
 app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/register", authLimiter);
-const httpServer = createServer(app);
 
-// Validate SESSION_SECRET in production
+/* ── Health check (before body parser / sessions) ────────────────── */
+app.get("/health", (_req, res) => {
+  res.json({
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    uptime: Math.round(process.uptime()),
+    env: IS_PROD ? "production" : "development",
+  });
+});
+
+/* ── Session ─────────────────────────────────────────────────────── */
 if (!process.env.SESSION_SECRET) {
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("SESSION_SECRET must be set in production");
-  }
-  console.warn("Warning: SESSION_SECRET not set, using fallback for development");
+  if (IS_PROD) throw new Error("SESSION_SECRET must be set in production");
+  console.warn("Warning: SESSION_SECRET not set — using fallback for development");
 }
 
-// Session configuration with PostgreSQL store
 const PgSession = connectPgSimple(session);
+const httpServer = createServer(app);
+
 app.use(
   session({
     store: new PgSession({
-      pool: pool,
+      pool,
       tableName: "user_sessions",
       createTableIfMissing: true,
+      pruneSessionInterval: 60 * 60, // prune expired sessions every hour
     }),
-    secret: process.env.SESSION_SECRET || "dev-fallback-secret",
+    secret: process.env.SESSION_SECRET || "dev-fallback-secret-change-in-prod",
     resave: false,
     saveUninitialized: false,
+    name: "gid",
     cookie: {
-      secure: process.env.NODE_ENV === "production",
+      secure: IS_PROD,
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       sameSite: "lax",
@@ -94,23 +122,18 @@ app.use(
   })
 );
 
+/* ── Body parsers ────────────────────────────────────────────────── */
 declare module "http" {
-  interface IncomingMessage {
-    rawBody: unknown;
-  }
+  interface IncomingMessage { rawBody: unknown; }
 }
 
-app.use(
-  express.json({
-    limit: '50mb',
-    verify: (req, _res, buf) => {
-      req.rawBody = buf;
-    },
-  }),
-);
+app.use(express.json({
+  limit: "50mb",
+  verify: (req, _res, buf) => { req.rawBody = buf; },
+}));
+app.use(express.urlencoded({ extended: false, limit: "50mb" }));
 
-app.use(express.urlencoded({ extended: false, limit: '50mb' }));
-
+/* ── Request logger ──────────────────────────────────────────────── */
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
     hour: "numeric",
@@ -118,59 +141,78 @@ export function log(message: string, source = "express") {
     second: "2-digit",
     hour12: true,
   });
-
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
 app.use((req, res, next) => {
   const start = Date.now();
-  const path = req.path;
-
   res.on("finish", () => {
     const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      const logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      log(logLine);
+    if (req.path.startsWith("/api")) {
+      log(`${req.method} ${req.path} ${res.statusCode} in ${duration}ms`);
     }
   });
-
   next();
 });
 
+/* ── Bootstrap ───────────────────────────────────────────────────── */
 (async () => {
   await registerRoutes(httpServer, app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
+  /* 404 handler for unmatched API routes */
+  app.use("/api/*", (_req: Request, res: Response) => {
+    res.status(404).json({ error: "API endpoint not found" });
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (process.env.NODE_ENV === "production") {
+  /* Global error handler */
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    const status  = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
+    if (!IS_PROD || status >= 500) {
+      console.error(`[error] ${status} — ${message}`, err.stack || "");
+    }
+    if (!res.headersSent) {
+      res.status(status).json({ error: message });
+    }
+  });
+
+  if (IS_PROD) {
     serveStatic(app);
   } else {
     const { setupVite } = await import("./vite");
     await setupVite(httpServer, app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || "5000", 10);
-  httpServer.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
-      log(`serving on port ${port}`);
-    },
-  );
+  httpServer.listen({ port, host: "0.0.0.0", reusePort: true }, () => {
+    log(`serving on port ${port} (${IS_PROD ? "production" : "development"})`);
+  });
+
+  /* ── Graceful shutdown ─────────────────────────────────────────── */
+  const shutdown = (signal: string) => {
+    log(`${signal} received — shutting down gracefully`, "server");
+    httpServer.close(() => {
+      pool.end(() => {
+        log("Database pool closed — exit", "server");
+        process.exit(0);
+      });
+    });
+    /* Force exit after 10 s if graceful shutdown hangs */
+    setTimeout(() => {
+      console.error("Forced exit after timeout");
+      process.exit(1);
+    }, 10_000).unref();
+  };
+
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT",  () => shutdown("SIGINT"));
+
+  /* Catch unhandled errors in production so the process stays alive */
+  process.on("uncaughtException", (err) => {
+    console.error("[uncaughtException]", err);
+    if (!IS_PROD) process.exit(1);
+  });
+  process.on("unhandledRejection", (reason) => {
+    console.error("[unhandledRejection]", reason);
+  });
 })();
