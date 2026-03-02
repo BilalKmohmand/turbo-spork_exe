@@ -649,6 +649,59 @@ export async function registerRoutes(
     }
   });
 
+  /* ── Multi-image endpoint ─────────────────────────────────────── */
+  app.post("/api/solve-images", async (req, res) => {
+    try {
+      const { images, prompt } = req.body;
+
+      if (!Array.isArray(images) || images.length === 0) {
+        return res.status(400).json({ error: "At least one image is required" });
+      }
+      if (images.length > 8) {
+        return res.status(400).json({ error: "Maximum 8 images allowed at once" });
+      }
+
+      const imageContent: any[] = images
+        .filter((img: any) => img.base64 && img.mimeType?.startsWith("image/"))
+        .map((img: any) => ({
+          type: "image_url",
+          image_url: { url: `data:${img.mimeType};base64,${img.base64}`, detail: "high" },
+        }));
+
+      if (imageContent.length === 0) {
+        return res.status(400).json({ error: "No valid images found. Please upload image files (JPG, PNG, WEBP)." });
+      }
+
+      const systemPrompt = `You are an expert AI tutor. Analyse ALL provided images carefully.
+${imageContent.length > 1 ? `There are ${imageContent.length} images — address each one.` : ""}
+Solve every problem shown step-by-step. Use $...$ for inline math and $$...$$ for display math.
+Be thorough and educational — explain your reasoning.`;
+
+      const textPart: any = {
+        type: "text",
+        text: prompt?.trim()
+          ? `${prompt.trim()}\n\nPlease analyse the ${imageContent.length > 1 ? "images" : "image"} and provide a complete solution.`
+          : `Please analyse ${imageContent.length > 1 ? `all ${imageContent.length} images` : "this image"} and solve every problem shown, step by step.`,
+      };
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user",   content: [textPart, ...imageContent] },
+        ],
+        max_completion_tokens: 2000,
+      });
+
+      const solution = response.choices[0]?.message?.content || "Could not analyse the images.";
+
+      res.json({ solution });
+    } catch (error: any) {
+      console.error("Multi-image solve error:", error?.message || error);
+      res.status(500).json({ error: error?.message || "Failed to process images" });
+    }
+  });
+
   app.post("/api/solve-image", async (req, res) => {
     try {
       const { image, mimeType } = req.body;

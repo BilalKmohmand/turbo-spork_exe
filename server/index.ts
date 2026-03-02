@@ -73,6 +73,7 @@ app.use("/api", generalLimiter);
 app.use("/api/solve-text", aiLimiter);
 app.use("/api/solve-text-stream", aiLimiter);
 app.use("/api/solve-image", aiLimiter);
+app.use("/api/solve-images", aiLimiter);
 app.use("/api/solve-image-stream", aiLimiter);
 app.use("/api/solve-with-rag", aiLimiter);
 app.use("/api/generate-quiz", aiLimiter);

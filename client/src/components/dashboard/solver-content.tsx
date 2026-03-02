@@ -14,7 +14,16 @@ import {
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
-  imagePreview?: string;
+  imagePreviews?: string[];   // multiple image previews
+  imagePreview?: string;      // kept for backwards compat
+}
+
+interface AttachedFile {
+  id: string;
+  name: string;
+  base64: string;
+  mimeType: string;
+  preview?: string;
 }
 
 interface AIMode {
@@ -86,8 +95,8 @@ export default function SolverContent() {
   const [activeMode, setActiveMode]     = useState<AIMode | null>(null);
   const [copiedIdx, setCopiedIdx]       = useState<number | null>(null);
 
-  /* File attachment state */
-  const [attachedFile, setAttachedFile]         = useState<{ name: string; base64: string; mimeType: string; preview?: string } | null>(null);
+  /* File attachment state — supports multiple images */
+  const [attachedFiles, setAttachedFiles]           = useState<AttachedFile[]>([]);
   const [isUploadingSolving, setIsUploadingSolving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -125,12 +134,12 @@ export default function SolverContent() {
   }, [chatHistory, isStreaming]);
 
   /* Streaming text solve ------------------------------------------ */
-  const solveWithStreaming = async (problem: string, imagePreview?: string) => {
-    const userMsg: ChatMessage = { role: "user", content: problem, imagePreview };
+  const solveWithStreaming = async (problem: string, imagePreviews?: string[]) => {
+    const userMsg: ChatMessage = { role: "user", content: problem, imagePreviews };
     setChatHistory(prev => [...prev, userMsg]);
     setIsStreaming(true);
     setTextProblem("");
-    setAttachedFile(null);
+    setAttachedFiles([]);
 
     const enrichedProblem = activeMode
       ? `[TUTOR MODE: ${activeMode.instruction}]\n\nStudent question: ${problem}`
@@ -180,24 +189,32 @@ export default function SolverContent() {
     }
   };
 
-  /* Image solve ---------------------------------------------------- */
-  const solveImage = async (base64: string, mimeType: string, preview: string, label: string) => {
-    const userMsg: ChatMessage = { role: "user", content: `[Analyzing ${label}]`, imagePreview: preview };
+  /* Multi-image solve ---------------------------------------------- */
+  const solveImages = async (files: AttachedFile[], prompt: string) => {
+    const previews = files.map(f => f.preview).filter(Boolean) as string[];
+    const label    = files.length === 1 ? files[0].name : `${files.length} images`;
+    const userContent = prompt.trim()
+      ? prompt.trim()
+      : `[Analysing ${label}]`;
+
+    const userMsg: ChatMessage = { role: "user", content: userContent, imagePreviews: previews };
     setChatHistory(prev => [...prev, userMsg]);
     setIsUploadingSolving(true);
-    setAttachedFile(null);
+    setAttachedFiles([]);
     setTextProblem("");
 
     try {
-      const response = await fetch("/api/solve-image", {
+      const response = await fetch("/api/solve-images", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: base64, mimeType }),
+        body: JSON.stringify({
+          images: files.map(f => ({ base64: f.base64, mimeType: f.mimeType })),
+          prompt: prompt.trim() || undefined,
+        }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Failed to analyse image");
-      const answer = data.solution || data.text || data.answer || JSON.stringify(data);
-      setChatHistory(prev => [...prev, { role: "assistant", content: answer }]);
+      if (!response.ok) throw new Error(data.error || "Failed to analyse images");
+      setChatHistory(prev => [...prev, { role: "assistant", content: data.solution || "No response." }]);
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
@@ -209,42 +226,61 @@ export default function SolverContent() {
   /* Handle submit -------------------------------------------------- */
   const handleSubmit = () => {
     if (isStreaming || isUploadingSolving) return;
-
-    /* Stop listening before submitting */
     if (listeningRef.current) stopVoice();
 
-    if (attachedFile) {
-      solveImage(attachedFile.base64, attachedFile.mimeType, attachedFile.preview || "", attachedFile.name);
+    if (attachedFiles.length > 0) {
+      solveImages(attachedFiles, textProblem);
     } else if (textProblem.trim()) {
       solveWithStreaming(textProblem.trim());
     }
   };
 
-  /* File attachment ----------------------------------------------- */
+  /* File attachment — supports multiple images -------------------- */
+  const MAX_FILES = 8;
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const selected = Array.from(e.target.files || []);
     e.target.value = "";
+    if (!selected.length) return;
 
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf"];
-    if (!allowedTypes.includes(file.type)) {
-      toast({ title: "Unsupported file", description: "Please attach an image (JPG, PNG, WEBP) or PDF.", variant: "destructive" });
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      toast({ title: "File too large", description: "Max file size is 10 MB.", variant: "destructive" });
+    const remaining = MAX_FILES - attachedFiles.length;
+    if (remaining <= 0) {
+      toast({ title: "Limit reached", description: `Maximum ${MAX_FILES} images at once.`, variant: "destructive" });
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl  = reader.result as string;
-      const base64   = dataUrl.split(",")[1];
-      const preview  = file.type.startsWith("image/") ? dataUrl : undefined;
-      setAttachedFile({ name: file.name, base64, mimeType: file.type, preview });
-    };
-    reader.readAsDataURL(file);
+    const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    const toProcess = selected.slice(0, remaining);
+    let rejected = 0;
+
+    toProcess.forEach(file => {
+      if (!allowed.includes(file.type)) { rejected++; return; }
+      if (file.size > 10 * 1024 * 1024) {
+        toast({ title: `${file.name} is too large`, description: "Max 10 MB per image.", variant: "destructive" });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        setAttachedFiles(prev => {
+          if (prev.length >= MAX_FILES) return prev;
+          return [...prev, {
+            id: `${Date.now()}-${Math.random()}`,
+            name: file.name,
+            base64: dataUrl.split(",")[1],
+            mimeType: file.type,
+            preview: dataUrl,
+          }];
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+
+    if (rejected > 0) {
+      toast({ title: "Some files skipped", description: "Only JPG, PNG, WEBP, GIF images are supported.", variant: "destructive" });
+    }
   };
+
+  const removeFile = (id: string) => setAttachedFiles(prev => prev.filter(f => f.id !== id));
 
   /* ── Voice input (production-grade) ─────────────────────────── */
   const startRecognition = useCallback(() => {
@@ -356,12 +392,12 @@ export default function SolverContent() {
   const clearChat = () => {
     setChatHistory([]);
     setTextProblem("");
-    setAttachedFile(null);
+    setAttachedFiles([]);
     setActiveMode(null);
     setScienceOpen(false);
   };
 
-  const canSend = (!isStreaming && !isUploadingSolving) && (!!textProblem.trim() || !!attachedFile);
+  const canSend = (!isStreaming && !isUploadingSolving) && (!!textProblem.trim() || attachedFiles.length > 0);
 
   /* ── Render ────────────────────────────────────────────────────── */
   return (
@@ -374,11 +410,12 @@ export default function SolverContent() {
         }
       `}</style>
 
-      {/* Hidden file input */}
+      {/* Hidden file input — multiple */}
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        multiple
         className="hidden"
         onChange={handleFileChange}
       />
@@ -492,7 +529,23 @@ export default function SolverContent() {
                     </div>
                   )}
                   <div className={`max-w-[85%] relative ${msg.role === "user" ? "bg-[#F0F0F0] dark:bg-[#1A1A1A] px-4 py-3 rounded-2xl text-[#111110] dark:text-white" : "text-[#111110] dark:text-[#E5E5E0]"}`}>
-                    {msg.imagePreview && (
+                    {/* Image previews — supports both single (legacy) and multiple */}
+                    {(msg.imagePreviews && msg.imagePreviews.length > 0) && (
+                      <div className={`flex flex-wrap gap-2 mb-2 ${msg.imagePreviews.length === 1 ? "" : "max-w-[320px]"}`}>
+                        {msg.imagePreviews.map((src, pi) => (
+                          <img
+                            key={pi}
+                            src={src}
+                            alt={`Image ${pi + 1}`}
+                            className={`rounded-xl border border-[#E5E5E0] object-cover ${
+                              msg.imagePreviews!.length === 1 ? "max-w-[240px] max-h-[200px]" :
+                              msg.imagePreviews!.length <= 4 ? "w-[140px] h-[110px]" : "w-[100px] h-[80px]"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    )}
+                    {msg.imagePreview && !msg.imagePreviews && (
                       <img src={msg.imagePreview} alt="attachment" className="max-w-[240px] rounded-xl mb-2 border border-[#E5E5E0]" />
                     )}
                     <div className="text-[15px] leading-[1.6]">
@@ -567,20 +620,42 @@ export default function SolverContent() {
             </div>
           )}
 
-          {/* Attached file preview */}
-          {attachedFile && (
-            <div className="mb-2 flex items-center gap-2 px-4 py-2 rounded-2xl bg-[#F0F0F0] dark:bg-[#1A1A1A] border border-[#E5E5E0] dark:border-[#22221F] w-fit max-w-full">
-              {attachedFile.mimeType === "application/pdf"
-                ? <FilePdf className="w-4 h-4 text-red-500 shrink-0" />
-                : <FileImage className="w-4 h-4 text-violet-500 shrink-0" />
-              }
-              {attachedFile.preview && (
-                <img src={attachedFile.preview} alt="" className="h-8 w-8 rounded object-cover border border-[#E5E5E0]" />
+          {/* Attached files preview — scrollable grid of thumbnails */}
+          {attachedFiles.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-2 items-end">
+              {attachedFiles.map(file => (
+                <div key={file.id} className="relative group flex-shrink-0">
+                  {file.preview ? (
+                    <>
+                      <img
+                        src={file.preview}
+                        alt={file.name}
+                        className="h-16 w-16 object-cover rounded-xl border border-[#E5E5E0] dark:border-[#22221F]"
+                        data-testid={`img-preview-${file.id}`}
+                      />
+                      <button
+                        onClick={() => removeFile(file.id)}
+                        className="absolute -top-1.5 -right-1.5 bg-[#111110] dark:bg-white text-white dark:text-black rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                        title={`Remove ${file.name}`}
+                        data-testid={`button-remove-file-${file.id}`}
+                      >×</button>
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-1.5 bg-[#F5F5F3] dark:bg-[#1A1A1A] px-3 py-1.5 rounded-xl text-xs text-[#111110] dark:text-white border border-[#E5E5E0] dark:border-[#22221F]">
+                      <FileImage className="w-3 h-3 text-violet-500" />
+                      <span className="max-w-[120px] truncate">{file.name}</span>
+                      <button onClick={() => removeFile(file.id)} className="ml-1 text-[#999] hover:text-[#111110] dark:hover:text-white">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+              {attachedFiles.length > 1 && (
+                <span className="text-xs text-[#999] dark:text-[#666] self-end mb-0.5">
+                  {attachedFiles.length}/{MAX_FILES}
+                </span>
               )}
-              <span className="text-[13px] font-medium text-[#444440] dark:text-[#BBBBBB] truncate max-w-[200px]">{attachedFile.name}</span>
-              <button onClick={() => setAttachedFile(null)} className="p-0.5 rounded hover:bg-[#E5E5E0] dark:hover:bg-[#22221F] transition-colors shrink-0">
-                <X className="w-3.5 h-3.5 text-[#666660]" />
-              </button>
             </div>
           )}
 

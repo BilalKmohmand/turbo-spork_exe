@@ -1,0 +1,127 @@
+{
+  "colorScheme": "light",
+  "fonts": [
+    {
+      "family": "IBM Plex Mono",
+      "role": "monospace"
+    }
+  ],
+  "colors": {
+    "primary": "#4B5563",
+    "accent": "#FF6542",
+    "background": "#FFFFFF",
+    "textPrimary": "#11181C",
+    "link": "#FF6542"
+  },
+  "typography": {
+    "fontFamilies": {
+      "primary": "IBM Plex Mono",
+      "heading": "IBM Plex Mono"
+    },
+    "fontStacks": {
+      "heading": [
+        "__IBM_Plex_Mono_b4c22e",
+        "__IBM_Plex_Mono_Fallback_b4c22e"
+      ],
+      "body": [
+        "__IBM_Plex_Mono_b4c22e",
+        "__IBM_Plex_Mono_Fallback_b4c22e"
+      ],
+      "paragraph": [
+        "__IBM_Plex_Mono_b4c22e",
+        "__IBM_Plex_Mono_Fallback_b4c22e"
+      ]
+    },
+    "fontSizes": {
+      "h1": "60px",
+      "h2": "48px",
+      "body": "20px"
+    }
+  },
+  "spacing": {
+    "baseUnit": 4,
+    "borderRadius": "4px"
+  },
+  "components": {
+    "buttonPrimary": {
+      "background": "#FF6542",
+      "textColor": "#FFFFFF",
+      "borderRadius": "9999px",
+      "borderRadiusCorners": {
+        "topLeft": "9999px",
+        "topRight": "9999px",
+        "bottomRight": "9999px",
+        "bottomLeft": "9999px"
+      },
+      "shadow": "none"
+    },
+    "buttonSecondary": {
+      "background": "#FFFFFF",
+      "textColor": "#FF6542",
+      "borderRadius": "9999px",
+      "borderRadiusCorners": {
+        "topLeft": "9999px",
+        "topRight": "9999px",
+        "bottomRight": "9999px",
+        "bottomLeft": "9999px"
+      },
+      "shadow": "none"
+    }
+  },
+  "images": {
+    "logo": "https://tutorai.me/image/logo.svg",
+    "favicon": "https://tutorai.me/favicon.ico",
+    "ogImage": "https://tutorai.me/image/tai_og_image.png",
+    "logoHref": "File saved at: attached_assets/logoHref.html",
+    "logoAlt": "tutorAI"
+  },
+  "__llm_logo_reasoning": {
+    "selectedIndex": 0,
+    "reasoning": "Selected #0 because it is visible, located in the header, links to the homepage, and matches the brand name 'tutorAI'.",
+    "confidence": 0.9,
+    "source": "llm"
+  },
+  "__llm_button_reasoning": {
+    "primary": {
+      "index": 0,
+      "text": "Create Custom Courses",
+      "reasoning": "Button #0 ('Create Custom Courses') uses the vibrant brand color #FF6542, making it the most prominent and action-oriented CTA on the page."
+    },
+    "secondary": {
+      "index": 2,
+      "text": "Create Your First Course",
+      "reasoning": "Button #2 ('Create Your First Course') has a different background color (#FFFFFF) and complements the primary CTA by offering a related action."
+    },
+    "confidence": 0.95
+  },
+  "personality": {
+    "tone": "modern",
+    "energy": "medium",
+    "targetAudience": "students and lifelong learners"
+  },
+  "designSystem": {
+    "framework": "tailwind",
+    "componentLibrary": ""
+  },
+  "confidence": {
+    "buttons": 0.95,
+    "colors": 0.9,
+    "overall": 0.925
+  },
+  "__llm_metadata": {
+    "logoSelection": {
+      "llmCalled": true,
+      "llmSucceeded": true,
+      "finalSource": "llm",
+      "rawLogoSelection": {
+        "selectedLogoIndex": 0,
+        "selectedLogoReasoning": "Selected #0 because it is visible, located in the header, links to the homepage, and matches the brand name 'tutorAI'.",
+        "confidence": 0.9
+      }
+    },
+    "buttonClassification": {
+      "llmCalled": true,
+      "llmSucceeded": true
+    }
+  }
+}
