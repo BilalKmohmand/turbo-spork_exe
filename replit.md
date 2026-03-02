@@ -58,6 +58,9 @@ Preferred communication style: Simple, everyday language.
 - **Evaluations**: id, submissionId, teacherId, score, feedback, reviewedAt
 - **Sessions**: PostgreSQL table "user_sessions" (auto-created)
 - **KnowledgeChunks**: RAG knowledge base with vector embeddings (1536 dimensions)
+- **Courses**: id, userId, title, topic, difficulty, audience, description, coverEmoji, chapters (JSONB), totalLessons, createdAt
+- **LessonContents**: id, courseId, lessonKey (e.g. "0-2"), content (markdown), quiz (JSONB array), createdAt
+- **LessonProgress**: id, userId, courseId, lessonKey, score, completedAt
 
 ### Key Pages
 - `/` - Landing page with hero, features, stats, testimonials
@@ -70,6 +73,14 @@ Preferred communication style: Simple, everyday language.
 - `/notes` - AI lecture notes from audio recordings
 - `/pricing` - Subscription pricing page
 - `/knowledge` - Knowledge base management for RAG (teachers only)
+
+### AI Course Creator (TutorAI-style feature)
+- **My Courses tab** in dashboard sidebar (GraduationCap icon)
+- **Course generation**: User enters topic + difficulty + audience → Claude generates structured course (4-6 chapters, 3-5 lessons each)
+- **Lesson content**: Generated on-demand via two-section format (===CONTENT=== markdown + ===QUIZ=== JSON) — cached in DB after first generation
+- **Progress tracking**: Lesson completion + quiz scores tracked per user
+- **Course library**: Grid of course cards with emoji, title, difficulty badge, progress bar
+- **Inline quiz**: 4 MCQs per lesson with explanations and score feedback
 
 ### API Endpoints
 - `POST /api/auth/register` - Register new user (bcrypt hashed password)

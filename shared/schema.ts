@@ -281,6 +281,69 @@ export const batchEvaluateSchema = z.object({
   submissionIds: z.array(z.string()).min(1, "At least one submission required"),
 });
 
+// ── AI Courses ─────────────────────────────────────────────────────
+
+export interface CourseLesson {
+  title: string;
+  duration: string;
+}
+
+export interface CourseChapter {
+  title: string;
+  description: string;
+  lessons: CourseLesson[];
+}
+
+export interface QuizQuestion {
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+}
+
+export const courses = pgTable("courses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  title: text("title").notNull(),
+  topic: text("topic").notNull(),
+  difficulty: text("difficulty").notNull().default("beginner"),
+  audience: text("audience").notNull().default("general"),
+  description: text("description").notNull(),
+  coverEmoji: text("cover_emoji").notNull().default("📚"),
+  chapters: jsonb("chapters").notNull().$type<CourseChapter[]>(),
+  totalLessons: integer("total_lessons").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const lessonContents = pgTable("lesson_contents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").references(() => courses.id).notNull(),
+  lessonKey: text("lesson_key").notNull(),
+  content: text("content").notNull(),
+  quiz: jsonb("quiz").notNull().$type<QuizQuestion[]>(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const lessonProgress = pgTable("lesson_progress", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  courseId: varchar("course_id").references(() => courses.id).notNull(),
+  lessonKey: text("lesson_key").notNull(),
+  score: integer("score"),
+  completedAt: timestamp("completed_at").defaultNow(),
+});
+
+export const insertCourseSchema = createInsertSchema(courses).omit({ id: true, createdAt: true });
+export const insertLessonContentSchema = createInsertSchema(lessonContents).omit({ id: true, createdAt: true });
+export const insertLessonProgressSchema = createInsertSchema(lessonProgress).omit({ id: true, completedAt: true });
+
+export type Course = typeof courses.$inferSelect;
+export type InsertCourse = z.infer<typeof insertCourseSchema>;
+export type LessonContent = typeof lessonContents.$inferSelect;
+export type InsertLessonContent = z.infer<typeof insertLessonContentSchema>;
+export type LessonProgressRow = typeof lessonProgress.$inferSelect;
+export type InsertLessonProgress = z.infer<typeof insertLessonProgressSchema>;
+
 // Knowledge chunks table for RAG system
 export const knowledgeChunks = pgTable("knowledge_chunks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

@@ -17,6 +17,12 @@ import {
   type InsertRubricSubmission,
   type RubricEvaluation,
   type InsertRubricEvaluation,
+  type Course,
+  type InsertCourse,
+  type LessonContent,
+  type InsertLessonContent,
+  type LessonProgressRow,
+  type InsertLessonProgress,
   users,
   submissions,
   evaluations,
@@ -25,6 +31,9 @@ import {
   rubricSubmissions,
   rubricEvaluations,
   quizAttempts,
+  courses,
+  lessonContents,
+  lessonProgress,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, inArray, gte, lt } from "drizzle-orm";
@@ -71,6 +80,20 @@ export interface IStorage {
   createRubricEvaluation(data: InsertRubricEvaluation): Promise<RubricEvaluation>;
   getRubricEvaluationsByRubric(rubricId: string): Promise<RubricEvaluation[]>;
   getRubricEvaluationsByTeacher(teacherId: string): Promise<RubricEvaluation[]>;
+
+  // Course operations
+  createCourse(data: InsertCourse): Promise<Course>;
+  getCourse(id: string): Promise<Course | undefined>;
+  getCoursesByUser(userId: string): Promise<Course[]>;
+  deleteCourse(id: string): Promise<void>;
+
+  // Lesson content
+  getLessonContent(courseId: string, lessonKey: string): Promise<LessonContent | undefined>;
+  createLessonContent(data: InsertLessonContent): Promise<LessonContent>;
+
+  // Lesson progress
+  getLessonProgress(userId: string, courseId: string): Promise<LessonProgressRow[]>;
+  markLessonComplete(data: InsertLessonProgress): Promise<LessonProgressRow>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -394,6 +417,63 @@ export class DatabaseStorage implements IStorage {
 
   async getRubricEvaluationsByTeacher(teacherId: string): Promise<RubricEvaluation[]> {
     return await db.select().from(rubricEvaluations).where(eq(rubricEvaluations.teacherId, teacherId)).orderBy(desc(rubricEvaluations.evaluatedAt));
+  }
+
+  /* ── Courses ─────────────────────────────────────────────── */
+  async createCourse(data: InsertCourse): Promise<Course> {
+    const [course] = await db.insert(courses).values(data).returning();
+    return course;
+  }
+
+  async getCourse(id: string): Promise<Course | undefined> {
+    const [course] = await db.select().from(courses).where(eq(courses.id, id));
+    return course;
+  }
+
+  async getCoursesByUser(userId: string): Promise<Course[]> {
+    return await db.select().from(courses).where(eq(courses.userId, userId)).orderBy(desc(courses.createdAt));
+  }
+
+  async deleteCourse(id: string): Promise<void> {
+    await db.delete(lessonProgress).where(eq(lessonProgress.courseId, id));
+    await db.delete(lessonContents).where(eq(lessonContents.courseId, id));
+    await db.delete(courses).where(eq(courses.id, id));
+  }
+
+  /* ── Lesson Contents ─────────────────────────────────────── */
+  async getLessonContent(courseId: string, lessonKey: string): Promise<LessonContent | undefined> {
+    const [lc] = await db.select().from(lessonContents)
+      .where(and(eq(lessonContents.courseId, courseId), eq(lessonContents.lessonKey, lessonKey)));
+    return lc;
+  }
+
+  async createLessonContent(data: InsertLessonContent): Promise<LessonContent> {
+    const [lc] = await db.insert(lessonContents).values(data).returning();
+    return lc;
+  }
+
+  /* ── Lesson Progress ─────────────────────────────────────── */
+  async getLessonProgress(userId: string, courseId: string): Promise<LessonProgressRow[]> {
+    return await db.select().from(lessonProgress)
+      .where(and(eq(lessonProgress.userId, userId), eq(lessonProgress.courseId, courseId)));
+  }
+
+  async markLessonComplete(data: InsertLessonProgress): Promise<LessonProgressRow> {
+    const existing = await db.select().from(lessonProgress)
+      .where(and(
+        eq(lessonProgress.userId, data.userId),
+        eq(lessonProgress.courseId, data.courseId),
+        eq(lessonProgress.lessonKey, data.lessonKey),
+      ));
+    if (existing.length > 0) {
+      const [updated] = await db.update(lessonProgress)
+        .set({ score: data.score, completedAt: new Date() })
+        .where(eq(lessonProgress.id, existing[0].id))
+        .returning();
+      return updated;
+    }
+    const [lp] = await db.insert(lessonProgress).values(data).returning();
+    return lp;
   }
 }
 

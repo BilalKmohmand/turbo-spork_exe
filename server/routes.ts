@@ -2896,5 +2896,226 @@ Respond with ONLY valid JSON (no markdown):
     }
   });
 
+  /* ── Course API ────────────────────────────────────────────────── */
+
+  // Generate a new AI course
+  app.post("/api/courses/generate", requireAuth, async (req, res) => {
+    try {
+      const { topic, difficulty = "beginner", audience = "general learners" } = req.body;
+      if (!topic?.trim()) return res.status(400).json({ error: "Topic is required" });
+
+      const prompt = `You are a world-class instructional designer. Create a comprehensive, well-structured course outline.
+
+Topic: ${topic}
+Difficulty: ${difficulty}
+Target Audience: ${audience}
+
+Return ONLY valid JSON (no markdown, no code blocks) with this exact structure:
+{
+  "title": "Engaging course title",
+  "description": "2-3 sentences describing what students will learn and why it matters",
+  "coverEmoji": "single relevant emoji",
+  "chapters": [
+    {
+      "title": "Chapter title",
+      "description": "One sentence describing this chapter",
+      "lessons": [
+        { "title": "Lesson title", "duration": "X min" }
+      ]
+    }
+  ]
+}
+
+Requirements:
+- 4-6 chapters
+- Each chapter: 3-5 lessons
+- Lesson durations: 5-15 minutes
+- Titles should be clear and engaging
+- Progress logically from fundamentals to advanced concepts`;
+
+      const response = await anthropic.messages.create({
+        model: "claude-opus-4-5",
+        max_tokens: 3000,
+        messages: [{ role: "user", content: prompt }],
+      });
+
+      let raw = (response.content[0] as any).text?.trim() || "";
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) return res.status(500).json({ error: "AI returned invalid structure. Please try again." });
+
+      let parsed: any;
+      try { parsed = JSON.parse(jsonMatch[0]); } catch {
+        return res.status(500).json({ error: "Failed to parse course structure. Please try again." });
+      }
+
+      const totalLessons = parsed.chapters.reduce((sum: number, ch: any) => sum + (ch.lessons?.length || 0), 0);
+
+      const course = await storage.createCourse({
+        userId: req.session.userId!,
+        title: parsed.title || topic,
+        topic,
+        difficulty,
+        audience,
+        description: parsed.description || "",
+        coverEmoji: parsed.coverEmoji || "📚",
+        chapters: parsed.chapters || [],
+        totalLessons,
+      });
+
+      res.status(201).json(course);
+    } catch (error: any) {
+      console.error("Course generate error:", error?.message);
+      res.status(500).json({ error: "Failed to generate course. Please try again." });
+    }
+  });
+
+  // List user's courses
+  app.get("/api/courses", requireAuth, async (req, res) => {
+    try {
+      const userCourses = await storage.getCoursesByUser(req.session.userId!);
+      res.json(userCourses);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch courses" });
+    }
+  });
+
+  // Get single course
+  app.get("/api/courses/:id", requireAuth, async (req, res) => {
+    try {
+      const course = await storage.getCourse(req.params.id);
+      if (!course) return res.status(404).json({ error: "Course not found" });
+      if (course.userId !== req.session.userId) return res.status(403).json({ error: "Forbidden" });
+      const progress = await storage.getLessonProgress(req.session.userId!, req.params.id);
+      res.json({ ...course, progress });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch course" });
+    }
+  });
+
+  // Delete course
+  app.delete("/api/courses/:id", requireAuth, async (req, res) => {
+    try {
+      const course = await storage.getCourse(req.params.id);
+      if (!course) return res.status(404).json({ error: "Course not found" });
+      if (course.userId !== req.session.userId) return res.status(403).json({ error: "Forbidden" });
+      await storage.deleteCourse(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to delete course" });
+    }
+  });
+
+  // Get or generate lesson content
+  app.post("/api/courses/:id/lesson/:lessonKey", requireAuth, async (req, res) => {
+    try {
+      const { id, lessonKey } = req.params;
+      const course = await storage.getCourse(id);
+      if (!course) return res.status(404).json({ error: "Course not found" });
+      if (course.userId !== req.session.userId) return res.status(403).json({ error: "Forbidden" });
+
+      // Return cached content if available
+      const cached = await storage.getLessonContent(id, lessonKey);
+      if (cached) return res.json(cached);
+
+      // Parse lesson key: "chapterIdx-lessonIdx"
+      const [chIdx, lIdx] = lessonKey.split("-").map(Number);
+      const chapter = (course.chapters as any[])[chIdx];
+      const lesson = chapter?.lessons?.[lIdx];
+      if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+
+      const prompt = `You are an expert educator creating a detailed lesson.
+
+Course: "${course.title}" (${course.difficulty})
+Chapter: "${chapter.title}"
+Lesson: "${lesson.title}"
+Target Audience: ${course.audience}
+
+Write your response in EXACTLY this two-section format — do not deviate:
+
+===CONTENT===
+Write the full lesson here in markdown. Use ## for main sections, ### for sub-sections, **bold** for key terms, - for bullet lists. For mathematical expressions use $inline math$ and $$display math$$. Include: introduction, core concepts with examples, practical applications, and a key takeaways summary. Minimum 500 words. Do NOT use JSON or code blocks with curly braces.
+
+===QUIZ===
+[{"question":"Question text?","options":["A option","B option","C option","D option"],"correctIndex":0,"explanation":"Why A is correct."},{"question":"...","options":["...","...","...","..."],"correctIndex":1,"explanation":"..."},{"question":"...","options":["...","...","...","..."],"correctIndex":2,"explanation":"..."},{"question":"...","options":["...","...","...","..."],"correctIndex":0,"explanation":"..."}]
+
+The quiz JSON array must contain exactly 4 questions. Each correctIndex is 0-3.`;
+
+      const response = await anthropic.messages.create({
+        model: "claude-opus-4-5",
+        max_tokens: 4000,
+        messages: [{ role: "user", content: prompt }],
+      });
+
+      const raw = (response.content[0] as any).text?.trim() || "";
+
+      // Parse the two-section format
+      const contentMatch = raw.match(/===CONTENT===\s*([\s\S]*?)(?:===QUIZ===|$)/);
+      const quizMatch    = raw.match(/===QUIZ===\s*([\s\S]*?)$/);
+
+      const lessonContent = contentMatch?.[1]?.trim() || "";
+      let quizData: any[] = [];
+
+      if (quizMatch?.[1]) {
+        const quizRaw = quizMatch[1].trim();
+        const arrMatch = quizRaw.match(/\[[\s\S]*\]/);
+        if (arrMatch) {
+          try { quizData = JSON.parse(arrMatch[0]); } catch {
+            quizData = [];
+          }
+        }
+      }
+
+      if (!lessonContent) {
+        return res.status(500).json({ error: "AI returned empty lesson content. Please try again." });
+      }
+
+      const lc = await storage.createLessonContent({
+        courseId: id,
+        lessonKey,
+        content: lessonContent,
+        quiz: quizData,
+      });
+
+      res.json(lc);
+    } catch (error: any) {
+      console.error("Lesson generate error:", error?.message);
+      res.status(500).json({ error: "Failed to generate lesson content. Please try again." });
+    }
+  });
+
+  // Mark lesson as complete
+  app.post("/api/courses/:id/lesson/:lessonKey/complete", requireAuth, async (req, res) => {
+    try {
+      const { id, lessonKey } = req.params;
+      const { score } = req.body;
+      const course = await storage.getCourse(id);
+      if (!course) return res.status(404).json({ error: "Course not found" });
+      if (course.userId !== req.session.userId) return res.status(403).json({ error: "Forbidden" });
+
+      const lp = await storage.markLessonComplete({
+        userId: req.session.userId!,
+        courseId: id,
+        lessonKey,
+        score: typeof score === "number" ? score : null,
+      });
+      res.json(lp);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to save progress" });
+    }
+  });
+
+  // Get lesson progress for a course
+  app.get("/api/courses/:id/progress", requireAuth, async (req, res) => {
+    try {
+      const course = await storage.getCourse(req.params.id);
+      if (!course) return res.status(404).json({ error: "Course not found" });
+      if (course.userId !== req.session.userId) return res.status(403).json({ error: "Forbidden" });
+      const progress = await storage.getLessonProgress(req.session.userId!, req.params.id);
+      res.json(progress);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch progress" });
+    }
+  });
+
   return httpServer;
 }

@@ -6,7 +6,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import {
   MessageSquare, Mic, FileText, FileEdit, Brain,
   LogOut, LayoutDashboard, Sparkles, Settings,
-  HelpCircle, Crown, ClipboardCheck,
+  HelpCircle, Crown, ClipboardCheck, GraduationCap,
   Menu, PanelLeftClose, PanelLeftOpen
 } from "lucide-react";
 
@@ -18,6 +18,7 @@ import OverviewContent  from "@/components/dashboard/overview-content";
 import HelpContent      from "@/components/dashboard/help-content";
 import SettingsContent  from "@/components/dashboard/settings-content";
 import EvaluateContent  from "@/components/dashboard/evaluate-content";
+import CoursesContent   from "@/components/dashboard/courses-content";
 
 /* ─── Nav config ─────────────────────────────────────────────── */
 const NAV = [
@@ -25,7 +26,8 @@ const NAV = [
     group: "Platform",
     items: [
       { id: "overview", label: "Overview",        icon: LayoutDashboard },
-      { id: "solver",   label: "AI Tutor",         icon: MessageSquare, badge: "Hot" },
+      { id: "courses",  label: "My Courses",       icon: GraduationCap, badge: "New" },
+      { id: "solver",   label: "AI Tutor",         icon: MessageSquare },
       { id: "notes",    label: "Lecture Notes",    icon: Mic },
       { id: "quiz",     label: "Quiz Generator",   icon: FileText },
       { id: "essay",    label: "Essay Writer",     icon: FileEdit },
@@ -290,6 +292,7 @@ export default function Dashboard() {
         <main className="flex-1 overflow-y-auto bg-[#FFFFFF] dark:bg-[#0A0A0A]">
           <div className={`max-w-screen-xl mx-auto h-full ${active === 'solver' ? '' : 'p-6 lg:p-8'}`}>
             {active === "overview"  && <OverviewContent user={user} onNavigate={setActive} />}
+            {active === "courses"   && <CoursesContent />}
             {active === "solver"    && <SolverContent />}
             {active === "notes"     && <NotesContent />}
             {active === "quiz"      && <QuizContent />}
