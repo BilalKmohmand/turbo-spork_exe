@@ -27,8 +27,8 @@ const STATS = [
 const FEATURES = [
   {
     icon: MessageSquare,
-    label: "AI Tutor",
-    desc: "Chat with a specialist AI tutor across Math, Science, English, History and Languages. Voice input, multi-image upload, and drag-and-drop files — all in one chat.",
+    label: "AI Tutor Chat",
+    desc: "Interactive 24/7 chat with specialist modes for Math, Science, English, History, and Languages. Supports voice input and drag-and-drop.",
     color: "text-violet-600",
     bg: "bg-violet-50",
     border: "border-violet-100",
@@ -38,7 +38,7 @@ const FEATURES = [
   {
     icon: GraduationCap,
     label: "AI Course Creator",
-    desc: "Enter any topic and get a fully structured 4–6 chapter course with lessons, quizzes and progress tracking — generated in seconds.",
+    desc: "Generate full structured courses on any topic instantly. Includes chapters, lessons, and progress tracking tailored to your level.",
     color: "text-indigo-600",
     bg: "bg-indigo-50",
     border: "border-indigo-100",
@@ -48,7 +48,7 @@ const FEATURES = [
   {
     icon: Camera,
     label: "Photo Solver",
-    desc: "Snap or upload any problem — handwritten, printed or in a PDF — and get an instant step-by-step solution.",
+    desc: "Snap a photo of handwritten or printed problems and get instant step-by-step solutions and explanations.",
     color: "text-fuchsia-600",
     bg: "bg-fuchsia-50",
     border: "border-fuchsia-100",
@@ -57,7 +57,7 @@ const FEATURES = [
   {
     icon: FileText,
     label: "Quiz Generator",
-    desc: "Turn any notes, PDF or textbook into a custom quiz in seconds.",
+    desc: "Turn any textbook, PDF, or notes into personalized practice quizzes with instant feedback.",
     color: "text-emerald-600",
     bg: "bg-emerald-50",
     border: "border-emerald-100",
@@ -66,7 +66,7 @@ const FEATURES = [
   {
     icon: Mic,
     label: "Lecture Notes",
-    desc: "Record any lecture and get AI-structured study notes instantly.",
+    desc: "Record lectures to generate structured study notes, summaries, and key takeaways automatically.",
     color: "text-sky-600",
     bg: "bg-sky-50",
     border: "border-sky-100",
@@ -75,10 +75,28 @@ const FEATURES = [
   {
     icon: FileEdit,
     label: "Essay Writer",
-    desc: "AI-powered outlines, drafts and feedback for better essays.",
+    desc: "Get help with outlines, drafting, and real-time feedback to improve your writing style and structure.",
     color: "text-amber-600",
     bg: "bg-amber-50",
     border: "border-amber-100",
+    size: "small",
+  },
+  {
+    icon: Sparkles,
+    label: "RAG Knowledge Base",
+    desc: "Answers grounded in verified educational content with citations to textbooks and sources.",
+    color: "text-blue-600",
+    bg: "bg-blue-50",
+    border: "border-blue-100",
+    size: "small",
+  },
+  {
+    icon: CheckCircle,
+    label: "AI Evaluator",
+    desc: "Get your work reviewed with scores and detailed feedback from an AI teacher perspective.",
+    color: "text-rose-600",
+    bg: "bg-rose-50",
+    border: "border-rose-100",
     size: "small",
   },
 ];
