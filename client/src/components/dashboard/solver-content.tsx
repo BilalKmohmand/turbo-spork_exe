@@ -100,6 +100,10 @@ export default function SolverContent() {
   const [isUploadingSolving, setIsUploadingSolving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  /* Drag-and-drop state */
+  const [isDragging, setIsDragging] = useState(false);
+  const dragCounterRef              = useRef(0); // tracks nested drag enter/leave
+
   /* Voice / speech-to-text state */
   const [isListening, setIsListening]   = useState(false);
   const recognitionRef                  = useRef<any>(null);
@@ -399,9 +403,86 @@ export default function SolverContent() {
 
   const canSend = (!isStreaming && !isUploadingSolving) && (!!textProblem.trim() || attachedFiles.length > 0);
 
+  /* ── Drag-and-drop handlers ────────────────────────────────────── */
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current++;
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current--;
+    if (dragCounterRef.current === 0) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = "copy";
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    dragCounterRef.current = 0;
+
+    const files = Array.from(e.dataTransfer.files);
+    if (!files.length) return;
+
+    const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    const remaining = MAX_FILES - attachedFiles.length;
+    if (remaining <= 0) {
+      toast({ title: "Limit reached", description: `Maximum ${MAX_FILES} images at once.`, variant: "destructive" });
+      return;
+    }
+
+    const toProcess = files.filter(f => allowed.includes(f.type)).slice(0, remaining);
+    const rejected  = files.filter(f => !allowed.includes(f.type)).length;
+
+    if (rejected > 0) {
+      toast({ title: "Some files skipped", description: "Only JPG, PNG, WEBP, GIF images are supported.", variant: "destructive" });
+    }
+
+    toProcess.forEach(file => {
+      if (file.size > 10 * 1024 * 1024) {
+        toast({ title: `${file.name} is too large`, description: "Max 10 MB per image.", variant: "destructive" });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        setAttachedFiles(prev => {
+          if (prev.length >= MAX_FILES) return prev;
+          return [...prev, {
+            id: `${Date.now()}-${Math.random()}`,
+            name: file.name,
+            base64: dataUrl.split(",")[1],
+            mimeType: file.type,
+            preview: dataUrl,
+          }];
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
   /* ── Render ────────────────────────────────────────────────────── */
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-[#0A0A0A] relative">
+    <div
+      className="flex flex-col h-full bg-white dark:bg-[#0A0A0A] relative"
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
       {/* Waveform keyframes */}
       <style>{`
         @keyframes voiceBar {
@@ -409,6 +490,23 @@ export default function SolverContent() {
           100% { transform: scaleY(1.1); }
         }
       `}</style>
+
+      {/* Drag-and-drop overlay */}
+      {isDragging && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center pointer-events-none">
+          <div className="absolute inset-0 bg-violet-500/10 dark:bg-violet-400/10 backdrop-blur-[1px]" />
+          <div className="absolute inset-4 rounded-2xl border-2 border-dashed border-violet-400 dark:border-violet-500" />
+          <div className="relative flex flex-col items-center gap-3 text-center px-8">
+            <div className="w-16 h-16 rounded-2xl bg-white dark:bg-[#111110] shadow-xl flex items-center justify-center">
+              <FileImage className="w-8 h-8 text-violet-500" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-violet-700 dark:text-violet-300">Drop images here</p>
+              <p className="text-sm text-violet-500 dark:text-violet-400 mt-0.5">JPG, PNG, WEBP, GIF — up to {MAX_FILES} images</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hidden file input — multiple */}
       <input
@@ -679,7 +777,7 @@ export default function SolverContent() {
                   setTextProblem(e.target.value);
                 }}
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSubmit())}
-                placeholder={isListening ? "Speak now — I'm listening…" : "Message Gradeio, or attach a photo of your homework…"}
+                placeholder={isListening ? "Speak now — I'm listening…" : "Ask anything, or drag & drop images here…"}
                 className={`w-full min-h-[60px] max-h-48 p-4 pt-5 pb-12 bg-transparent border-none focus-visible:ring-0 text-[15px] resize-none no-scrollbar ${
                   isListening ? "placeholder:text-red-400" : "placeholder:text-[#999990]"
                 }`}
