@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import { Link } from "wouter";
+import { renderMathText } from "@/components/math-display";
 import {
   ArrowRight, Sparkles, Brain, Camera, MessageSquare,
   FileText, Mic, FileEdit, CheckCircle, Star,
@@ -789,10 +790,10 @@ function InteractiveDemo() {
                     : "text-white/75"
                 }`}>
                   {msg.role === "ai" ? (
-                    <div className="whitespace-pre-wrap">
-                      {msg.text}
+                    <div>
+                      {renderMathText(msg.text)}
                       {streaming && i === messages.length - 1 && (
-                        <span className="inline-block w-0.5 h-4 bg-violet-400 ml-0.5 animate-pulse align-middle" />
+                        <span className="inline-block w-0.5 h-3.5 bg-violet-400 ml-0.5 animate-pulse align-middle rounded-sm" />
                       )}
                     </div>
                   ) : msg.text}

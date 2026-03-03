@@ -94,13 +94,27 @@ function processTextWithMath(text: string): string {
   });
   
   result = result.replace(/\*\*([^*]+?)\*\*/g, '<strong class="font-semibold">$1</strong>');
-  
-  result = result.replace(/^### (.+)$/gm, '<h3 class="text-lg font-bold mt-4 mb-2">$1</h3>');
-  result = result.replace(/^## (.+)$/gm, '<h2 class="text-xl font-bold mt-5 mb-2">$1</h2>');
-  result = result.replace(/^# (.+)$/gm, '<h1 class="text-2xl font-bold mt-6 mb-3">$1</h1>');
-  
+  result = result.replace(/\*([^*\n]+?)\*/g, '<em>$1</em>');
+  result = result.replace(/`([^`\n]+?)`/g, '<code style="padding:1px 4px;background:rgba(255,255,255,0.1);border-radius:4px;font-size:0.85em;font-family:monospace">$1</code>');
+
+  result = result.replace(/^### (.+)$/gm, '<h3 class="text-base font-bold mt-4 mb-2">$1</h3>');
+  result = result.replace(/^## (.+)$/gm, '<h2 class="text-lg font-bold mt-5 mb-2">$1</h2>');
+  result = result.replace(/^# (.+)$/gm, '<h1 class="text-xl font-bold mt-5 mb-3">$1</h1>');
+
   result = result.replace(/^---$/gm, '<hr class="my-4 border-border"/>');
-  
+
+  result = result.replace(/^(→|->|▸)\s+(.+)$/gm,
+    '<div style="display:flex;gap:8px;margin:3px 0"><span style="opacity:0.5;flex-shrink:0;margin-top:1px">→</span><span>$2</span></div>');
+
+  result = result.replace(/^[-•]\s+(.+)$/gm,
+    '<div style="display:flex;gap:8px;margin:3px 0"><span style="opacity:0.4;flex-shrink:0">•</span><span>$1</span></div>');
+
+  result = result.replace(/^\d+\.\s+(.+)$/gm, (match, content, offset, str) => {
+    const before = str.slice(0, offset);
+    const num = (before.match(/^\d+\./gm) || []).length + 1;
+    return `<div style="display:flex;gap:8px;margin:3px 0"><span style="opacity:0.5;flex-shrink:0;min-width:16px;text-align:right">${num}.</span><span>${content}</span></div>`;
+  });
+
   result = result.replace(/\n\n+/g, '</p><p class="mt-3">');
   result = result.replace(/\n/g, '<br/>');
   result = `<p>${result}</p>`;

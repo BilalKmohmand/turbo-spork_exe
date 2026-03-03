@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
+import { renderMathText } from "@/components/math-display";
 import {
   Sparkles, MessageSquare, GraduationCap, FileText, Mic, FileEdit,
   LayoutDashboard, ArrowRight, Calculator, FlaskConical, BookOpen,
@@ -444,12 +445,18 @@ function DemoTutor() {
                 <Sparkles className={`w-4 h-4 ${curSubject.color}`} />
               </div>
             )}
-            <div className={`max-w-[80%] text-[14px] leading-relaxed ${msg.role === "user" ? "bg-white text-black px-4 py-3 rounded-2xl rounded-br-sm font-medium" : "text-white/75 whitespace-pre-wrap"}`}>
-              {msg.text}
-              {streaming && i === messages.length - 1 && msg.role === "ai" && (
-                <span className="inline-block w-0.5 h-4 bg-violet-400 ml-0.5 animate-pulse align-middle rounded" />
-              )}
-            </div>
+            {msg.role === "user" ? (
+              <div className="max-w-[80%] text-[14px] leading-relaxed bg-white text-black px-4 py-3 rounded-2xl rounded-br-sm font-medium">
+                {msg.text}
+              </div>
+            ) : (
+              <div className="max-w-[80%] text-[14px] leading-relaxed text-white/80">
+                {renderMathText(msg.text)}
+                {streaming && i === messages.length - 1 && (
+                  <span className="inline-block w-0.5 h-3.5 bg-violet-400 ml-0.5 animate-pulse align-middle rounded-sm" />
+                )}
+              </div>
+            )}
           </div>
         ))}
         {error && (
