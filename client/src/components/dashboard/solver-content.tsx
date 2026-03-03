@@ -5,10 +5,40 @@ import { renderMathText } from "@/components/math-display";
 import {
   Send, Paperclip, Sparkles, BookOpen,
   Calculator, FlaskConical, Globe, Mic, MicOff,
-  User, X, FileImage, FileText as FilePdf,
+  User, X, FileImage, FileText, File, FileSpreadsheet,
   Atom, TestTube, Leaf, ChevronRight, Copy, Check,
   Trash2, PenLine, Eye, AlignLeft, RefreshCw, BookMarked, GraduationCap,
 } from "lucide-react";
+
+/* ─── Accepted file types ────────────────────────────────────────── */
+const IMAGE_MIMES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const DOC_MIMES   = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "text/plain",
+  "text/csv",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+];
+const ALL_MIMES = [...IMAGE_MIMES, ...DOC_MIMES];
+
+const FILE_INPUT_ACCEPT =
+  "image/jpeg,image/png,image/webp,image/gif," +
+  "application/pdf," +
+  ".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document," +
+  "text/plain,text/csv," +
+  ".xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+function getDocMeta(mimeType: string): { icon: any; color: string; bg: string; label: string } {
+  if (mimeType === "application/pdf")
+    return { icon: FileText, color: "text-red-500",   bg: "bg-red-50 dark:bg-red-950/30",   label: "PDF"  };
+  if (mimeType.includes("word"))
+    return { icon: FileText, color: "text-blue-500",  bg: "bg-blue-50 dark:bg-blue-950/30", label: "DOC"  };
+  if (mimeType.includes("excel") || mimeType.includes("spreadsheet") || mimeType === "text/csv")
+    return { icon: FileSpreadsheet, color: "text-green-500", bg: "bg-green-50 dark:bg-green-950/30", label: "XLS" };
+  return { icon: File, color: "text-gray-500", bg: "bg-gray-50 dark:bg-gray-950/30", label: "TXT" };
+}
 
 /* ─── Types ─────────────────────────────────────────────────────── */
 interface ChatMessage {
@@ -358,42 +388,130 @@ export default function SolverContent() {
     }
   };
 
+  /* Document solve via streaming ---------------------------------- */
+  const solveDocument = async (file: AttachedFile, prompt: string) => {
+    const displayName = file.name;
+    const userContent = prompt.trim() ? `${prompt.trim()}\n\n📎 ${displayName}` : `📎 ${displayName}`;
+    const userMsg: ChatMessage = { role: "user", content: userContent };
+    setChatHistory(prev => [...prev, userMsg]);
+    setIsStreaming(true);
+    setAttachedFiles([]);
+    setTextProblem("");
+
+    const instruction = activeMode
+      ? `[TUTOR MODE: ${activeMode.instruction}]\n\n`
+      : "";
+
+    try {
+      const response = await fetch("/api/solve-image-stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          image: file.base64,
+          mimeType: file.mimeType,
+          prompt: instruction + (prompt.trim() || "Analyse and explain the contents of this file in detail."),
+        }),
+      });
+      if (!response.ok) throw new Error("Failed to process file");
+
+      const reader  = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let   fullText = "";
+
+      setChatHistory(prev => [...prev, { role: "assistant", content: "" }]);
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value);
+          for (const line of chunk.split("\n").filter(l => l.startsWith("data: "))) {
+            try {
+              const data = JSON.parse(line.slice(6).trim());
+              if (data.token) {
+                fullText += data.token;
+                setChatHistory(prev => {
+                  const updated = [...prev];
+                  updated[updated.length - 1] = { role: "assistant", content: fullText };
+                  return updated;
+                });
+                scrollToBottom();
+              } else if (data.error) {
+                throw new Error(data.error);
+              }
+            } catch {}
+          }
+        }
+      }
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to process file", variant: "destructive" });
+    } finally {
+      setIsStreaming(false);
+      scrollToBottom();
+    }
+  };
+
   /* Handle submit -------------------------------------------------- */
   const handleSubmit = () => {
     if (isStreaming || isUploadingSolving) return;
     if (listeningRef.current) stopVoice();
 
     if (attachedFiles.length > 0) {
-      solveImages(attachedFiles, textProblem);
+      const docs = attachedFiles.filter(f => !IMAGE_MIMES.includes(f.mimeType));
+      const imgs = attachedFiles.filter(f => IMAGE_MIMES.includes(f.mimeType));
+      if (docs.length > 0) {
+        // Process first document (multiple docs → process one at a time)
+        solveDocument(docs[0], textProblem);
+      } else {
+        solveImages(imgs, textProblem);
+      }
     } else if (textProblem.trim()) {
       solveWithStreaming(textProblem.trim());
     }
   };
 
-  /* File attachment — supports multiple images -------------------- */
+  /* File attachment — images + documents ------------------------- */
   const MAX_FILES = 8;
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = Array.from(e.target.files || []);
-    e.target.value = "";
-    if (!selected.length) return;
 
+  const processFiles = (rawFiles: File[]) => {
     const remaining = MAX_FILES - attachedFiles.length;
     if (remaining <= 0) {
-      toast({ title: "Limit reached", description: `Maximum ${MAX_FILES} images at once.`, variant: "destructive" });
+      toast({ title: "Limit reached", description: `Maximum ${MAX_FILES} files at once.`, variant: "destructive" });
       return;
     }
 
-    const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-    const toProcess = selected.slice(0, remaining);
-    let rejected = 0;
+    const toProcess: File[] = [];
+    const unsupported: string[] = [];
+
+    rawFiles.slice(0, remaining).forEach(file => {
+      const mime = file.type || "";
+      const ext  = file.name.split(".").pop()?.toLowerCase() ?? "";
+      const byExt =
+        ["pdf","doc","docx","txt","csv","xls","xlsx"].includes(ext) ||
+        ["jpg","jpeg","png","webp","gif"].includes(ext);
+      if (ALL_MIMES.includes(mime) || byExt) {
+        toProcess.push(file);
+      } else {
+        unsupported.push(file.name);
+      }
+    });
+
+    if (unsupported.length > 0) {
+      toast({
+        title: "Unsupported file type",
+        description: `${unsupported.join(", ")} — supported: images, PDF, Word, Excel, TXT`,
+        variant: "destructive",
+      });
+    }
 
     toProcess.forEach(file => {
-      if (!allowed.includes(file.type)) { rejected++; return; }
-      if (file.size > 10 * 1024 * 1024) {
-        toast({ title: `${file.name} is too large`, description: "Max 10 MB per image.", variant: "destructive" });
+      const sizeLimitMB = 25;
+      if (file.size > sizeLimitMB * 1024 * 1024) {
+        toast({ title: `${file.name} too large`, description: `Max ${sizeLimitMB} MB per file.`, variant: "destructive" });
         return;
       }
-      const reader = new FileReader();
+      const isImage = IMAGE_MIMES.includes(file.type);
+      const reader  = new FileReader();
       reader.onload = () => {
         const dataUrl = reader.result as string;
         setAttachedFiles(prev => {
@@ -402,17 +520,22 @@ export default function SolverContent() {
             id: `${Date.now()}-${Math.random()}`,
             name: file.name,
             base64: dataUrl.split(",")[1],
-            mimeType: file.type,
-            preview: dataUrl,
+            mimeType: file.type || (file.name.endsWith(".pdf") ? "application/pdf"
+              : file.name.match(/\.docx?$/) ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              : file.name.match(/\.xlsx?$/) ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              : "text/plain"),
+            preview: isImage ? dataUrl : undefined,
           }];
         });
       };
       reader.readAsDataURL(file);
     });
+  };
 
-    if (rejected > 0) {
-      toast({ title: "Some files skipped", description: "Only JPG, PNG, WEBP, GIF images are supported.", variant: "destructive" });
-    }
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (selected.length) processFiles(selected);
   };
 
   const removeFile = (id: string) => setAttachedFiles(prev => prev.filter(f => f.id !== id));
@@ -564,45 +687,8 @@ export default function SolverContent() {
     e.stopPropagation();
     setIsDragging(false);
     dragCounterRef.current = 0;
-
     const files = Array.from(e.dataTransfer.files);
-    if (!files.length) return;
-
-    const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-    const remaining = MAX_FILES - attachedFiles.length;
-    if (remaining <= 0) {
-      toast({ title: "Limit reached", description: `Maximum ${MAX_FILES} images at once.`, variant: "destructive" });
-      return;
-    }
-
-    const toProcess = files.filter(f => allowed.includes(f.type)).slice(0, remaining);
-    const rejected  = files.filter(f => !allowed.includes(f.type)).length;
-
-    if (rejected > 0) {
-      toast({ title: "Some files skipped", description: "Only JPG, PNG, WEBP, GIF images are supported.", variant: "destructive" });
-    }
-
-    toProcess.forEach(file => {
-      if (file.size > 10 * 1024 * 1024) {
-        toast({ title: `${file.name} is too large`, description: "Max 10 MB per image.", variant: "destructive" });
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        setAttachedFiles(prev => {
-          if (prev.length >= MAX_FILES) return prev;
-          return [...prev, {
-            id: `${Date.now()}-${Math.random()}`,
-            name: file.name,
-            base64: dataUrl.split(",")[1],
-            mimeType: file.type,
-            preview: dataUrl,
-          }];
-        });
-      };
-      reader.readAsDataURL(file);
-    });
+    if (files.length) processFiles(files);
   };
 
   /* ── Render ────────────────────────────────────────────────────── */
@@ -632,8 +718,8 @@ export default function SolverContent() {
               <FileImage className="w-8 h-8 text-violet-500" />
             </div>
             <div>
-              <p className="text-lg font-bold text-violet-700 dark:text-violet-300">Drop images here</p>
-              <p className="text-sm text-violet-500 dark:text-violet-400 mt-0.5">JPG, PNG, WEBP, GIF — up to {MAX_FILES} images</p>
+              <p className="text-lg font-bold text-violet-700 dark:text-violet-300">Drop files here</p>
+              <p className="text-sm text-violet-500 dark:text-violet-400 mt-0.5">Images, PDF, Word, Excel, TXT — up to {MAX_FILES} files</p>
             </div>
           </div>
         </div>
@@ -643,7 +729,7 @@ export default function SolverContent() {
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp,image/gif"
+        accept={FILE_INPUT_ACCEPT}
         multiple
         className="hidden"
         onChange={handleFileChange}
@@ -855,37 +941,52 @@ export default function SolverContent() {
             </div>
           )}
 
-          {/* Attached files preview — scrollable grid of thumbnails */}
+          {/* Attached files preview */}
           {attachedFiles.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-2 items-end">
-              {attachedFiles.map(file => (
-                <div key={file.id} className="relative group flex-shrink-0">
-                  {file.preview ? (
-                    <>
-                      <img
-                        src={file.preview}
-                        alt={file.name}
-                        className="h-16 w-16 object-cover rounded-xl border border-[#E5E5E0] dark:border-[#22221F]"
-                        data-testid={`img-preview-${file.id}`}
-                      />
-                      <button
-                        onClick={() => removeFile(file.id)}
-                        className="absolute -top-1.5 -right-1.5 bg-[#111110] dark:bg-white text-white dark:text-black rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
-                        title={`Remove ${file.name}`}
-                        data-testid={`button-remove-file-${file.id}`}
-                      >×</button>
-                    </>
-                  ) : (
-                    <div className="flex items-center gap-1.5 bg-[#F5F5F3] dark:bg-[#1A1A1A] px-3 py-1.5 rounded-xl text-xs text-[#111110] dark:text-white border border-[#E5E5E0] dark:border-[#22221F]">
-                      <FileImage className="w-3 h-3 text-violet-500" />
-                      <span className="max-w-[120px] truncate">{file.name}</span>
-                      <button onClick={() => removeFile(file.id)} className="ml-1 text-[#999] hover:text-[#111110] dark:hover:text-white">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
+              {attachedFiles.map(file => {
+                const isImage = IMAGE_MIMES.includes(file.mimeType);
+                const docMeta = isImage ? null : getDocMeta(file.mimeType);
+                return (
+                  <div key={file.id} className="relative group flex-shrink-0">
+                    {isImage && file.preview ? (
+                      <>
+                        <img
+                          src={file.preview}
+                          alt={file.name}
+                          className="h-16 w-16 object-cover rounded-xl border border-[#E5E5E0] dark:border-[#22221F]"
+                          data-testid={`img-preview-${file.id}`}
+                        />
+                        <button
+                          onClick={() => removeFile(file.id)}
+                          className="absolute -top-1.5 -right-1.5 bg-[#111110] dark:bg-white text-white dark:text-black rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                          title={`Remove ${file.name}`}
+                          data-testid={`button-remove-file-${file.id}`}
+                        >×</button>
+                      </>
+                    ) : (
+                      /* Document card */
+                      <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border border-[#E5E5E0] dark:border-[#22221F] bg-white dark:bg-[#111110] max-w-[200px]`}>
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${docMeta?.bg}`}>
+                          {docMeta && <docMeta.icon className={`w-4 h-4 ${docMeta.color}`} />}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[12px] font-semibold text-[#111110] dark:text-white truncate">{file.name}</p>
+                          <p className={`text-[10px] font-bold uppercase ${docMeta?.color}`}>{docMeta?.label}</p>
+                        </div>
+                        <button
+                          onClick={() => removeFile(file.id)}
+                          className="ml-1 text-[#999] hover:text-[#111110] dark:hover:text-white shrink-0"
+                          title={`Remove ${file.name}`}
+                          data-testid={`button-remove-file-${file.id}`}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
               {attachedFiles.length > 1 && (
                 <span className="text-xs text-[#999] dark:text-[#666] self-end mb-0.5">
                   {attachedFiles.length}/{MAX_FILES}
@@ -914,7 +1015,7 @@ export default function SolverContent() {
                   setTextProblem(e.target.value);
                 }}
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSubmit())}
-                placeholder={isListening ? "Speak now — I'm listening…" : "Ask anything, or drag & drop images here…"}
+                placeholder={isListening ? "Speak now — I'm listening…" : "Ask anything, or drag & drop files here…"}
                 className={`w-full min-h-[60px] max-h-48 p-4 pt-5 pb-12 bg-transparent border-none focus-visible:ring-0 text-[15px] resize-none no-scrollbar ${
                   isListening ? "placeholder:text-red-400" : "placeholder:text-[#999990]"
                 }`}
@@ -925,7 +1026,7 @@ export default function SolverContent() {
                 {/* Paperclip — open file picker */}
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  title="Attach image or PDF"
+                  title="Attach image, PDF, Word, Excel or TXT"
                   disabled={isListening}
                   className="p-2 rounded-lg text-[#666660] hover:bg-[#F0F0F0] dark:hover:bg-[#1A1A1A] hover:text-[#111110] dark:hover:text-white transition-colors disabled:opacity-40"
                   data-testid="button-attach-file"

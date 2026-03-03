@@ -1005,7 +1005,7 @@ RULES:
   // Streaming endpoint for image/PDF solving
   app.post("/api/solve-image-stream", async (req, res) => {
     try {
-      const { image, mimeType } = req.body;
+      const { image, mimeType, prompt: userPrompt } = req.body;
       
       if (!image || !mimeType) {
         return res.status(400).json({ error: "Image and mimeType are required" });
@@ -1158,8 +1158,22 @@ RULES:
             res.end();
             return;
           } else if (extractedText) {
-            // Text only - redirect to text solving
-            res.write(`data: ${JSON.stringify({ redirect: "text", problem: extractedText })}\n\n`);
+            // Text only - process inline with Claude
+            const claudeClient = await import("@anthropic-ai/sdk").then(m => new m.default());
+            const msgPrompt = userPrompt?.trim()
+              ? `${userPrompt}\n\nDocument content:\n${extractedText.substring(0, 20000)}`
+              : `Analyse the following Word document and provide a comprehensive summary, key points, and any actionable insights:\n\n${extractedText.substring(0, 20000)}`;
+            const textStream = await claudeClient.messages.stream({
+              model: "claude-opus-4-5",
+              max_tokens: 2000,
+              messages: [{ role: "user", content: msgPrompt }],
+            });
+            for await (const evt of textStream) {
+              if (evt.type === "content_block_delta" && evt.delta.type === "text_delta") {
+                res.write(`data: ${JSON.stringify({ token: evt.delta.text })}\n\n`);
+              }
+            }
+            res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
             res.end();
             return;
           } else {
@@ -1183,25 +1197,18 @@ RULES:
           console.log("Processing text file, length:", textContent.length);
           
           // Stream response for text content
+          const textPromptContent = userPrompt?.trim()
+            ? `${userPrompt}\n\nFile content:\n${textContent.substring(0, 15000)}${textContent.length > 15000 ? "\n(Content truncated...)" : ""}`
+            : `Analyse and help with this ${isSpreadsheet ? "spreadsheet/data" : "text"} file:\n\n${textContent.substring(0, 15000)}${textContent.length > 15000 ? "\n(Content truncated...)" : ""}\n\nPlease:\n1. Summarise the content\n2. Answer any questions if present\n3. Solve any problems or tasks mentioned\n4. Provide helpful insights or analysis`;
           const stream = await openai.chat.completions.create({
             model: "gpt-4o-mini",
             messages: [
               {
                 role: "user",
-                content: `Analyze and help with this ${isSpreadsheet ? "spreadsheet/data" : "text"} content:
-
-${textContent.substring(0, 15000)}
-
-${textContent.length > 15000 ? "(Content truncated...)" : ""}
-
-Please:
-1. Summarize the content
-2. Answer any questions if present
-3. Solve any problems or tasks mentioned
-4. Provide helpful insights or analysis`,
+                content: textPromptContent,
               },
             ],
-            max_completion_tokens: 800,
+            max_completion_tokens: 2000,
             stream: true,
           });
 
@@ -1293,7 +1300,22 @@ Please:
         }
       }
 
-      // Use GPT-4o for accurate image reading
+      // Use GPT-4o for accurate image/PDF reading
+      const visionPromptText = userPrompt?.trim()
+        ? userPrompt.trim()
+        : `READ THIS IMAGE CAREFULLY. Solve every math problem you see with the ACTUAL numbers from the image.
+
+FORMAT ALL MATH WITH LATEX:
+- Use $...$ for inline math: $V = \\frac{1}{3}\\pi r^2 h$
+- Use $$...$$ for display/block math equations
+
+RULES:
+- Use LaTeX for ALL mathematical expressions
+- Use **bold** for section headers
+- Read ACTUAL numbers from the image
+- Solve ALL problems visible in the image
+- Show clear step-by-step work with proper math notation`;
+
       const stream = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
@@ -1302,38 +1324,7 @@ Please:
             content: [
               {
                 type: "text",
-                text: `READ THIS IMAGE CAREFULLY. Solve every math problem you see with the ACTUAL numbers from the image.
-
-FORMAT ALL MATH WITH LATEX:
-- Use $...$ for inline math: $V = \\frac{1}{3}\\pi r^2 h$
-- Use $$...$$ for display/block math equations
-
-Example format:
-
-**Question 7**
-Find the volume of the cone with radius 9 yd and height 17 yd.
-
-**Given:**
-- Radius $r = 9$ yd
-- Height $h = 17$ yd
-
-**Solution:**
-Using the cone volume formula:
-$$V = \\frac{1}{3}\\pi r^2 h$$
-
-Substituting values:
-$$V = \\frac{1}{3}\\pi (9)^2 (17) = \\frac{1}{3}\\pi \\cdot 81 \\cdot 17 = \\frac{1377\\pi}{3} \\approx 1443.7 \\text{ yd}^3$$
-
-**Answer:** $V \\approx 1443.7$ yd³
-
----
-
-RULES:
-- Use LaTeX for ALL mathematical expressions
-- Use **bold** for section headers
-- Read ACTUAL numbers from the image
-- Solve ALL problems visible in the image
-- Show clear step-by-step work with proper math notation`,
+                text: visionPromptText,
               },
               {
                 type: "image_url",
@@ -1342,7 +1333,7 @@ RULES:
             ],
           },
         ],
-        max_completion_tokens: 800,
+        max_completion_tokens: 2000,
         stream: true,
       });
 
