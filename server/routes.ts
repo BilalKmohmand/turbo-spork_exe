@@ -485,10 +485,78 @@ Rules:
   }
 }
 
+/* ── In-memory demo rate limiter (3 per IP per 15 min) ─────── */
+const demoRateMap = new Map<string, { count: number; resetAt: number }>();
+const DEMO_LIMIT = 3;
+const DEMO_WINDOW = 15 * 60 * 1000;
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+
+  /* ── Public demo endpoint (no auth) ──────────────────────── */
+  app.post("/api/demo", async (req: Request, res: Response) => {
+    const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket.remoteAddress || "unknown";
+    const now = Date.now();
+    let entry = demoRateMap.get(ip);
+    if (!entry || now > entry.resetAt) {
+      entry = { count: 0, resetAt: now + DEMO_WINDOW };
+      demoRateMap.set(ip, entry);
+    }
+    if (entry.count >= DEMO_LIMIT) {
+      return res.status(429).json({ error: "You've used all 3 free demos. Sign up for unlimited access!" });
+    }
+    entry.count++;
+    const remaining = DEMO_LIMIT - entry.count;
+
+    const { question, subject } = req.body;
+    if (!question || typeof question !== "string" || question.trim().length < 2) {
+      return res.status(400).json({ error: "Please enter a question." });
+    }
+    if (question.length > 500) {
+      return res.status(400).json({ error: "Question too long (max 500 chars)." });
+    }
+
+    const systemMap: Record<string, string> = {
+      Math:      "You are an expert maths tutor. Give clear, step-by-step solutions using proper notation. Be concise (max 250 words). Use → for steps and wrap LaTeX in $ delimiters.",
+      Physics:   "You are an expert physics tutor. Explain concepts clearly, show formulas and derivations step by step. Be concise (max 250 words).",
+      Chemistry: "You are an expert chemistry tutor. Explain reactions and concepts with clear steps. Be concise (max 250 words).",
+      Biology:   "You are an expert biology tutor. Explain biological concepts with clarity and structure. Be concise (max 250 words).",
+      English:   "You are an expert English tutor covering grammar, essay writing, literature and comprehension. Give structured, actionable advice. Be concise (max 250 words).",
+      History:   "You are an expert history tutor. Provide accurate, well-structured historical explanations with key dates and context. Be concise (max 250 words).",
+    };
+    const system = systemMap[subject] || "You are a helpful AI tutor. Be concise and educational (max 250 words).";
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+
+    // Send remaining count first
+    res.write(`data: ${JSON.stringify({ remaining })}\n\n`);
+
+    try {
+      const stream = anthropic.messages.stream({
+        model: "claude-opus-4-5",
+        max_tokens: 400,
+        system,
+        messages: [{ role: "user", content: question.trim() }],
+      });
+
+      for await (const chunk of stream) {
+        if (chunk.type === "content_block_delta" && chunk.delta.type === "text_delta") {
+          res.write(`data: ${JSON.stringify({ text: chunk.delta.text })}\n\n`);
+        }
+        if (res.writableEnded) break;
+      }
+      res.write("data: [DONE]\n\n");
+    } catch (err) {
+      res.write(`data: ${JSON.stringify({ error: "AI unavailable, please try again." })}\n\n`);
+    }
+    res.end();
+  });
+
   // Auth routes
   app.post("/api/auth/register", async (req, res) => {
     try {
