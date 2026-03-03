@@ -880,9 +880,9 @@ export default function Landing() {
                 Start learning for free <ArrowRight className="w-4 h-4" />
               </button>
             </Link>
-            <Link href="/auth">
-              <button className="flex items-center gap-2 px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white/70 hover:text-white text-[15px] font-semibold rounded-2xl transition-all" data-testid="button-hero-login">
-                Sign in
+            <Link href="/demo">
+              <button className="flex items-center gap-2 px-8 py-4 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 hover:border-violet-500/50 text-violet-300 hover:text-white text-[15px] font-semibold rounded-2xl transition-all" data-testid="button-hero-demo">
+                <Play className="w-4 h-4" /> Try full demo
               </button>
             </Link>
           </motion.div>
@@ -1117,9 +1117,9 @@ export default function Landing() {
                     Start for free <ArrowRight className="w-4 h-4" />
                   </button>
                 </Link>
-                <Link href="/pricing">
-                  <button className="flex items-center gap-2 px-9 py-4 border border-white/15 hover:border-white/30 text-white/60 hover:text-white text-[16px] font-semibold rounded-2xl transition-all">
-                    View pricing <ChevronRight className="w-4 h-4" />
+                <Link href="/demo">
+                  <button className="flex items-center gap-2 px-9 py-4 bg-white/8 hover:bg-white/15 border border-white/15 hover:border-white/30 text-white/70 hover:text-white text-[16px] font-semibold rounded-2xl transition-all" data-testid="button-cta-demo">
+                    <Play className="w-5 h-5" /> Try full demo
                   </button>
                 </Link>
               </div>

@@ -495,6 +495,45 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
 
+  /* ── Full-demo endpoint (higher limit, for /demo page) ───── */
+  const demoFullMap = new Map<string, { count: number; resetAt: number }>();
+  app.post("/api/demo-full", async (req: Request, res: Response) => {
+    const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket.remoteAddress || "unknown";
+    const now = Date.now();
+    let entry = demoFullMap.get(ip);
+    if (!entry || now > entry.resetAt) { entry = { count: 0, resetAt: now + 60 * 60 * 1000 }; demoFullMap.set(ip, entry); }
+    if (entry.count >= 10) return res.status(429).json({ error: "Demo limit reached. Sign up for unlimited access!" });
+    entry.count++;
+    const remaining = 10 - entry.count;
+    const { question, subject } = req.body;
+    if (!question || typeof question !== "string" || question.trim().length < 2) return res.status(400).json({ error: "Please enter a question." });
+    if (question.length > 600) return res.status(400).json({ error: "Question too long." });
+    const systemMap: Record<string, string> = {
+      Math:      "You are an expert maths tutor. Give clear, step-by-step solutions. Be concise (max 300 words). Use → for steps.",
+      Physics:   "You are an expert physics tutor. Show formulas and derivations step by step. Be concise (max 300 words).",
+      Chemistry: "You are an expert chemistry tutor. Show reactions with clear steps. Be concise (max 300 words).",
+      Biology:   "You are an expert biology tutor. Explain biological concepts clearly. Be concise (max 300 words).",
+      English:   "You are an expert English tutor. Give structured, actionable advice. Be concise (max 300 words).",
+      History:   "You are an expert history tutor. Provide accurate, well-structured explanations. Be concise (max 300 words).",
+      Science:   "You are an expert science tutor. Explain clearly with examples. Be concise (max 300 words).",
+    };
+    const system = systemMap[subject] || "You are a helpful AI tutor. Be concise and educational (max 300 words).";
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.write(`data: ${JSON.stringify({ remaining })}\n\n`);
+    try {
+      const stream = anthropic.messages.stream({ model: "claude-opus-4-5", max_tokens: 500, system, messages: [{ role: "user", content: question.trim() }] });
+      for await (const chunk of stream) {
+        if (chunk.type === "content_block_delta" && chunk.delta.type === "text_delta") res.write(`data: ${JSON.stringify({ text: chunk.delta.text })}\n\n`);
+        if (res.writableEnded) break;
+      }
+      res.write("data: [DONE]\n\n");
+    } catch { res.write(`data: ${JSON.stringify({ error: "AI unavailable, please try again." })}\n\n`); }
+    res.end();
+  });
+
   /* ── Public demo endpoint (no auth) ──────────────────────── */
   app.post("/api/demo", async (req: Request, res: Response) => {
     const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket.remoteAddress || "unknown";

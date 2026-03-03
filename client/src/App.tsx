@@ -9,6 +9,7 @@ import { SEOHead } from "@/components/seo-head";
 import Landing from "@/pages/landing";
 import Pricing from "@/pages/pricing";
 import Auth from "@/pages/auth";
+import Demo from "@/pages/demo";
 import Dashboard from "@/pages/dashboard";
 import TeacherDashboard from "@/pages/teacher-dashboard";
 import Knowledge from "@/pages/knowledge";
@@ -20,6 +21,7 @@ function Router() {
       <Route path="/pricing" component={Pricing} />
       <Route path="/auth" component={Auth} />
       <Route path="/login" component={Auth} />
+      <Route path="/demo" component={Demo} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/student" component={Dashboard} />
       <Route path="/solver" component={Dashboard} />
