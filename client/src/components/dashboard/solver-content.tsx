@@ -9,6 +9,7 @@ import {
   User, X, FileImage, FileText, File, FileSpreadsheet,
   Atom, TestTube, Leaf, ChevronRight, Copy, Check,
   Trash2, PenLine, Eye, AlignLeft, RefreshCw, BookMarked, GraduationCap,
+  Brain, Sigma, Lightbulb, ClipboardList,
 } from "lucide-react";
 
 /* ─── Accepted file types ────────────────────────────────────────── */
@@ -74,6 +75,46 @@ interface SubMode {
   instruction: string;
   prompt: string;
 }
+
+/* ─── Math sub-modes ─────────────────────────────────────────────── */
+const MATH_MODES: SubMode[] = [
+  {
+    icon: Sigma,
+    label: "Step-by-Step Solver",
+    color: "text-blue-600",
+    bg: "bg-blue-50 dark:bg-blue-950/30",
+    desc: "Full working with numbered steps",
+    prompt: "Solve: ",
+    instruction: "You are an expert Math tutor. For every problem: show all working step-by-step with clear numbered steps, state the method or formula used at the start, highlight the final answer clearly, and explain any key concepts the student needs to understand. Use LaTeX notation for all mathematical expressions (e.g. $x^2 + 2x + 1$). If the problem has multiple parts, solve each part clearly.",
+  },
+  {
+    icon: Brain,
+    label: "Critical Thinking",
+    color: "text-violet-600",
+    bg: "bg-violet-50 dark:bg-violet-950/30",
+    desc: "Guided discovery — don't just get the answer",
+    prompt: "Help me think through: ",
+    instruction: "You are a Socratic math tutor focused on developing critical thinking. Do NOT immediately give the final answer. Instead: ask guiding questions that lead the student to discover the solution themselves, highlight the key reasoning step they need to unlock, explain WHY each step matters (not just what to do), point out connections to other concepts, and challenge assumptions. If the student is stuck, give a small hint — not the full answer. End with a deeper follow-up question to strengthen understanding. Use LaTeX for all maths expressions.",
+  },
+  {
+    icon: Lightbulb,
+    label: "Concept Explainer",
+    color: "text-amber-600",
+    bg: "bg-amber-50 dark:bg-amber-950/30",
+    desc: "Understand the 'why' behind the maths",
+    prompt: "Explain the concept of: ",
+    instruction: "You are an expert Math tutor focused on conceptual understanding. When explaining a mathematical concept: start with an intuitive real-world analogy, then build up to the formal definition, show how the concept connects to other ideas the student already knows, give 2–3 worked examples of increasing difficulty, highlight common misconceptions and why they're wrong, and end with a memorable summary. Use LaTeX for all mathematical expressions.",
+  },
+  {
+    icon: ClipboardList,
+    label: "Exam Technique",
+    color: "text-emerald-600",
+    bg: "bg-emerald-50 dark:bg-emerald-950/30",
+    desc: "Exam strategy, mark schemes & shortcuts",
+    prompt: "Help me with exam technique for: ",
+    instruction: "You are an expert Math exam coach. Focus on exam performance: show exactly how a top student would lay out their answer to maximise marks, identify which formula or method examiners expect, point out common mistakes that lose marks and how to avoid them, show time-saving shortcuts where appropriate, explain how marks are allocated (method marks vs answer marks), and give a 'model answer' the student can learn from. Use LaTeX for all mathematical expressions.",
+  },
+];
 
 /* ─── Science sub-topics ─────────────────────────────────────────── */
 const SCIENCE_MODES: SubMode[] = [
@@ -183,10 +224,12 @@ const quickPrompts: QuickPrompt[] = [
     icon: Calculator,
     label: "Math",
     desc: "Solve equations, geometry & word problems",
-    prompt: "Solve: ",
+    prompt: "",
     color: "text-blue-500",
     bg: "bg-blue-50 dark:bg-blue-950/20",
-    instruction: "You are an expert Math tutor. For every problem: show all working step-by-step with clear numbered steps, state the method or formula used at the start, highlight the final answer, and explain any key concepts the student needs to understand. Use LaTeX notation for all mathematical expressions (e.g. $x^2 + 2x + 1$). If the problem has multiple parts, solve each part clearly.",
+    accentBorder: "border-blue-300 dark:border-blue-800",
+    accentBg: "bg-blue-50 dark:bg-blue-950/20",
+    subModes: MATH_MODES,
   },
   {
     icon: FlaskConical,
