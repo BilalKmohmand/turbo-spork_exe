@@ -539,16 +539,89 @@ const DEMO_EXAMPLES: Record<string, string[]> = {
   History:   ["What caused World War 1?", "Explain the French Revolution in 3 points", "Who was Napoleon Bonaparte?"],
 };
 
+const LS_KEY = "gradeio_demo_v1";
+
+function loadDemoState(): { remaining: number; resetAt: number } {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return { remaining: 3, resetAt: Date.now() + 24 * 60 * 60 * 1000 };
+    const parsed = JSON.parse(raw);
+    if (Date.now() > parsed.resetAt) return { remaining: 3, resetAt: Date.now() + 24 * 60 * 60 * 1000 };
+    return parsed;
+  } catch { return { remaining: 3, resetAt: Date.now() + 24 * 60 * 60 * 1000 }; }
+}
+
+function saveDemoState(remaining: number, resetAt: number) {
+  try { localStorage.setItem(LS_KEY, JSON.stringify({ remaining, resetAt })); } catch {}
+}
+
+function formatResetTime(resetAt: number): string {
+  const ms = resetAt - Date.now();
+  if (ms <= 0) return "now";
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  if (h > 0) return `in ${h}h ${m}m`;
+  return `in ${m} minute${m !== 1 ? "s" : ""}`;
+}
+
+function DemoLockedState({ resetAt }: { resetAt: number }) {
+  const [countdown, setCountdown] = useState(() => formatResetTime(resetAt));
+  useEffect(() => {
+    const t = setInterval(() => setCountdown(formatResetTime(resetAt)), 60000);
+    return () => clearInterval(t);
+  }, [resetAt]);
+
+  return (
+    <div className="h-[320px] flex flex-col items-center justify-center gap-5 px-8 text-center">
+      <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+        <AlertCircle className="w-7 h-7 text-red-400" />
+      </div>
+      <div>
+        <p className="text-[16px] font-black text-white mb-1">Daily demos used up</p>
+        <p className="text-[13px] text-white/45 leading-relaxed">
+          You've used all <span className="text-white font-semibold">3 free demos</span> for today.<br />
+          Resets <span className="text-white/70 font-medium">{countdown}</span>.
+        </p>
+      </div>
+      <div className="flex items-center gap-2">
+        {[0, 1, 2].map(i => (
+          <div key={i} className="w-3 h-3 rounded-full bg-red-500/40 border border-red-500/30" />
+        ))}
+      </div>
+      <Link href="/auth?mode=register">
+        <button className="flex items-center gap-2 px-7 py-3.5 bg-violet-600 hover:bg-violet-500 text-white text-[14px] font-bold rounded-2xl transition-all">
+          Sign up for unlimited access <ArrowRight className="w-4 h-4" />
+        </button>
+      </Link>
+      <p className="text-[11px] text-white/25">Free plan available — no credit card needed</p>
+    </div>
+  );
+}
+
 function InteractiveDemo() {
   const [subject, setSubject] = useState("Math");
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<{ role: "user" | "ai"; text: string }[]>([]);
   const [streaming, setStreaming] = useState(false);
-  const [remaining, setRemaining] = useState(3);
+  const [remaining, setRemaining] = useState(() => loadDemoState().remaining);
+  const [resetAt, setResetAt] = useState(() => loadDemoState().resetAt);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    fetch("/api/demo/status")
+      .then(r => r.json())
+      .then(data => {
+        if (typeof data.remaining === "number") {
+          setRemaining(data.remaining);
+          setResetAt(data.resetAt);
+          saveDemoState(data.remaining, data.resetAt);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const scrollToBottom = () => {
     setTimeout(() => chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: "smooth" }), 50);
@@ -575,8 +648,15 @@ function InteractiveDemo() {
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         setMessages(prev => prev.slice(0, -1));
-        setError(err.error || "Something went wrong. Please try again.");
-        if (res.status === 429) setRemaining(0);
+        if (res.status === 429) {
+          const newRemaining = 0;
+          const newResetAt = err.resetAt || Date.now() + 24 * 60 * 60 * 1000;
+          setRemaining(newRemaining);
+          setResetAt(newResetAt);
+          saveDemoState(newRemaining, newResetAt);
+        } else {
+          setError(err.error || "Something went wrong. Please try again.");
+        }
         setStreaming(false);
         return;
       }
@@ -598,7 +678,10 @@ function InteractiveDemo() {
           if (payload === "[DONE]") { setDone(true); break; }
           try {
             const parsed = JSON.parse(payload);
-            if (parsed.remaining !== undefined) setRemaining(parsed.remaining);
+            if (parsed.remaining !== undefined) {
+              setRemaining(parsed.remaining);
+              if (parsed.resetAt) { setResetAt(parsed.resetAt); saveDemoState(parsed.remaining, parsed.resetAt); }
+            }
             if (parsed.text) {
               aiText += parsed.text;
               setMessages(prev => {
@@ -628,6 +711,7 @@ function InteractiveDemo() {
   };
 
   const currentSubject = DEMO_SUBJECTS.find(s => s.id === subject)!;
+  const isLocked = remaining <= 0;
 
   return (
     <div className="rounded-3xl border border-white/10 bg-[#0D0D0C] overflow-hidden shadow-2xl shadow-black/50">
@@ -643,10 +727,13 @@ function InteractiveDemo() {
               <p className="text-[11px] text-white/35">Ask any real question and get an instant AI answer</p>
             </div>
           </div>
-          {remaining > 0 ? (
-            <span className="text-[11px] font-bold px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/40">
-              {remaining} demo{remaining !== 1 ? "s" : ""} left
-            </span>
+          {!isLocked ? (
+            <div className="flex items-center gap-1.5 shrink-0">
+              {[0, 1, 2].map(i => (
+                <div key={i} className={`w-2 h-2 rounded-full transition-all ${i < remaining ? "bg-emerald-400" : "bg-white/10"}`} />
+              ))}
+              <span className="text-[11px] font-bold text-white/40 ml-1">{remaining}/3 left today</span>
+            </div>
           ) : (
             <Link href="/auth?mode=register">
               <span className="text-[11px] font-bold px-3 py-1.5 rounded-full bg-violet-600 text-white cursor-pointer hover:bg-violet-500 transition-colors">
@@ -662,7 +749,8 @@ function InteractiveDemo() {
             <button
               key={s.id}
               onClick={() => { setSubject(s.id); setError(null); }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[12px] font-semibold transition-all ${
+              disabled={isLocked}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[12px] font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
                 subject === s.id ? `${s.bg} ${s.color}` : "border-white/8 text-white/30 hover:text-white/60 hover:border-white/15"
               }`}
             >
@@ -673,112 +761,113 @@ function InteractiveDemo() {
         </div>
       </div>
 
-      {/* Chat area */}
-      <div ref={chatRef} className="h-[320px] overflow-y-auto px-6 py-5 space-y-4 scroll-smooth">
-        {messages.length === 0 && (
-          <div className="h-full flex flex-col items-center justify-center gap-4">
-            <div className={`w-12 h-12 rounded-2xl border flex items-center justify-center ${currentSubject.bg}`}>
-              <currentSubject.icon className={`w-6 h-6 ${currentSubject.color}`} />
-            </div>
-            <div className="text-center">
-              <p className="text-[14px] font-semibold text-white/50 mb-1">{subject} Tutor Mode</p>
-              <p className="text-[12px] text-white/25">Ask a question or pick an example below</p>
-            </div>
-          </div>
-        )}
-        {messages.map((msg, i) => (
-          <div key={i} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}>
-            {msg.role === "ai" && (
-              <div className={`w-7 h-7 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ${streaming && i === messages.length - 1 ? "animate-pulse " : ""}${currentSubject.bg}`}>
-                <Sparkles className={`w-3.5 h-3.5 ${currentSubject.color}`} />
+      {/* Chat area or locked state */}
+      {isLocked ? (
+        <DemoLockedState resetAt={resetAt} />
+      ) : (
+        <>
+          <div ref={chatRef} className="h-[320px] overflow-y-auto px-6 py-5 space-y-4 scroll-smooth">
+            {messages.length === 0 && (
+              <div className="h-full flex flex-col items-center justify-center gap-4">
+                <div className={`w-12 h-12 rounded-2xl border flex items-center justify-center ${currentSubject.bg}`}>
+                  <currentSubject.icon className={`w-6 h-6 ${currentSubject.color}`} />
+                </div>
+                <div className="text-center">
+                  <p className="text-[14px] font-semibold text-white/50 mb-1">{subject} Tutor Mode</p>
+                  <p className="text-[12px] text-white/25">Ask a question or pick an example below</p>
+                </div>
               </div>
             )}
-            <div className={`max-w-[82%] text-[13px] leading-relaxed ${
-              msg.role === "user"
-                ? "bg-white text-black px-4 py-2.5 rounded-2xl rounded-br-sm font-medium"
-                : "text-white/75"
-            }`}>
-              {msg.role === "ai" ? (
-                <div className="whitespace-pre-wrap">
-                  {msg.text}
-                  {streaming && i === messages.length - 1 && (
-                    <span className="inline-block w-0.5 h-4 bg-violet-400 ml-0.5 animate-pulse align-middle" />
-                  )}
+            {messages.map((msg, i) => (
+              <div key={i} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}>
+                {msg.role === "ai" && (
+                  <div className={`w-7 h-7 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ${streaming && i === messages.length - 1 ? "animate-pulse " : ""}${currentSubject.bg}`}>
+                    <Sparkles className={`w-3.5 h-3.5 ${currentSubject.color}`} />
+                  </div>
+                )}
+                <div className={`max-w-[82%] text-[13px] leading-relaxed ${
+                  msg.role === "user"
+                    ? "bg-white text-black px-4 py-2.5 rounded-2xl rounded-br-sm font-medium"
+                    : "text-white/75"
+                }`}>
+                  {msg.role === "ai" ? (
+                    <div className="whitespace-pre-wrap">
+                      {msg.text}
+                      {streaming && i === messages.length - 1 && (
+                        <span className="inline-block w-0.5 h-4 bg-violet-400 ml-0.5 animate-pulse align-middle" />
+                      )}
+                    </div>
+                  ) : msg.text}
                 </div>
-              ) : msg.text}
+              </div>
+            ))}
+            {error && (
+              <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-[13px] text-red-400">
+                <AlertCircle className="w-4 h-4 shrink-0" /> {error}
+              </div>
+            )}
+          </div>
+
+          {/* Example prompts */}
+          <div className="px-6 pb-3">
+            <div className="flex flex-wrap gap-2">
+              {DEMO_EXAMPLES[subject]?.map(ex => (
+                <button
+                  key={ex}
+                  onClick={() => askQuestion(ex)}
+                  disabled={streaming}
+                  className="text-[11px] font-medium px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/8 text-white/40 hover:text-white/70 hover:border-white/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  {ex}
+                </button>
+              ))}
             </div>
           </div>
-        ))}
-        {error && (
-          <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-[13px] text-red-400">
-            <AlertCircle className="w-4 h-4 shrink-0" /> {error}
-            {remaining === 0 && (
+
+          {/* Input */}
+          <div className="px-6 pb-5">
+            <div className="flex gap-3 items-end bg-white/5 border border-white/10 rounded-2xl p-3 focus-within:border-violet-500/40 transition-colors">
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={handleKey}
+                placeholder={`Ask a ${subject} question… (Enter to send)`}
+                disabled={streaming}
+                rows={1}
+                className="flex-1 bg-transparent text-[14px] text-white placeholder:text-white/20 outline-none resize-none disabled:cursor-not-allowed leading-relaxed"
+                style={{ maxHeight: "120px" }}
+              />
+              <button
+                onClick={() => askQuestion(input)}
+                disabled={streaming || !input.trim()}
+                className="w-9 h-9 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition-all shrink-0"
+                data-testid="button-demo-send"
+              >
+                {streaming ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <ArrowRight className="w-4 h-4 text-white" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* After answer CTA */}
+          {done && remaining < 3 && (
+            <div className="mx-6 mb-5 flex items-center justify-between bg-gradient-to-r from-violet-600/20 to-indigo-600/20 border border-violet-500/20 rounded-2xl px-5 py-4 gap-3">
+              <div>
+                <p className="text-[14px] font-bold text-white">Like what you see?</p>
+                <p className="text-[12px] text-white/40">Unlimited questions, all subjects — free forever plan available.</p>
+              </div>
               <Link href="/auth?mode=register">
-                <span className="ml-2 font-bold underline cursor-pointer">Create free account →</span>
+                <button className="flex items-center gap-1.5 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-[13px] font-bold rounded-xl transition-all whitespace-nowrap">
+                  Get started free <ArrowRight className="w-3.5 h-3.5" />
+                </button>
               </Link>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Example prompts */}
-      <div className="px-6 pb-3">
-        <div className="flex flex-wrap gap-2">
-          {DEMO_EXAMPLES[subject]?.map(ex => (
-            <button
-              key={ex}
-              onClick={() => askQuestion(ex)}
-              disabled={streaming || remaining <= 0}
-              className="text-[11px] font-medium px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/8 text-white/40 hover:text-white/70 hover:border-white/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              {ex}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Input */}
-      <div className="px-6 pb-5">
-        <div className="flex gap-3 items-end bg-white/5 border border-white/10 rounded-2xl p-3 focus-within:border-violet-500/40 transition-colors">
-          <textarea
-            ref={inputRef}
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={handleKey}
-            placeholder={remaining > 0 ? `Ask a ${subject} question… (Enter to send)` : "Sign up for unlimited access"}
-            disabled={streaming || remaining <= 0}
-            rows={1}
-            className="flex-1 bg-transparent text-[14px] text-white placeholder:text-white/20 outline-none resize-none disabled:cursor-not-allowed leading-relaxed"
-            style={{ maxHeight: "120px" }}
-          />
-          <button
-            onClick={() => askQuestion(input)}
-            disabled={streaming || !input.trim() || remaining <= 0}
-            className="w-9 h-9 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition-all shrink-0"
-            data-testid="button-demo-send"
-          >
-            {streaming ? (
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <ArrowRight className="w-4 h-4 text-white" />
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* After answer CTA */}
-      {done && remaining < 3 && (
-        <div className="mx-6 mb-5 flex items-center justify-between bg-gradient-to-r from-violet-600/20 to-indigo-600/20 border border-violet-500/20 rounded-2xl px-5 py-4">
-          <div>
-            <p className="text-[14px] font-bold text-white">Like what you see?</p>
-            <p className="text-[12px] text-white/40">Unlimited questions, all subjects — free forever plan available.</p>
-          </div>
-          <Link href="/auth?mode=register">
-            <button className="flex items-center gap-1.5 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-[13px] font-bold rounded-xl transition-all whitespace-nowrap">
-              Get started free <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </Link>
-        </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

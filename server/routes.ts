@@ -485,15 +485,26 @@ Rules:
   }
 }
 
-/* ── In-memory demo rate limiter (3 per IP per 15 min) ─────── */
+/* ── In-memory demo rate limiter (3 per IP per 24h) ──────── */
 const demoRateMap = new Map<string, { count: number; resetAt: number }>();
 const DEMO_LIMIT = 3;
-const DEMO_WINDOW = 15 * 60 * 1000;
+const DEMO_WINDOW = 24 * 60 * 60 * 1000;
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+
+  /* ── Demo status check (no auth, no count consumed) ─────── */
+  app.get("/api/demo/status", (req: Request, res: Response) => {
+    const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket.remoteAddress || "unknown";
+    const now = Date.now();
+    const entry = demoRateMap.get(ip);
+    if (!entry || now > entry.resetAt) {
+      return res.json({ remaining: DEMO_LIMIT, resetAt: now + DEMO_WINDOW, total: DEMO_LIMIT });
+    }
+    return res.json({ remaining: Math.max(0, DEMO_LIMIT - entry.count), resetAt: entry.resetAt, total: DEMO_LIMIT });
+  });
 
   /* ── Full-demo endpoint (higher limit, for /demo page) ───── */
   const demoFullMap = new Map<string, { count: number; resetAt: number }>();
@@ -544,7 +555,7 @@ export async function registerRoutes(
       demoRateMap.set(ip, entry);
     }
     if (entry.count >= DEMO_LIMIT) {
-      return res.status(429).json({ error: "You've used all 3 free demos. Sign up for unlimited access!" });
+      return res.status(429).json({ error: "You've used all 3 free demos for today.", resetAt: entry.resetAt, remaining: 0 });
     }
     entry.count++;
     const remaining = DEMO_LIMIT - entry.count;
@@ -572,8 +583,7 @@ export async function registerRoutes(
     res.setHeader("Connection", "keep-alive");
     res.setHeader("X-Accel-Buffering", "no");
 
-    // Send remaining count first
-    res.write(`data: ${JSON.stringify({ remaining })}\n\n`);
+    res.write(`data: ${JSON.stringify({ remaining, resetAt: entry.resetAt, total: DEMO_LIMIT })}\n\n`);
 
     try {
       const stream = anthropic.messages.stream({
