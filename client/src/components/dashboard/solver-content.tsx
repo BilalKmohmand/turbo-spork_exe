@@ -7,7 +7,7 @@ import {
   Calculator, FlaskConical, Globe, Mic, MicOff,
   User, X, FileImage, FileText as FilePdf,
   Atom, TestTube, Leaf, ChevronRight, Copy, Check,
-  Trash2,
+  Trash2, PenLine, Eye, AlignLeft, RefreshCw, BookMarked, GraduationCap,
 } from "lucide-react";
 
 /* ─── Types ─────────────────────────────────────────────────────── */
@@ -33,14 +33,26 @@ interface AIMode {
   instruction: string;
 }
 
+/* ─── Sub-mode type ──────────────────────────────────────────────── */
+interface SubMode {
+  icon: any;
+  label: string;
+  color: string;
+  bg: string;
+  desc: string;
+  instruction: string;
+  prompt: string;
+}
+
 /* ─── Science sub-topics ─────────────────────────────────────────── */
-const SCIENCE_MODES: { icon: any; label: string; color: string; bg: string; instruction: string; desc: string }[] = [
+const SCIENCE_MODES: SubMode[] = [
   {
     icon: Atom,
     label: "Physics",
     color: "text-blue-600",
     bg: "bg-blue-50 dark:bg-blue-950/30",
     desc: "Forces, energy, motion & waves",
+    prompt: "Explain: ",
     instruction: "You are an expert Physics tutor. When explaining, always include relevant formulas with proper units, draw diagrams using text when helpful, break problems into clear steps, and highlight key physics principles involved.",
   },
   {
@@ -49,6 +61,7 @@ const SCIENCE_MODES: { icon: any; label: string; color: string; bg: string; inst
     color: "text-purple-600",
     bg: "bg-purple-50 dark:bg-purple-950/30",
     desc: "Reactions, elements & bonding",
+    prompt: "Explain: ",
     instruction: "You are an expert Chemistry tutor. Always show balanced chemical equations when relevant, explain reaction mechanisms step by step, reference the periodic table when discussing elements, and explain bonding and molecular structures clearly.",
   },
   {
@@ -57,15 +70,86 @@ const SCIENCE_MODES: { icon: any; label: string; color: string; bg: string; inst
     color: "text-green-600",
     bg: "bg-green-50 dark:bg-green-950/30",
     desc: "Living systems & life processes",
+    prompt: "Explain: ",
     instruction: "You are an expert Biology tutor. Explain biological processes with clear diagrams using text when helpful, relate concepts to real organisms and body systems, use proper scientific terminology while keeping explanations accessible, and connect cellular to organism-level concepts.",
   },
 ];
 
-const quickPrompts = [
-  { icon: Calculator,   label: "Math",      prompt: "Solve: ",         color: "text-blue-500",    isScience: false },
-  { icon: FlaskConical, label: "Science",   prompt: "",                color: "text-emerald-500", isScience: true  },
-  { icon: BookOpen,     label: "History",   prompt: "Tell me about: ", color: "text-orange-500",  isScience: false },
-  { icon: Globe,        label: "Languages", prompt: "Translate: ",     color: "text-violet-500",  isScience: false },
+/* ─── English sub-topics ─────────────────────────────────────────── */
+const ENGLISH_MODES: SubMode[] = [
+  {
+    icon: PenLine,
+    label: "Grammar Check",
+    color: "text-violet-600",
+    bg: "bg-violet-50 dark:bg-violet-950/30",
+    desc: "Fix grammar, spelling & punctuation",
+    prompt: "Check the grammar of: ",
+    instruction: "You are an expert English grammar tutor. When given a sentence or passage, carefully identify all grammar, spelling, punctuation and style errors. Show the corrected version, then explain each correction with a clear rule or reason. Use simple language suitable for students.",
+  },
+  {
+    icon: Eye,
+    label: "Comprehension",
+    color: "text-sky-600",
+    bg: "bg-sky-50 dark:bg-sky-950/30",
+    desc: "Understand passages & answer questions",
+    prompt: "Help me understand this passage: ",
+    instruction: "You are an expert English comprehension tutor. When given a passage or text, help the student fully understand it by: summarising the main ideas, identifying key themes and literary devices, explaining difficult vocabulary in context, and answering any comprehension questions they have. Always quote relevant parts of the text in your answers.",
+  },
+  {
+    icon: GraduationCap,
+    label: "Essay Writing",
+    color: "text-emerald-600",
+    bg: "bg-emerald-50 dark:bg-emerald-950/30",
+    desc: "Structure, argue & improve essays",
+    prompt: "Help me write an essay about: ",
+    instruction: "You are an expert essay writing tutor. Help the student plan, structure and write compelling essays. Provide clear outlines, suggest strong thesis statements, guide them on paragraph structure (PEEL: Point, Evidence, Explain, Link), and give feedback on argument strength, coherence and academic style. Always explain your suggestions so the student learns.",
+  },
+  {
+    icon: AlignLeft,
+    label: "Summarise",
+    color: "text-amber-600",
+    bg: "bg-amber-50 dark:bg-amber-950/30",
+    desc: "Condense long texts clearly",
+    prompt: "Summarise this text: ",
+    instruction: "You are an expert at summarising complex texts for students. When given text to summarise: produce a concise summary capturing all key ideas, identify the most important points as bullet points, preserve the original meaning accurately, and adjust the reading level to be clear and accessible. If the text has multiple sections, summarise each one.",
+  },
+  {
+    icon: RefreshCw,
+    label: "Rewrite / Paraphrase",
+    color: "text-rose-600",
+    bg: "bg-rose-50 dark:bg-rose-950/30",
+    desc: "Rephrase text in your own words",
+    prompt: "Rewrite this in clearer words: ",
+    instruction: "You are an expert English writing coach. When asked to rewrite or paraphrase text: preserve the original meaning exactly, improve clarity and flow, use varied vocabulary appropriate for the student's level, and if needed provide multiple versions (e.g. formal and informal). Explain significant word choices so the student builds vocabulary.",
+  },
+  {
+    icon: BookMarked,
+    label: "Vocabulary",
+    color: "text-fuchsia-600",
+    bg: "bg-fuchsia-50 dark:bg-fuchsia-950/30",
+    desc: "Learn new words & meanings",
+    prompt: "Explain the word: ",
+    instruction: "You are an expert English vocabulary tutor. When asked about a word or phrase: give a clear definition, show its etymology (word origin) if interesting, provide 3–5 example sentences at different difficulty levels, list common synonyms and antonyms, highlight any common misuses or confusions, and suggest memory tips or mnemonics to help the student remember it.",
+  },
+];
+
+/* ─── Quick prompt items ─────────────────────────────────────────── */
+interface QuickPrompt {
+  icon: any;
+  label: string;
+  prompt: string;
+  color: string;
+  accentBorder?: string;
+  accentBg?: string;
+  subModes?: SubMode[];
+}
+
+const quickPrompts: QuickPrompt[] = [
+  { icon: Calculator,   label: "Math",      prompt: "Solve: ",         color: "text-blue-500"    },
+  { icon: FlaskConical, label: "Science",   prompt: "",                color: "text-emerald-500", accentBorder: "border-emerald-300 dark:border-emerald-800", accentBg: "bg-emerald-50 dark:bg-emerald-950/20", subModes: SCIENCE_MODES },
+  { icon: BookOpen,     label: "English",   prompt: "",                color: "text-violet-500",  accentBorder: "border-violet-300 dark:border-violet-800",  accentBg: "bg-violet-50 dark:bg-violet-950/20",  subModes: ENGLISH_MODES },
+  { icon: Globe,        label: "Languages", prompt: "Translate: ",     color: "text-orange-500"   },
+  { icon: BookMarked,   label: "History",   prompt: "Tell me about: ", color: "text-rose-500"     },
 ];
 
 /* ─── Waveform bars animation while listening ─────────────────── */
@@ -91,7 +175,7 @@ export default function SolverContent() {
   const [textProblem, setTextProblem]   = useState("");
   const [chatHistory, setChatHistory]   = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming]   = useState(false);
-  const [scienceOpen, setScienceOpen]   = useState(false);
+  const [openSubMenu, setOpenSubMenu]   = useState<string | null>(null);
   const [activeMode, setActiveMode]     = useState<AIMode | null>(null);
   const [copiedIdx, setCopiedIdx]       = useState<number | null>(null);
 
@@ -398,7 +482,7 @@ export default function SolverContent() {
     setTextProblem("");
     setAttachedFiles([]);
     setActiveMode(null);
-    setScienceOpen(false);
+    setOpenSubMenu(null);
   };
 
   const canSend = (!isStreaming && !isUploadingSolving) && (!!textProblem.trim() || attachedFiles.length > 0);
@@ -546,69 +630,73 @@ export default function SolverContent() {
                 Ask any question, upload a photo of your homework, or speak directly.
               </p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
-                {quickPrompts.map((item) => (
-                  <div key={item.label} className="flex flex-col gap-2">
-                    <button
-                      onClick={() => {
-                        if (item.isScience) {
-                          setScienceOpen(v => !v);
-                        } else {
-                          setScienceOpen(false);
-                          setActiveMode(null);
-                          setTextProblem(item.prompt);
-                        }
-                      }}
-                      className={`flex items-center gap-3 p-4 rounded-xl border transition-all text-left group w-full ${
-                        item.isScience && scienceOpen
-                          ? "border-emerald-300 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-800"
-                          : "border-[#E5E5E0] dark:border-[#22221F] bg-white dark:bg-[#111110] hover:bg-[#F9F9F8] dark:hover:bg-[#1A1A1A]"
-                      }`}
-                    >
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform ${
-                        item.isScience && scienceOpen
-                          ? "bg-emerald-100 dark:bg-emerald-900"
-                          : "bg-[#F0F0F0] dark:bg-[#1A1A1A]"
-                      }`}>
-                        <item.icon className={`w-5 h-5 ${item.color}`} />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-[14px] font-semibold text-[#111110] dark:text-white">{item.label}</p>
-                        <p className="text-[12px] text-[#999990]">
-                          {item.isScience ? "Choose a subject" : "Ask a question"}
-                        </p>
-                      </div>
-                      {item.isScience && (
-                        <ChevronRight className={`w-4 h-4 text-[#999990] transition-transform ${scienceOpen ? "rotate-90" : ""}`} />
-                      )}
-                    </button>
+              <div className="grid grid-cols-2 gap-3 w-full max-w-lg">
+                {quickPrompts.map((item) => {
+                  const isOpen = openSubMenu === item.label;
+                  const hasSubMenu = !!item.subModes;
+                  return (
+                    <div key={item.label} className="flex flex-col gap-2">
+                      <button
+                        data-testid={`quick-prompt-${item.label.toLowerCase()}`}
+                        onClick={() => {
+                          if (hasSubMenu) {
+                            setOpenSubMenu(isOpen ? null : item.label);
+                          } else {
+                            setOpenSubMenu(null);
+                            setActiveMode(null);
+                            setTextProblem(item.prompt);
+                          }
+                        }}
+                        className={`flex items-center gap-3 p-4 rounded-xl border transition-all text-left group w-full ${
+                          isOpen
+                            ? `${item.accentBorder} ${item.accentBg}`
+                            : "border-[#E5E5E0] dark:border-[#22221F] bg-white dark:bg-[#111110] hover:bg-[#F9F9F8] dark:hover:bg-[#1A1A1A]"
+                        }`}
+                      >
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform ${
+                          isOpen ? "bg-white/70 dark:bg-black/30" : "bg-[#F0F0F0] dark:bg-[#1A1A1A]"
+                        }`}>
+                          <item.icon className={`w-5 h-5 ${item.color}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[14px] font-semibold text-[#111110] dark:text-white">{item.label}</p>
+                          <p className="text-[12px] text-[#999990]">
+                            {hasSubMenu ? "Choose a mode" : "Ask a question"}
+                          </p>
+                        </div>
+                        {hasSubMenu && (
+                          <ChevronRight className={`w-4 h-4 text-[#999990] shrink-0 transition-transform ${isOpen ? "rotate-90" : ""}`} />
+                        )}
+                      </button>
 
-                    {/* Science sub-menu */}
-                    {item.isScience && scienceOpen && (
-                      <div className="ml-3 flex flex-col gap-2 border-l-2 border-emerald-200 dark:border-emerald-800 pl-3">
-                        {SCIENCE_MODES.map(mode => (
-                          <button
-                            key={mode.label}
-                            onClick={() => {
-                              setActiveMode({ label: mode.label, color: mode.color, bg: mode.bg, instruction: mode.instruction });
-                              setTextProblem("Explain: ");
-                              setScienceOpen(false);
-                            }}
-                            className={`flex items-start gap-3 p-3 rounded-xl border transition-all text-left group w-full ${mode.bg} border-transparent hover:border-current`}
-                          >
-                            <div className="w-8 h-8 rounded-lg bg-white/60 dark:bg-black/20 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                              <mode.icon className={`w-4 h-4 ${mode.color}`} />
-                            </div>
-                            <div>
-                              <p className={`text-[13px] font-bold ${mode.color}`}>{mode.label}</p>
-                              <p className="text-[11px] text-[#666660] dark:text-[#888880]">{mode.desc}</p>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                      {/* Generic sub-menu */}
+                      {hasSubMenu && isOpen && (
+                        <div className="ml-3 flex flex-col gap-1.5 border-l-2 border-[#D5D5D0] dark:border-[#2A2A28] pl-3">
+                          {item.subModes!.map(mode => (
+                            <button
+                              key={mode.label}
+                              data-testid={`sub-mode-${mode.label.toLowerCase().replace(/\s+/g, "-")}`}
+                              onClick={() => {
+                                setActiveMode({ label: mode.label, color: mode.color, bg: mode.bg, instruction: mode.instruction });
+                                setTextProblem(mode.prompt);
+                                setOpenSubMenu(null);
+                              }}
+                              className={`flex items-start gap-3 p-3 rounded-xl border transition-all text-left group w-full ${mode.bg} border-transparent hover:border-current`}
+                            >
+                              <div className="w-8 h-8 rounded-lg bg-white/60 dark:bg-black/20 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                <mode.icon className={`w-4 h-4 ${mode.color}`} />
+                              </div>
+                              <div className="min-w-0">
+                                <p className={`text-[13px] font-bold ${mode.color}`}>{mode.label}</p>
+                                <p className="text-[11px] text-[#666660] dark:text-[#888880] leading-tight">{mode.desc}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Voice hint */}
