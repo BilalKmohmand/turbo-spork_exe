@@ -588,11 +588,9 @@ function DemoLockedState({ resetAt }: { resetAt: number }) {
           <div key={i} className="w-3 h-3 rounded-full bg-red-500/40 border border-red-500/30" />
         ))}
       </div>
-      <Link href="/auth?mode=register">
-        <button className="flex items-center gap-2 px-7 py-3.5 bg-violet-600 hover:bg-violet-500 text-white text-[14px] font-bold rounded-2xl transition-all">
-          Sign up for unlimited access <ArrowRight className="w-4 h-4" />
-        </button>
-      </Link>
+      <a href="/auth?mode=register" className="flex items-center gap-2 px-7 py-3.5 bg-violet-600 hover:bg-violet-500 text-white text-[14px] font-bold rounded-2xl transition-all">
+        Sign up for unlimited access <ArrowRight className="w-4 h-4" />
+      </a>
       <p className="text-[11px] text-white/25">Free plan available — no credit card needed</p>
     </div>
   );
@@ -860,11 +858,9 @@ function InteractiveDemo() {
                 <p className="text-[14px] font-bold text-white">Like what you see?</p>
                 <p className="text-[12px] text-white/40">Unlimited questions, all subjects — free forever plan available.</p>
               </div>
-              <Link href="/auth?mode=register">
-                <button className="flex items-center gap-1.5 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-[13px] font-bold rounded-xl transition-all whitespace-nowrap">
-                  Get started free <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </Link>
+              <a href="/auth?mode=register" className="flex items-center gap-1.5 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-[13px] font-bold rounded-xl transition-all whitespace-nowrap">
+                Get started free <ArrowRight className="w-3.5 h-3.5" />
+              </a>
             </div>
           )}
         </>
@@ -908,12 +904,10 @@ export default function Landing() {
             ))}
           </nav>
           <div className="hidden md:flex items-center gap-2.5">
-            <Link href="/auth"><button className="text-[13px] text-white/50 hover:text-white transition-colors px-3 py-1.5 font-medium" data-testid="button-login">Sign in</button></Link>
-            <Link href="/auth?mode=register">
-              <button className="flex items-center gap-1.5 text-[13px] font-bold bg-white hover:bg-white/90 text-black px-4 py-2 rounded-xl transition-all shadow-lg shadow-white/5" data-testid="button-signup">
-                Get started free <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </Link>
+            <a href="/auth" className="text-[13px] text-white/50 hover:text-white transition-colors px-3 py-1.5 font-medium" data-testid="button-login">Sign in</a>
+            <a href="/auth?mode=register" className="flex items-center gap-1.5 text-[13px] font-bold bg-white hover:bg-white/90 text-black px-4 py-2 rounded-xl transition-all shadow-lg shadow-white/5" data-testid="button-signup">
+              Get started free <ArrowRight className="w-3.5 h-3.5" />
+            </a>
           </div>
           <button className="md:hidden p-2 text-white/50 hover:text-white" onClick={() => setMenuOpen(v => !v)}>
             {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -928,10 +922,8 @@ export default function Landing() {
                   <a key={link.label} href={link.href} className="text-[15px] text-white/70 font-medium" onClick={() => setMenuOpen(false)}>{link.label}</a>
                 ))}
                 <hr className="border-white/10" />
-                <Link href="/auth"><button className="w-full text-left text-[14px] text-white/50">Sign in</button></Link>
-                <Link href="/auth?mode=register">
-                  <button className="w-full flex items-center justify-center gap-2 text-[14px] font-bold bg-white text-black py-3 rounded-xl">Get started free <ArrowRight className="w-4 h-4" /></button>
-                </Link>
+                <a href="/auth" className="w-full text-left text-[14px] text-white/50">Sign in</a>
+                <a href="/auth?mode=register" className="w-full flex items-center justify-center gap-2 text-[14px] font-bold bg-white text-black py-3 rounded-xl">Get started free <ArrowRight className="w-4 h-4" /></a>
               </div>
             </motion.div>
           )}
@@ -964,16 +956,12 @@ export default function Landing() {
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.4 }}
             className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link href="/auth?mode=register">
-              <button className="flex items-center gap-2 px-8 py-4 bg-white hover:bg-white/90 text-black text-[15px] font-bold rounded-2xl shadow-2xl shadow-white/10 transition-all hover:-translate-y-0.5" data-testid="button-hero-cta">
-                Start learning for free <ArrowRight className="w-4 h-4" />
-              </button>
-            </Link>
-            <Link href="/demo">
-              <button className="flex items-center gap-2 px-8 py-4 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 hover:border-violet-500/50 text-violet-300 hover:text-white text-[15px] font-semibold rounded-2xl transition-all" data-testid="button-hero-demo">
-                <Play className="w-4 h-4" /> Try full demo
-              </button>
-            </Link>
+            <a href="/auth?mode=register" className="flex items-center gap-2 px-8 py-4 bg-white hover:bg-white/90 text-black text-[15px] font-bold rounded-2xl shadow-2xl shadow-white/10 transition-all hover:-translate-y-0.5" data-testid="button-hero-cta">
+              Start learning for free <ArrowRight className="w-4 h-4" />
+            </a>
+            <a href="/demo" className="flex items-center gap-2 px-8 py-4 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 hover:border-violet-500/50 text-violet-300 hover:text-white text-[15px] font-semibold rounded-2xl transition-all" data-testid="button-hero-demo">
+              <Play className="w-4 h-4" /> Try full demo
+            </a>
           </motion.div>
 
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.65 }}
@@ -1143,11 +1131,9 @@ export default function Landing() {
             ))}
           </div>
           <motion.div {...fadeUp(0.3)} className="mt-12 text-center">
-            <Link href="/auth?mode=register">
-              <button className="inline-flex items-center gap-2 px-8 py-4 bg-white hover:bg-white/90 text-black text-[15px] font-bold rounded-2xl shadow-2xl shadow-white/5 transition-all hover:-translate-y-0.5">
-                Try it free <ArrowRight className="w-4 h-4" />
-              </button>
-            </Link>
+            <a href="/auth?mode=register" className="inline-flex items-center gap-2 px-8 py-4 bg-white hover:bg-white/90 text-black text-[15px] font-bold rounded-2xl shadow-2xl shadow-white/5 transition-all hover:-translate-y-0.5">
+              Try it free <ArrowRight className="w-4 h-4" />
+            </a>
           </motion.div>
         </div>
       </section>
@@ -1201,16 +1187,12 @@ export default function Landing() {
                 Join 2 million students who use Gradeio to learn faster, understand deeper, and get better grades.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <Link href="/auth?mode=register">
-                  <button className="flex items-center gap-2 px-9 py-4 bg-white hover:bg-white/90 text-black text-[16px] font-bold rounded-2xl shadow-2xl shadow-white/10 transition-all hover:-translate-y-0.5" data-testid="button-cta-bottom">
-                    Start for free <ArrowRight className="w-4 h-4" />
-                  </button>
-                </Link>
-                <Link href="/demo">
-                  <button className="flex items-center gap-2 px-9 py-4 bg-white/8 hover:bg-white/15 border border-white/15 hover:border-white/30 text-white/70 hover:text-white text-[16px] font-semibold rounded-2xl transition-all" data-testid="button-cta-demo">
-                    <Play className="w-5 h-5" /> Try full demo
-                  </button>
-                </Link>
+                <a href="/auth?mode=register" className="flex items-center gap-2 px-9 py-4 bg-white hover:bg-white/90 text-black text-[16px] font-bold rounded-2xl shadow-2xl shadow-white/10 transition-all hover:-translate-y-0.5" data-testid="button-cta-bottom">
+                  Start for free <ArrowRight className="w-4 h-4" />
+                </a>
+                <a href="/demo" className="flex items-center gap-2 px-9 py-4 bg-white/8 hover:bg-white/15 border border-white/15 hover:border-white/30 text-white/70 hover:text-white text-[16px] font-semibold rounded-2xl transition-all" data-testid="button-cta-demo">
+                  <Play className="w-5 h-5" /> Try full demo
+                </a>
               </div>
               <p className="mt-6 text-[12px] text-white/25">No credit card required · Free plan available · Cancel anytime</p>
             </div>

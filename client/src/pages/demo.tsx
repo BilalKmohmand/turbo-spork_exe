@@ -342,11 +342,9 @@ function DemoOverview({ setActive }: { setActive: (s: string) => void }) {
           <p className="text-[16px] font-bold text-white mb-1">Ready for the real thing?</p>
           <p className="text-[13px] text-white/45">Sign up free — no credit card needed. Unlimited access starts now.</p>
         </div>
-        <Link href="/auth?mode=register">
-          <button className="flex items-center gap-2 px-5 py-3 bg-white hover:bg-white/90 text-black text-[14px] font-bold rounded-xl transition-all whitespace-nowrap shrink-0">
-            Get started free <ArrowRight className="w-4 h-4" />
-          </button>
-        </Link>
+        <a href="/auth?mode=register" className="flex items-center gap-2 px-5 py-3 bg-white hover:bg-white/90 text-black text-[14px] font-bold rounded-xl transition-all whitespace-nowrap shrink-0">
+          Get started free <ArrowRight className="w-4 h-4" />
+        </a>
       </div>
     </div>
   );
@@ -520,11 +518,9 @@ function DemoCourses() {
           <div className="mt-8 p-5 bg-violet-600/10 border border-violet-500/20 rounded-2xl">
             <p className="text-[13px] font-bold text-violet-300 mb-1 flex items-center gap-2"><Lightbulb className="w-4 h-4" />Want more lessons like this?</p>
             <p className="text-[12px] text-white/40 mb-3">Sign up free to access all lessons, quizzes and generate your own courses on any topic.</p>
-            <Link href="/auth?mode=register">
-              <button className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-[13px] font-bold rounded-xl transition-all">
-                Continue learning free <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </Link>
+            <a href="/auth?mode=register" className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-[13px] font-bold rounded-xl transition-all">
+              Continue learning free <ArrowRight className="w-3.5 h-3.5" />
+            </a>
           </div>
         </div>
       </div>
@@ -689,11 +685,9 @@ function DemoQuiz() {
           <button onClick={reset} className="flex-1 flex items-center justify-center gap-2 py-3 bg-white/8 border border-white/10 text-white font-semibold rounded-2xl transition-all text-[14px] hover:bg-white/15">
             <RotateCcw className="w-4 h-4" /> Try again
           </button>
-          <Link href="/auth?mode=register" className="flex-1">
-            <button className="w-full flex items-center justify-center gap-2 py-3 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-2xl transition-all text-[14px]">
-              Generate my own quizzes <ArrowRight className="w-4 h-4" />
-            </button>
-          </Link>
+          <a href="/auth?mode=register" className="flex-1 flex items-center justify-center gap-2 py-3 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-2xl transition-all text-[14px]">
+            Generate my own quizzes <ArrowRight className="w-4 h-4" />
+          </a>
         </div>
       </div>
     </div>
@@ -865,14 +859,10 @@ export default function DemoPage() {
               )}
             </div>
             <div className="flex items-center gap-3">
-              <Link href="/">
-                <button className="text-[13px] text-white/40 hover:text-white transition-colors">← Back to site</button>
-              </Link>
-              <Link href="/auth?mode=register">
-                <button className="flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-white/90 text-black text-[13px] font-bold rounded-xl transition-all">
-                  Sign up free <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </Link>
+              <a href="/" className="text-[13px] text-white/40 hover:text-white transition-colors">← Back to site</a>
+              <a href="/auth?mode=register" className="flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-white/90 text-black text-[13px] font-bold rounded-xl transition-all">
+                Sign up free <ArrowRight className="w-3.5 h-3.5" />
+              </a>
             </div>
           </header>
 
