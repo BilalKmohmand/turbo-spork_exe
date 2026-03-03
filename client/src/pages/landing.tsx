@@ -4,7 +4,7 @@ import { Link } from "wouter";
 import {
   ArrowRight, Sparkles, Brain, Camera, MessageSquare,
   FileText, Mic, FileEdit, CheckCircle, Star,
-  Zap, Shield, ChevronRight, Menu, X,
+  Zap, Shield, ChevronRight, Menu,
   GraduationCap, BookOpen, Users, PenLine, Eye,
   AlignLeft, Calculator, FlaskConical, Globe, RefreshCw,
   BookMarked, Volume2, Upload, Award, Database, LayoutDashboard,
@@ -105,17 +105,6 @@ const SUBJECTS = [
   { icon: GraduationCap,label: "Courses",         color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
 ];
 
-const COMPARISON = [
-  { feature: "Subject specialist AI modes",    gradeio: true,  chatgpt: false,     generic: false },
-  { feature: "AI Course Creator",              gradeio: true,  chatgpt: false,     generic: false },
-  { feature: "Photo & PDF solver",             gradeio: true,  chatgpt: "partial", generic: false },
-  { feature: "Voice input",                    gradeio: true,  chatgpt: false,     generic: false },
-  { feature: "Lecture notes from audio",       gradeio: true,  chatgpt: false,     generic: false },
-  { feature: "Teacher grading dashboard",      gradeio: true,  chatgpt: false,     generic: false },
-  { feature: "Drag & drop any file type",      gradeio: true,  chatgpt: false,     generic: false },
-  { feature: "Knowledge base with citations",  gradeio: true,  chatgpt: false,     generic: false },
-  { feature: "Free to start",                  gradeio: true,  chatgpt: "partial", generic: false },
-];
 
 const TESTIMONIALS = [
   { name: "Sarah M.",   school: "Stanford",  avatar: "SM", color: "from-violet-500 to-indigo-600", rating: 5, text: "Gradeio helped me understand calculus concepts I'd struggled with for months. The step-by-step explanations are unlike anything else." },
@@ -791,49 +780,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ══ COMPARISON TABLE ════════════════════════════════════ */}
-      <section className="py-28 border-t border-white/5 bg-white/[0.015]">
-        <div className="max-w-4xl mx-auto px-5 sm:px-8">
-          <motion.div {...fadeUp()} className="text-center mb-16">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-violet-400 mb-3 block">Why Gradeio</span>
-            <h2 className="text-4xl sm:text-[52px] font-black tracking-tight">
-              Built for education,
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-indigo-400"> not just chat.</span>
-            </h2>
-          </motion.div>
-          <motion.div {...fadeUp(0.1)} className="rounded-2xl border border-white/10 overflow-hidden">
-            <div className="grid grid-cols-4 bg-white/5 border-b border-white/10 px-6 py-4 text-[12px] font-bold">
-              <div className="text-white/40 uppercase tracking-widest">Feature</div>
-              <div className="text-center text-violet-400 uppercase tracking-widest">Gradeio</div>
-              <div className="text-center text-white/30 uppercase tracking-widest">ChatGPT</div>
-              <div className="text-center text-white/30 uppercase tracking-widest">Generic AI</div>
-            </div>
-            {COMPARISON.map((row, i) => (
-              <motion.div key={row.feature} {...fadeUp(i * 0.04)}
-                className={`grid grid-cols-4 px-6 py-4 border-b border-white/5 hover:bg-white/[0.02] transition-colors ${i % 2 === 0 ? "" : "bg-white/[0.01]"}`}>
-                <div className="text-[13px] text-white/60 font-medium flex items-center">{row.feature}</div>
-                <div className="flex items-center justify-center">
-                  <span className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
-                    <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
-                  </span>
-                </div>
-                <div className="flex items-center justify-center">
-                  {row.chatgpt === true ? (
-                    <span className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center"><CheckCircle className="w-3.5 h-3.5 text-emerald-400" /></span>
-                  ) : row.chatgpt === "partial" ? (
-                    <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">Partial</span>
-                  ) : (
-                    <span className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center"><X className="w-3 h-3 text-white/20" /></span>
-                  )}
-                </div>
-                <div className="flex items-center justify-center">
-                  <span className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center"><X className="w-3 h-3 text-white/20" /></span>
-                </div>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
 
       {/* ══ TESTIMONIALS ════════════════════════════════════════ */}
       <section className="py-28 border-t border-white/5" id="testimonials">
