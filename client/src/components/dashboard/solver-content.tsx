@@ -137,19 +137,66 @@ const ENGLISH_MODES: SubMode[] = [
 interface QuickPrompt {
   icon: any;
   label: string;
+  desc: string;
   prompt: string;
   color: string;
+  bg: string;
+  instruction?: string;
   accentBorder?: string;
   accentBg?: string;
   subModes?: SubMode[];
 }
 
 const quickPrompts: QuickPrompt[] = [
-  { icon: Calculator,   label: "Math",      prompt: "Solve: ",         color: "text-blue-500"    },
-  { icon: FlaskConical, label: "Science",   prompt: "",                color: "text-emerald-500", accentBorder: "border-emerald-300 dark:border-emerald-800", accentBg: "bg-emerald-50 dark:bg-emerald-950/20", subModes: SCIENCE_MODES },
-  { icon: BookOpen,     label: "English",   prompt: "",                color: "text-violet-500",  accentBorder: "border-violet-300 dark:border-violet-800",  accentBg: "bg-violet-50 dark:bg-violet-950/20",  subModes: ENGLISH_MODES },
-  { icon: Globe,        label: "Languages", prompt: "Translate: ",     color: "text-orange-500"   },
-  { icon: BookMarked,   label: "History",   prompt: "Tell me about: ", color: "text-rose-500"     },
+  {
+    icon: Calculator,
+    label: "Math",
+    desc: "Solve equations, geometry & word problems",
+    prompt: "Solve: ",
+    color: "text-blue-500",
+    bg: "bg-blue-50 dark:bg-blue-950/20",
+    instruction: "You are an expert Math tutor. For every problem: show all working step-by-step with clear numbered steps, state the method or formula used at the start, highlight the final answer, and explain any key concepts the student needs to understand. Use LaTeX notation for all mathematical expressions (e.g. $x^2 + 2x + 1$). If the problem has multiple parts, solve each part clearly.",
+  },
+  {
+    icon: FlaskConical,
+    label: "Science",
+    desc: "Physics, Chemistry & Biology explained",
+    prompt: "",
+    color: "text-emerald-500",
+    bg: "bg-emerald-50 dark:bg-emerald-950/20",
+    accentBorder: "border-emerald-300 dark:border-emerald-800",
+    accentBg: "bg-emerald-50 dark:bg-emerald-950/20",
+    subModes: SCIENCE_MODES,
+  },
+  {
+    icon: BookOpen,
+    label: "English",
+    desc: "Grammar, comprehension, essays & more",
+    prompt: "",
+    color: "text-violet-500",
+    bg: "bg-violet-50 dark:bg-violet-950/20",
+    accentBorder: "border-violet-300 dark:border-violet-800",
+    accentBg: "bg-violet-50 dark:bg-violet-950/20",
+    subModes: ENGLISH_MODES,
+  },
+  {
+    icon: Globe,
+    label: "Languages",
+    desc: "Translate text & learn new languages",
+    prompt: "Translate to English: ",
+    color: "text-orange-500",
+    bg: "bg-orange-50 dark:bg-orange-950/20",
+    instruction: "You are an expert multilingual language tutor. When asked to translate: provide an accurate translation, then break down key vocabulary word-by-word, explain any grammar structures that differ from English, give pronunciation tips where helpful, and provide cultural context if relevant. If the student asks about grammar rules, explain them with clear examples in both languages.",
+  },
+  {
+    icon: BookMarked,
+    label: "History",
+    desc: "Explore events, people & historical context",
+    prompt: "Tell me about: ",
+    color: "text-rose-500",
+    bg: "bg-rose-50 dark:bg-rose-950/20",
+    instruction: "You are an expert History tutor. When answering historical questions: give clear timelines with dates, explain cause-and-effect relationships between events, describe key figures and their motivations, provide historical context showing why events were significant, and connect historical events to their long-term consequences. Use primary source examples where relevant and help students think critically about different historical perspectives.",
+  },
 ];
 
 /* ─── Waveform bars animation while listening ─────────────────── */
@@ -643,7 +690,11 @@ export default function SolverContent() {
                             setOpenSubMenu(isOpen ? null : item.label);
                           } else {
                             setOpenSubMenu(null);
-                            setActiveMode(null);
+                            if (item.instruction) {
+                              setActiveMode({ label: item.label, color: item.color, bg: item.bg, instruction: item.instruction });
+                            } else {
+                              setActiveMode(null);
+                            }
                             setTextProblem(item.prompt);
                           }
                         }}
@@ -660,9 +711,7 @@ export default function SolverContent() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-[14px] font-semibold text-[#111110] dark:text-white">{item.label}</p>
-                          <p className="text-[12px] text-[#999990]">
-                            {hasSubMenu ? "Choose a mode" : "Ask a question"}
-                          </p>
+                          <p className="text-[12px] text-[#999990] leading-tight">{item.desc}</p>
                         </div>
                         {hasSubMenu && (
                           <ChevronRight className={`w-4 h-4 text-[#999990] shrink-0 transition-transform ${isOpen ? "rotate-90" : ""}`} />
