@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { motion } from "framer-motion";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { renderMathText } from "@/components/math-display";
@@ -244,6 +245,16 @@ function VoiceWaveform() {
         />
       ))}
     </span>
+  );
+}
+
+/* ─── Streaming cursor ───────────────────────────────────────────── */
+function StreamingCursor() {
+  return (
+    <span
+      className="inline-block w-0.5 h-[1em] bg-violet-500 ml-0.5 align-middle rounded-sm"
+      style={{ animation: "cursorBlink 1s ease-in-out infinite" }}
+    />
   );
 }
 
@@ -706,6 +717,10 @@ export default function SolverContent() {
           0%   { transform: scaleY(0.4); }
           100% { transform: scaleY(1.1); }
         }
+        @keyframes cursorBlink {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0; }
+        }
       `}</style>
 
       {/* Drag-and-drop overlay */}
@@ -842,71 +857,93 @@ export default function SolverContent() {
           ) : (
             /* ── Chat messages ── */
             <div className="space-y-8 py-4">
-              {chatHistory.map((msg, idx) => (
-                <div key={idx} className={`flex gap-5 group ${msg.role === "user" ? "justify-end" : ""}`}>
-                  {msg.role === "assistant" && (
-                    <div className="w-8 h-8 rounded-lg bg-[#111110] dark:bg-white flex items-center justify-center flex-shrink-0 mt-1">
-                      <Sparkles className="w-4 h-4 text-white dark:text-black" />
-                    </div>
-                  )}
-                  <div className={`max-w-[85%] relative ${msg.role === "user" ? "bg-[#F0F0F0] dark:bg-[#1A1A1A] px-4 py-3 rounded-2xl text-[#111110] dark:text-white" : "text-[#111110] dark:text-[#E5E5E0]"}`}>
-                    {/* Image previews — supports both single (legacy) and multiple */}
-                    {(msg.imagePreviews && msg.imagePreviews.length > 0) && (
-                      <div className={`flex flex-wrap gap-2 mb-2 ${msg.imagePreviews.length === 1 ? "" : "max-w-[320px]"}`}>
-                        {msg.imagePreviews.map((src, pi) => (
-                          <img
-                            key={pi}
-                            src={src}
-                            alt={`Image ${pi + 1}`}
-                            className={`rounded-xl border border-[#E5E5E0] object-cover ${
-                              msg.imagePreviews!.length === 1 ? "max-w-[240px] max-h-[200px]" :
-                              msg.imagePreviews!.length <= 4 ? "w-[140px] h-[110px]" : "w-[100px] h-[80px]"
-                            }`}
-                          />
-                        ))}
+              {chatHistory.map((msg, idx) => {
+                const isLastAssistant = msg.role === "assistant" && idx === chatHistory.length - 1;
+                const showCursor = isLastAssistant && (isStreaming || isUploadingSolving) && msg.content.length > 0;
+                return (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                    className={`flex gap-5 group ${msg.role === "user" ? "justify-end" : ""}`}
+                  >
+                    {msg.role === "assistant" && (
+                      <div className={`w-8 h-8 rounded-lg bg-[#111110] dark:bg-white flex items-center justify-center flex-shrink-0 mt-1 ${showCursor ? "animate-pulse" : ""}`}>
+                        <Sparkles className="w-4 h-4 text-white dark:text-black" />
                       </div>
                     )}
-                    {msg.imagePreview && !msg.imagePreviews && (
-                      <img src={msg.imagePreview} alt="attachment" className="max-w-[240px] rounded-xl mb-2 border border-[#E5E5E0]" />
-                    )}
-                    <div className="text-[15px] leading-[1.6]">
-                      {msg.role === "assistant" ? renderMathText(msg.content) : msg.content}
+                    <div className={`max-w-[85%] relative ${msg.role === "user" ? "bg-[#F0F0F0] dark:bg-[#1A1A1A] px-4 py-3 rounded-2xl text-[#111110] dark:text-white" : "text-[#111110] dark:text-[#E5E5E0]"}`}>
+                      {/* Image previews — supports both single (legacy) and multiple */}
+                      {(msg.imagePreviews && msg.imagePreviews.length > 0) && (
+                        <div className={`flex flex-wrap gap-2 mb-2 ${msg.imagePreviews.length === 1 ? "" : "max-w-[320px]"}`}>
+                          {msg.imagePreviews.map((src, pi) => (
+                            <img
+                              key={pi}
+                              src={src}
+                              alt={`Image ${pi + 1}`}
+                              className={`rounded-xl border border-[#E5E5E0] object-cover ${
+                                msg.imagePreviews!.length === 1 ? "max-w-[240px] max-h-[200px]" :
+                                msg.imagePreviews!.length <= 4 ? "w-[140px] h-[110px]" : "w-[100px] h-[80px]"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      )}
+                      {msg.imagePreview && !msg.imagePreviews && (
+                        <img src={msg.imagePreview} alt="attachment" className="max-w-[240px] rounded-xl mb-2 border border-[#E5E5E0]" />
+                      )}
+                      <div className="text-[15px] leading-[1.6]">
+                        {msg.role === "assistant" ? (
+                          <>
+                            {renderMathText(msg.content)}
+                            {showCursor && <StreamingCursor />}
+                          </>
+                        ) : msg.content}
+                      </div>
+                      {/* Copy button */}
+                      {msg.content && (
+                        <button
+                          onClick={() => copyMessage(msg.content, idx)}
+                          className={`absolute -bottom-6 ${msg.role === "user" ? "right-0" : "left-0"} opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-[11px] text-[#999990] hover:text-[#444440] dark:hover:text-[#BBBBBB] py-0.5 px-2 rounded`}
+                          title="Copy message"
+                        >
+                          {copiedIdx === idx
+                            ? <><Check className="w-3 h-3 text-emerald-500" /><span className="text-emerald-500">Copied</span></>
+                            : <><Copy className="w-3 h-3" />Copy</>
+                          }
+                        </button>
+                      )}
                     </div>
-                    {/* Copy button */}
-                    {msg.content && (
-                      <button
-                        onClick={() => copyMessage(msg.content, idx)}
-                        className={`absolute -bottom-6 ${msg.role === "user" ? "right-0" : "left-0"} opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-[11px] text-[#999990] hover:text-[#444440] dark:hover:text-[#BBBBBB] py-0.5 px-2 rounded`}
-                        title="Copy message"
-                      >
-                        {copiedIdx === idx
-                          ? <><Check className="w-3 h-3 text-emerald-500" /><span className="text-emerald-500">Copied</span></>
-                          : <><Copy className="w-3 h-3" />Copy</>
-                        }
-                      </button>
+                    {msg.role === "user" && (
+                      <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-950 flex items-center justify-center flex-shrink-0 mt-1 border border-violet-200 dark:border-violet-900">
+                        <User className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                      </div>
                     )}
-                  </div>
-                  {msg.role === "user" && (
-                    <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-950 flex items-center justify-center flex-shrink-0 mt-1 border border-violet-200 dark:border-violet-900">
-                      <User className="w-4 h-4 text-violet-600 dark:text-violet-400" />
-                    </div>
-                  )}
-                </div>
-              ))}
-              {(isStreaming || isUploadingSolving) && (
-                <div className="flex gap-5">
+                  </motion.div>
+                );
+              })}
+              {/* Thinking dots — only before first tokens arrive */}
+              {(isStreaming || isUploadingSolving) &&
+                (chatHistory.length === 0 || chatHistory[chatHistory.length - 1]?.content === "") && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="flex gap-5"
+                >
                   <div className="w-8 h-8 rounded-lg bg-[#111110] dark:bg-white flex items-center justify-center flex-shrink-0 mt-1 animate-pulse">
                     <Sparkles className="w-4 h-4 text-white dark:text-black" />
                   </div>
-                  <div className="flex items-center gap-2 text-[#666660] text-[15px] italic">
-                    <span>Thinking</span>
-                    <span className="flex gap-0.5">
-                      <span className="w-1 h-1 rounded-full bg-[#999990] animate-bounce" style={{ animationDelay: "0ms" }} />
-                      <span className="w-1 h-1 rounded-full bg-[#999990] animate-bounce" style={{ animationDelay: "150ms" }} />
-                      <span className="w-1 h-1 rounded-full bg-[#999990] animate-bounce" style={{ animationDelay: "300ms" }} />
+                  <div className="flex items-center gap-2 text-[#666660] dark:text-[#888880] text-[15px]">
+                    <span className="font-medium">Thinking</span>
+                    <span className="flex gap-1 ml-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+                      <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: "150ms" }} />
+                      <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: "300ms" }} />
                     </span>
                   </div>
-                </div>
+                </motion.div>
               )}
             </div>
           )}
