@@ -933,7 +933,7 @@ export default function Landing() {
 
       {/* ══ HERO ════════════════════════════════════════════════ */}
       <section className="relative pt-32 pb-24 overflow-hidden">
-        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "linear-gradient(white 1px, transparent 1px), linear-gradient(90deg, white 1px, transparent 1px)", backgroundSize: "60px 60px" }} />
+        <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: "linear-gradient(white 1px, transparent 1px), linear-gradient(90deg, white 1px, transparent 1px)", backgroundSize: "60px 60px" }} />
         <div className="absolute top-20 left-1/4 w-[600px] h-[500px] bg-violet-600/12 rounded-full blur-[120px] pointer-events-none" />
         <div className="absolute top-40 right-1/4 w-[400px] h-[300px] bg-indigo-600/10 rounded-full blur-[100px] pointer-events-none" />
 
@@ -1171,7 +1171,7 @@ export default function Landing() {
       <section className="py-28 border-t border-white/5">
         <div className="max-w-6xl mx-auto px-5 sm:px-8">
           <motion.div {...fadeUp()} className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-violet-600/20 via-indigo-600/10 to-fuchsia-600/20 border border-violet-500/20 p-12 md:p-20 text-center">
-            <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "linear-gradient(white 1px, transparent 1px), linear-gradient(90deg, white 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
+            <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ backgroundImage: "linear-gradient(white 1px, transparent 1px), linear-gradient(90deg, white 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
             <div className="absolute top-0 left-1/4 w-[500px] h-[300px] bg-violet-600/20 rounded-full blur-[80px] pointer-events-none" />
             <div className="relative z-10">
               <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-violet-400/20 bg-violet-500/10 text-violet-300 text-[11px] font-semibold mb-6">
