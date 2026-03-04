@@ -9,7 +9,7 @@ import {
   GraduationCap, BookOpen, Users, PenLine, Eye,
   AlignLeft, Calculator, FlaskConical, Globe, RefreshCw,
   BookMarked, Volume2, Upload, Award, Database, LayoutDashboard,
-  ClipboardCheck, BookCopy, Play,
+  ClipboardCheck, BookCopy,
 } from "lucide-react";
 
 /* ─── Typing animation ───────────────────────────────────────── */
@@ -956,12 +956,9 @@ export default function Landing() {
           </motion.p>
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.4 }}
-            className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <a href="/auth?mode=register" className="flex items-center gap-2 px-8 py-4 bg-white hover:bg-white/90 text-black text-[15px] font-bold rounded-2xl shadow-2xl shadow-white/10 transition-all hover:-translate-y-0.5" data-testid="button-hero-cta">
-              Start learning for free <ArrowRight className="w-4 h-4" />
-            </a>
-            <a href="/demo" className="flex items-center gap-2 px-8 py-4 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 hover:border-violet-500/50 text-violet-300 hover:text-white text-[15px] font-semibold rounded-2xl transition-all" data-testid="button-hero-demo">
-              <Play className="w-4 h-4" /> Try full demo
+            className="mt-10 flex items-center justify-center">
+            <a href="/auth?mode=register" className="flex items-center gap-2 px-9 py-4 bg-white hover:bg-white/90 text-black text-[15px] font-bold rounded-2xl shadow-2xl shadow-white/10 transition-all hover:-translate-y-0.5" data-testid="button-hero-cta">
+              Get started free <ArrowRight className="w-4 h-4" />
             </a>
           </motion.div>
 
@@ -1187,12 +1184,9 @@ export default function Landing() {
               <p className="text-[16px] text-white/50 max-w-md mx-auto mb-10 leading-relaxed">
                 Join 2 million students who use Gradeio to learn faster, understand deeper, and get better grades.
               </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <a href="/auth?mode=register" className="flex items-center gap-2 px-9 py-4 bg-white hover:bg-white/90 text-black text-[16px] font-bold rounded-2xl shadow-2xl shadow-white/10 transition-all hover:-translate-y-0.5" data-testid="button-cta-bottom">
-                  Start for free <ArrowRight className="w-4 h-4" />
-                </a>
-                <a href="/demo" className="flex items-center gap-2 px-9 py-4 bg-white/8 hover:bg-white/15 border border-white/15 hover:border-white/30 text-white/70 hover:text-white text-[16px] font-semibold rounded-2xl transition-all" data-testid="button-cta-demo">
-                  <Play className="w-5 h-5" /> Try full demo
+              <div className="flex items-center justify-center">
+                <a href="/auth?mode=register" className="flex items-center gap-2 px-10 py-4 bg-white hover:bg-white/90 text-black text-[16px] font-bold rounded-2xl shadow-2xl shadow-white/10 transition-all hover:-translate-y-0.5" data-testid="button-cta-bottom">
+                  Get started free <ArrowRight className="w-4 h-4" />
                 </a>
               </div>
               <p className="mt-6 text-[12px] text-white/25">No credit card required · Free plan available · Cancel anytime</p>
