@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { renderMathText } from "@/components/math-display";
 import {
   Send, Paperclip, Sparkles, BookOpen,
-  Calculator, FlaskConical, Globe, Mic, MicOff,
+  Calculator, FlaskConical, Mic, MicOff,
   User, X, FileImage, FileText, File, FileSpreadsheet,
   Atom, TestTube, Leaf, ChevronRight, Copy, Check,
   Trash2, PenLine, Eye, AlignLeft, RefreshCw, BookMarked, GraduationCap,
@@ -252,15 +252,6 @@ const quickPrompts: QuickPrompt[] = [
     accentBorder: "border-violet-300 dark:border-violet-800",
     accentBg: "bg-violet-50 dark:bg-violet-950/20",
     subModes: ENGLISH_MODES,
-  },
-  {
-    icon: Globe,
-    label: "Languages",
-    desc: "Translate text & learn new languages",
-    prompt: "Translate to English: ",
-    color: "text-orange-500",
-    bg: "bg-orange-50 dark:bg-orange-950/20",
-    instruction: "You are an expert multilingual language tutor. When asked to translate: provide an accurate translation, then break down key vocabulary word-by-word, explain any grammar structures that differ from English, give pronunciation tips where helpful, and provide cultural context if relevant. If the student asks about grammar rules, explain them with clear examples in both languages.",
   },
   {
     icon: BookMarked,
@@ -808,7 +799,7 @@ export default function SolverContent() {
       )}
 
       {/* Scrollable chat area */}
-      <div ref={chatContainerRef} className="flex-1 overflow-y-auto no-scrollbar pt-4 pb-36">
+      <div ref={chatContainerRef} className="flex-1 overflow-y-auto no-scrollbar pt-4 pb-6">
         <div className="max-w-3xl mx-auto px-6 w-full">
           {chatHistory.length === 0 ? (
             /* ── Empty state ── */
@@ -993,8 +984,8 @@ export default function SolverContent() {
         </div>
       </div>
 
-      {/* Floating input bar */}
-      <div className="absolute bottom-6 left-0 right-0 px-6">
+      {/* Sticky input bar */}
+      <div className="shrink-0 px-6 pb-6 pt-2 bg-white dark:bg-[#0A0A0A]">
         <div className="max-w-3xl mx-auto">
           {/* Active science mode badge */}
           {activeMode && (
