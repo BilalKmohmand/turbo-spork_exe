@@ -3225,7 +3225,132 @@ The quiz JSON array must contain exactly 4 questions. Each correctIndex is 0-3.`
     }
   });
 
-  /* ── Research Assessment ──────────────────────────────────────── */
+  /* ── Research Assessment (file upload) ───────────────────────── */
+  const researchUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 25 * 1024 * 1024, files: 5 },
+  });
+
+  async function extractTextFromBuffer(buffer: Buffer, mime: string, name: string): Promise<string> {
+    const ext = name.toLowerCase().split(".").pop() || "";
+
+    if (mime === "application/pdf" || ext === "pdf") {
+      try {
+        const PDFParseClass = await getPDFParse();
+        const parser = new PDFParseClass(new Uint8Array(buffer));
+        const r = await parser.getText();
+        return r.text?.trim().replace(/\n*-- \d+ of \d+ --\n*/g, "").trim() || "";
+      } catch { return ""; }
+    }
+
+    if (mime.includes("word") || ["doc", "docx"].includes(ext)) {
+      try {
+        const mammoth = await import("mammoth");
+        const r = await mammoth.extractRawText({ buffer });
+        return r.value?.trim() || "";
+      } catch { return ""; }
+    }
+
+    if (mime.startsWith("text/") || ["txt","md","csv","rtf"].includes(ext)) {
+      return buffer.toString("utf-8").slice(0, 30000);
+    }
+
+    if (mime.startsWith("image/") || ["jpg","jpeg","png","webp","gif"].includes(ext)) {
+      try {
+        const b64 = buffer.toString("base64");
+        const imgMime = mime.startsWith("image/") ? mime : "image/jpeg";
+        const visionResp = await openai.chat.completions.create({
+          model: "gpt-4o",
+          max_completion_tokens: 1500,
+          messages: [{
+            role: "user",
+            content: [
+              { type: "image_url", image_url: { url: `data:${imgMime};base64,${b64}`, detail: "high" } },
+              { type: "text", text: "Extract all text and key information visible in this image. If it's a chart or diagram, describe the data and insights. If it's a research document, extract all readable text." }
+            ],
+          }],
+        });
+        return visionResp.choices[0]?.message?.content?.trim() || "";
+      } catch { return ""; }
+    }
+
+    try {
+      const text = buffer.toString("utf-8");
+      const ratio = (text.match(/[\x20-\x7E\n\r\t]/g) || []).length / text.length;
+      return ratio > 0.8 ? text.slice(0, 20000) : "";
+    } catch { return ""; }
+  }
+
+  async function runResearchAssess(prompt: string): Promise<{ assessment: string; sources: { title: string; url: string }[] }> {
+    const response = await (openai as any).responses.create({
+      model: "gpt-4o",
+      tools: [{ type: "web_search_preview" }],
+      input: prompt,
+    });
+
+    let assessmentText = "";
+    const sources: { title: string; url: string }[] = [];
+    const seenUrls = new Set<string>();
+
+    for (const item of (response.output || [])) {
+      if (item.type === "message") {
+        for (const content of (item.content || [])) {
+          if (content.type === "output_text") {
+            assessmentText = content.text || "";
+            for (const ann of (content.annotations || [])) {
+              if (ann.type === "url_citation" && ann.url && !seenUrls.has(ann.url)) {
+                seenUrls.add(ann.url);
+                sources.push({ title: ann.title || ann.url, url: ann.url });
+              }
+            }
+          }
+        }
+      }
+    }
+    return { assessment: assessmentText, sources };
+  }
+
+  app.post("/api/research-assess-file", requireAuth, researchUpload.array("files", 5), async (req, res) => {
+    try {
+      const { topic, type } = req.body as { topic: string; type: string };
+      const files = (req.files || []) as Express.Multer.File[];
+
+      if (!topic?.trim() && !files.length) {
+        return res.status(400).json({ error: "Topic or files are required" });
+      }
+
+      // Extract text from all uploaded files
+      const extractedParts: string[] = [];
+      for (const file of files) {
+        const extracted = await extractTextFromBuffer(file.buffer, file.mimetype, file.originalname);
+        if (extracted) {
+          extractedParts.push(`--- File: ${file.originalname} ---\n${extracted.slice(0, 20000)}`);
+        }
+      }
+
+      const combinedFileText = extractedParts.join("\n\n");
+      const topicLine = topic?.trim() || "Research project (see uploaded files)";
+
+      let prompt = "";
+      if (type === "essay") {
+        prompt = `You are an expert academic research evaluator. A student has submitted a research project for assessment.\n\nTopic: ${topicLine}\n\n${combinedFileText ? `Uploaded content:\n${combinedFileText}\n\n` : ""}Use web search to find authoritative and current sources on this topic. Then provide a thorough assessment covering:\n\n**Overall Grade** (A/B/C/D/F) — with clear justification\n**Strengths** — what the research does well\n**Weaknesses & Gaps** — missing arguments, evidence, or perspectives\n**Factual Accuracy** — verify key claims against current sources\n**Missing Key Sources** — important works the student should cite\n**Recommendations** — specific, actionable improvements\n\nReference the web sources you found to support your evaluation.`;
+      } else if (type === "factcheck") {
+        prompt = `You are an expert fact-checker. Please verify the following research claims or statements:\n\nTopic: ${topicLine}\n\n${combinedFileText ? `Content to verify:\n${combinedFileText}\n\n` : ""}Search the web for authoritative sources to verify or refute each claim. Provide:\n\n**Verdict for each claim** — True / False / Partially True / Unverified\n**Evidence** — sources that confirm or contradict the claim\n**Corrections** — accurate information where claims are wrong\n**Overall Credibility Score** (1-10) — with explanation`;
+      } else {
+        prompt = `You are an expert research analyst. Conduct a thorough research assessment on the following topic:\n\n"${topicLine}"\n\n${combinedFileText ? `Uploaded research materials:\n${combinedFileText}\n\n` : ""}Search the web for the most current, authoritative sources. Provide:\n\n**Topic Overview** — current state of knowledge\n**Key Findings** — major discoveries and consensus views\n**Debates & Controversies** — where experts disagree\n**Source Quality Assessment** — evaluation of available literature\n**Research Gaps** — what is still unknown or understudied\n**Top Recommended Sources** — the best references for further study`;
+      }
+
+      const { assessment, sources } = await runResearchAssess(prompt);
+      if (!assessment) return res.status(500).json({ error: "No assessment generated. Please try again." });
+
+      res.json({ assessment, sources, type, filesProcessed: files.length });
+    } catch (err: any) {
+      console.error("Research assess file error:", err);
+      res.status(500).json({ error: err.message || "Assessment failed" });
+    }
+  });
+
+  /* ── Research Assessment (text only) ─────────────────────────── */
   app.post("/api/research-assess", requireAuth, async (req, res) => {
     try {
       const { topic, text, type } = req.body as { topic: string; text?: string; type: string };
@@ -3240,37 +3365,10 @@ The quiz JSON array must contain exactly 4 questions. Each correctIndex is 0-3.`
         prompt = `You are an expert research analyst. Conduct a thorough research assessment on the following topic:\n\n"${topic.trim()}"\n\nSearch the web for the most current, authoritative, and peer-reviewed sources. Provide:\n\n**Topic Overview** — current state of knowledge\n**Key Findings** — major discoveries and consensus views\n**Debates & Controversies** — where experts disagree\n**Source Quality Assessment** — evaluation of available literature\n**Research Gaps** — what is still unknown or understudied\n**Top Recommended Sources** — the best references for further study\n**Research Difficulty** — how challenging this topic is to research (Easy/Moderate/Hard)\n\nInclude specific sources found during your web search.`;
       }
 
-      const response = await (openai as any).responses.create({
-        model: "gpt-4o",
-        tools: [{ type: "web_search_preview" }],
-        input: prompt,
-      });
+      const { assessment, sources } = await runResearchAssess(prompt);
+      if (!assessment) return res.status(500).json({ error: "No assessment generated. Please try again." });
 
-      let assessmentText = "";
-      const sources: { title: string; url: string }[] = [];
-      const seenUrls = new Set<string>();
-
-      for (const item of (response.output || [])) {
-        if (item.type === "message") {
-          for (const content of (item.content || [])) {
-            if (content.type === "output_text") {
-              assessmentText = content.text || "";
-              for (const ann of (content.annotations || [])) {
-                if (ann.type === "url_citation" && ann.url && !seenUrls.has(ann.url)) {
-                  seenUrls.add(ann.url);
-                  sources.push({ title: ann.title || ann.url, url: ann.url });
-                }
-              }
-            }
-          }
-        }
-      }
-
-      if (!assessmentText) {
-        return res.status(500).json({ error: "No assessment generated. Please try again." });
-      }
-
-      res.json({ assessment: assessmentText, sources, type });
+      res.json({ assessment, sources, type });
     } catch (err: any) {
       console.error("Research assess error:", err);
       res.status(500).json({ error: err.message || "Assessment failed" });
