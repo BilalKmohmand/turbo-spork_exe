@@ -3225,5 +3225,57 @@ The quiz JSON array must contain exactly 4 questions. Each correctIndex is 0-3.`
     }
   });
 
+  /* ── Research Assessment ──────────────────────────────────────── */
+  app.post("/api/research-assess", requireAuth, async (req, res) => {
+    try {
+      const { topic, text, type } = req.body as { topic: string; text?: string; type: string };
+      if (!topic?.trim()) return res.status(400).json({ error: "Topic is required" });
+
+      let prompt = "";
+      if (type === "essay") {
+        prompt = `You are an expert academic research evaluator. A student has submitted a research essay for assessment.\n\nTopic: ${topic.trim()}\n\nEssay/Paper:\n${(text || "").trim() || "(No essay text provided — evaluate the topic only)"}\n\nUse web search to find authoritative and current sources on this topic. Then provide a thorough assessment covering:\n\n**Overall Grade** (A/B/C/D/F) — with clear justification\n**Strengths** — what the research does well\n**Weaknesses & Gaps** — missing arguments, evidence, or perspectives\n**Factual Accuracy** — verify key claims against current sources\n**Missing Key Sources** — important works the student should cite\n**Recommendations** — specific, actionable improvements\n\nReference the web sources you found to support your evaluation.`;
+      } else if (type === "factcheck") {
+        prompt = `You are an expert fact-checker. Please verify the following claims or research statements:\n\n${(text || topic).trim()}\n\nSearch the web for authoritative sources to verify or refute each claim. Provide:\n\n**Verdict for each claim** — True / False / Partially True / Unverified\n**Evidence** — sources that confirm or contradict the claim\n**Corrections** — accurate information where claims are wrong\n**Overall Credibility Score** (1-10) — with explanation\n\nBe precise and cite your sources.`;
+      } else {
+        prompt = `You are an expert research analyst. Conduct a thorough research assessment on the following topic:\n\n"${topic.trim()}"\n\nSearch the web for the most current, authoritative, and peer-reviewed sources. Provide:\n\n**Topic Overview** — current state of knowledge\n**Key Findings** — major discoveries and consensus views\n**Debates & Controversies** — where experts disagree\n**Source Quality Assessment** — evaluation of available literature\n**Research Gaps** — what is still unknown or understudied\n**Top Recommended Sources** — the best references for further study\n**Research Difficulty** — how challenging this topic is to research (Easy/Moderate/Hard)\n\nInclude specific sources found during your web search.`;
+      }
+
+      const response = await (openai as any).responses.create({
+        model: "gpt-4o",
+        tools: [{ type: "web_search_preview" }],
+        input: prompt,
+      });
+
+      let assessmentText = "";
+      const sources: { title: string; url: string }[] = [];
+      const seenUrls = new Set<string>();
+
+      for (const item of (response.output || [])) {
+        if (item.type === "message") {
+          for (const content of (item.content || [])) {
+            if (content.type === "output_text") {
+              assessmentText = content.text || "";
+              for (const ann of (content.annotations || [])) {
+                if (ann.type === "url_citation" && ann.url && !seenUrls.has(ann.url)) {
+                  seenUrls.add(ann.url);
+                  sources.push({ title: ann.title || ann.url, url: ann.url });
+                }
+              }
+            }
+          }
+        }
+      }
+
+      if (!assessmentText) {
+        return res.status(500).json({ error: "No assessment generated. Please try again." });
+      }
+
+      res.json({ assessment: assessmentText, sources, type });
+    } catch (err: any) {
+      console.error("Research assess error:", err);
+      res.status(500).json({ error: err.message || "Assessment failed" });
+    }
+  });
+
   return httpServer;
 }
