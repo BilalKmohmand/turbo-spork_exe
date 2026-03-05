@@ -62,6 +62,16 @@ Preferred communication style: Simple, everyday language.
 - **LessonContents**: id, courseId, lessonKey (e.g. "0-2"), content (markdown), quiz (JSONB array), createdAt
 - **LessonProgress**: id, userId, courseId, lessonKey, score, completedAt
 
+### Research Assessment Feature
+- **Research tab** in dashboard sidebar (Globe icon)
+- **Three modes**: Topic Research, Essay Review, Fact Check
+- **Web search**: Uses OpenAI Responses API with `web_search_preview` tool — searches live web for authoritative sources
+- **Essay Review**: Grade (A–F), strengths, weaknesses, missing sources, recommendations
+- **Fact Check**: Verifies claims against web sources, returns True/False/Partially True verdicts
+- **Topic Research**: Deep-dive with key findings, debates, research gaps, recommended sources
+- **Citations**: All web sources returned with title + URL, displayed as clickable source list
+- **Endpoint**: `POST /api/research-assess` — non-streaming, returns `{ assessment, sources, type }`
+
 ### Key Pages
 - `/` - Landing page with hero, features, stats, testimonials
 - `/auth` or `/login` - Authentication (login/register with role selection)

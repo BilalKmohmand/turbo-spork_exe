@@ -7,7 +7,7 @@ import {
   MessageSquare, Mic, FileText, FileEdit, Brain,
   LogOut, LayoutDashboard, Sparkles, Settings,
   HelpCircle, Crown, ClipboardCheck, GraduationCap,
-  Menu, PanelLeftClose, PanelLeftOpen
+  Menu, PanelLeftClose, PanelLeftOpen, Globe
 } from "lucide-react";
 
 import SolverContent    from "@/components/dashboard/solver-content";
@@ -19,6 +19,7 @@ import HelpContent      from "@/components/dashboard/help-content";
 import SettingsContent  from "@/components/dashboard/settings-content";
 import EvaluateContent  from "@/components/dashboard/evaluate-content";
 import CoursesContent   from "@/components/dashboard/courses-content";
+import ResearchContent  from "@/components/dashboard/research-content";
 
 /* ─── Nav config ─────────────────────────────────────────────── */
 const NAV = [
@@ -28,6 +29,7 @@ const NAV = [
       { id: "overview", label: "Overview",        icon: LayoutDashboard },
       { id: "courses",  label: "My Courses",       icon: GraduationCap, badge: "New" },
       { id: "solver",   label: "AI Tutor",         icon: MessageSquare },
+      { id: "research", label: "Research",          icon: Globe, badge: "New" },
       { id: "notes",    label: "Lecture Notes",    icon: Mic },
       { id: "quiz",     label: "Quiz Generator",   icon: FileText },
       { id: "essay",    label: "Essay Writer",     icon: FileEdit },
@@ -294,6 +296,7 @@ export default function Dashboard() {
             {active === "overview"  && <OverviewContent user={user} onNavigate={setActive} />}
             {active === "courses"   && <CoursesContent />}
             {active === "solver"    && <SolverContent />}
+            {active === "research"  && <ResearchContent />}
             {active === "notes"     && <NotesContent />}
             {active === "quiz"      && <QuizContent />}
             {active === "essay"     && <EssayContent />}
