@@ -187,7 +187,7 @@ export default function QuizContent() {
   const [extracting, setExtracting] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [youtubeUrl, setYoutubeUrl] = useState("");
-  const [youtubeVideo, setYoutubeVideo] = useState<{ id: string; charCount: number } | null>(null);
+  const [youtubeVideo, setYoutubeVideo] = useState<{ id: string; title: string; hasTranscript: boolean } | null>(null);
   const [fetchingTranscript, setFetchingTranscript] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [quizType, setQuizType] = useState<QuizType>("single_choice");
@@ -262,12 +262,17 @@ export default function QuizContent() {
         body: JSON.stringify({ url: youtubeUrl.trim() }),
       });
       const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error || "Failed to fetch transcript");
-      setSourceText(data.transcript);
-      setYoutubeVideo({ id: data.videoId, charCount: data.charCount });
-      toast({ title: "Transcript loaded", description: `${data.charCount.toLocaleString()} characters ready — now generate your quiz.` });
+      if (!resp.ok) throw new Error(data.error || "Failed to fetch video info");
+      // Use quizContent (transcript if available, else title+description)
+      setSourceText(data.quizContent);
+      setYoutubeVideo({ id: data.videoId, title: data.title, hasTranscript: data.hasTranscript });
+      if (data.hasTranscript) {
+        toast({ title: "Transcript loaded", description: `Ready to generate a quiz from "${data.title}"` });
+      } else {
+        toast({ title: "Video found", description: `Generating quiz from video topic: "${data.title}"` });
+      }
     } catch (err: any) {
-      toast({ title: "Transcript unavailable", description: err.message, variant: "destructive" });
+      toast({ title: "Could not load video", description: err.message, variant: "destructive" });
     } finally {
       setFetchingTranscript(false);
     }
@@ -637,26 +642,28 @@ export default function QuizContent() {
                     </>
                   ) : (
                     <div className="text-center">
-                      <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto mb-3">
-                        <CheckCircle className="w-6 h-6 text-emerald-500" />
+                      <div className={`w-12 h-12 rounded-xl border flex items-center justify-center mx-auto mb-3 ${youtubeVideo.hasTranscript ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"}`}>
+                        <CheckCircle className={`w-6 h-6 ${youtubeVideo.hasTranscript ? "text-emerald-500" : "text-amber-500"}`} />
                       </div>
-                      <p className="font-semibold text-[#111110] mb-1">Transcript loaded</p>
-                      <p className="text-sm text-[#666660] mb-1">{youtubeVideo.charCount.toLocaleString()} characters from video</p>
+                      <p className="font-semibold text-[#111110] mb-1 text-[15px] line-clamp-2 px-2">{youtubeVideo.title}</p>
                       <a
                         href={`https://www.youtube.com/watch?v=${youtubeVideo.id}`}
                         target="_blank" rel="noopener noreferrer"
-                        className="text-[12px] text-red-500 hover:text-red-600 underline mb-4 inline-block"
+                        className="text-[12px] text-red-500 hover:text-red-600 underline block mb-3"
                       >
                         youtube.com/watch?v={youtubeVideo.id}
                       </a>
-                      <div className="mt-3">
-                        <button
-                          onClick={() => { setYoutubeVideo(null); setYoutubeUrl(""); setSourceText(""); }}
-                          className="text-sm text-[#999990] hover:text-[#666660] underline"
-                        >
-                          Use a different video
-                        </button>
-                      </div>
+                      {youtubeVideo.hasTranscript ? (
+                        <p className="text-[12px] text-emerald-600 font-medium mb-3">Transcript loaded — quiz will be based on actual video content</p>
+                      ) : (
+                        <p className="text-[12px] text-amber-600 mb-3">Transcript not available from server — quiz will be generated from the video topic and description</p>
+                      )}
+                      <button
+                        onClick={() => { setYoutubeVideo(null); setYoutubeUrl(""); setSourceText(""); }}
+                        className="text-sm text-[#999990] hover:text-[#666660] underline"
+                      >
+                        Use a different video
+                      </button>
                     </div>
                   )}
                 </div>

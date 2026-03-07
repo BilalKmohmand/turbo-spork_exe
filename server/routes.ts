@@ -1782,7 +1782,7 @@ Rules: 3-6 subtopics, 5 possible questions as examples of what can be tested, qu
         return res.status(400).json({ error: "Please provide a YouTube URL" });
       }
 
-      // Extract video ID from various YouTube URL formats
+      // Extract video ID
       const patterns = [
         /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([A-Za-z0-9_-]{11})/,
         /^([A-Za-z0-9_-]{11})$/,
@@ -1793,25 +1793,89 @@ Rules: 3-6 subtopics, 5 possible questions as examples of what can be tested, qu
         if (m) { videoId = m[1]; break; }
       }
       if (!videoId) {
-        return res.status(400).json({ error: "Could not extract a valid YouTube video ID from that URL. Please use a standard youtube.com or youtu.be link." });
+        return res.status(400).json({ error: "Could not extract a valid YouTube video ID. Please use a standard youtube.com or youtu.be link." });
       }
 
-      const { YoutubeTranscript } = await import("youtube-transcript");
-      const items = await YoutubeTranscript.fetchTranscript(videoId);
-      if (!items || items.length === 0) {
-        return res.status(422).json({ error: "No transcript/captions available for this video. The video may have captions disabled or be in a language not supported." });
+      // Fetch the YouTube watch page to extract metadata + attempt transcript
+      const pageResp = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+          "Accept-Language": "en-US,en;q=0.9",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        },
+      });
+      if (!pageResp.ok) {
+        return res.status(404).json({ error: "Video not found or not accessible. Make sure the video is public." });
+      }
+      const html = await pageResp.text();
+
+      // Extract title
+      const titleMatch = html.match(/<title>([^<]+)<\/title>/);
+      const title = titleMatch?.[1]?.replace(/ - YouTube$/, "").trim() || "";
+
+      // Extract description
+      const descMatch = html.match(/"shortDescription":"((?:[^"\\]|\\.)*)"/);
+      const description = descMatch?.[1]
+        ?.replace(/\\n/g, " ")
+        ?.replace(/\\"/g, '"')
+        ?.replace(/\\\\/g, "\\")
+        ?.slice(0, 1500) || "";
+
+      if (!title) {
+        return res.status(404).json({ error: "Video not found. Make sure the link is correct and the video is publicly accessible." });
       }
 
-      const transcript = items.map((t: any) => t.text).join(" ").replace(/\s+/g, " ").trim();
-      const truncated  = transcript.slice(0, 8000);
-      return res.json({ transcript: truncated, videoId, charCount: truncated.length });
+      // Try to get caption track URLs from the page (may be empty on cloud IPs)
+      let transcript = "";
+      try {
+        const captionMatch = html.match(/"captionTracks":(\[[\s\S]*?\])/);
+        if (captionMatch) {
+          const tracks = JSON.parse(captionMatch[1]);
+          const pageCookies = pageResp.headers.getSetCookie?.() || [];
+          const cookieStr = pageCookies.map((c: string) => c.split(";")[0]).join("; ");
+          const enTrack = tracks.find((t: any) => t.languageCode === "en" && !t.kind)
+            || tracks.find((t: any) => t.languageCode === "en")
+            || tracks[0];
+          if (enTrack?.baseUrl) {
+            const txResp = await fetch(enTrack.baseUrl + "&fmt=json3", {
+              headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Cookie": cookieStr,
+                "Referer": `https://www.youtube.com/watch?v=${videoId}`,
+              },
+            });
+            const txBody = await txResp.text();
+            if (txBody && txBody.length > 50) {
+              const txData = JSON.parse(txBody);
+              transcript = (txData.events || [])
+                .filter((e: any) => e.segs)
+                .map((e: any) => e.segs.map((s: any) => s.utf8 || "").join(""))
+                .join(" ")
+                .replace(/\[.*?\]/g, "")
+                .replace(/\s+/g, " ")
+                .trim()
+                .slice(0, 8000);
+            }
+          }
+        }
+      } catch (_) {
+        // Transcript fetch failed silently — use metadata instead
+      }
+
+      return res.json({
+        videoId,
+        title,
+        description,
+        transcript,
+        hasTranscript: transcript.length > 100,
+        // Content to use for quiz generation: transcript if available, else title+description
+        quizContent: transcript.length > 100
+          ? transcript
+          : `Video: ${title}\n\nDescription: ${description}`,
+      });
     } catch (err: any) {
-      const msg = err?.message || "";
-      if (msg.includes("Could not get") || msg.includes("subtitles") || msg.includes("disabled")) {
-        return res.status(422).json({ error: "Transcripts are disabled or unavailable for this video." });
-      }
       console.error("YouTube transcript error:", err);
-      return res.status(500).json({ error: "Failed to fetch transcript. Make sure the video is public and has captions enabled." });
+      return res.status(500).json({ error: "Failed to fetch video info. Make sure the video is public." });
     }
   });
 
