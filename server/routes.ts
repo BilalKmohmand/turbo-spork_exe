@@ -1774,6 +1774,47 @@ Rules: 3-6 subtopics, 5 possible questions as examples of what can be tested, qu
     }
   });
 
+  /* ── YouTube transcript ──────────────────────────────────────── */
+  app.post("/api/youtube-transcript", async (req, res) => {
+    try {
+      const { url } = req.body;
+      if (!url || typeof url !== "string") {
+        return res.status(400).json({ error: "Please provide a YouTube URL" });
+      }
+
+      // Extract video ID from various YouTube URL formats
+      const patterns = [
+        /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([A-Za-z0-9_-]{11})/,
+        /^([A-Za-z0-9_-]{11})$/,
+      ];
+      let videoId: string | null = null;
+      for (const p of patterns) {
+        const m = url.match(p);
+        if (m) { videoId = m[1]; break; }
+      }
+      if (!videoId) {
+        return res.status(400).json({ error: "Could not extract a valid YouTube video ID from that URL. Please use a standard youtube.com or youtu.be link." });
+      }
+
+      const { YoutubeTranscript } = await import("youtube-transcript");
+      const items = await YoutubeTranscript.fetchTranscript(videoId);
+      if (!items || items.length === 0) {
+        return res.status(422).json({ error: "No transcript/captions available for this video. The video may have captions disabled or be in a language not supported." });
+      }
+
+      const transcript = items.map((t: any) => t.text).join(" ").replace(/\s+/g, " ").trim();
+      const truncated  = transcript.slice(0, 8000);
+      return res.json({ transcript: truncated, videoId, charCount: truncated.length });
+    } catch (err: any) {
+      const msg = err?.message || "";
+      if (msg.includes("Could not get") || msg.includes("subtitles") || msg.includes("disabled")) {
+        return res.status(422).json({ error: "Transcripts are disabled or unavailable for this video." });
+      }
+      console.error("YouTube transcript error:", err);
+      return res.status(500).json({ error: "Failed to fetch transcript. Make sure the video is public and has captions enabled." });
+    }
+  });
+
   app.post("/api/generate-quiz", async (req, res) => {
     try {
       const { text, level, questionCount, quizType } = req.body;

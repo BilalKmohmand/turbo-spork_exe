@@ -106,6 +106,7 @@ Preferred communication style: Simple, everyday language.
 - `POST /api/solve-text` - Solve text problem with AI
 - `POST /api/solve-image` - Solve image problem with AI
 - `POST /api/generate-quiz` - Generate quiz from text
+- `POST /api/youtube-transcript` - Fetch transcript from a YouTube video URL
 - `POST /api/generate-essay` - Generate essay
 - `POST /api/transcribe` - Transcribe audio to text (multer file upload)
 - `POST /api/generate-notes` - Generate AI study notes from transcript (streaming)

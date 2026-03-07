@@ -9,7 +9,7 @@ import {
   Loader2, Sparkles, FileText, Trophy, Target,
   Zap, TrendingUp, ToggleLeft, PenLine, MessageSquare,
   CheckSquare, Upload, Clock, ArrowRight, CheckCircle,
-  XCircle, ChevronRight, BarChart2, RefreshCw,
+  XCircle, ChevronRight, BarChart2, RefreshCw, Youtube, Link,
 } from "lucide-react";
 
 /* ─── Types ────────────────────────────────────────────────────── */
@@ -181,11 +181,14 @@ function RecentAttempts({ attempts, onRetry }: { attempts: QuizAttempt[]; onRetr
 
 /* ─── Main Component ─────────────────────────────────────────────── */
 export default function QuizContent() {
-  const [sourceTab, setSourceTab] = useState<"document" | "text">("document");
+  const [sourceTab, setSourceTab] = useState<"document" | "text" | "youtube">("document");
   const [sourceText, setSourceText] = useState("");
   const [uploadedFile, setUploadedFile] = useState<{ name: string } | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [youtubeVideo, setYoutubeVideo] = useState<{ id: string; charCount: number } | null>(null);
+  const [fetchingTranscript, setFetchingTranscript] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [quizType, setQuizType] = useState<QuizType>("single_choice");
   const [level, setLevel] = useState<DifficultyLevel>("intermediate");
@@ -245,6 +248,30 @@ export default function QuizContent() {
     if (file) handleFileUpload(file);
     e.target.value = "";
   }, [handleFileUpload]);
+
+  /* YouTube transcript fetch */
+  const handleFetchTranscript = useCallback(async () => {
+    if (!youtubeUrl.trim()) return;
+    setFetchingTranscript(true);
+    setYoutubeVideo(null);
+    try {
+      const resp = await fetch("/api/youtube-transcript", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ url: youtubeUrl.trim() }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "Failed to fetch transcript");
+      setSourceText(data.transcript);
+      setYoutubeVideo({ id: data.videoId, charCount: data.charCount });
+      toast({ title: "Transcript loaded", description: `${data.charCount.toLocaleString()} characters ready — now generate your quiz.` });
+    } catch (err: any) {
+      toast({ title: "Transcript unavailable", description: err.message, variant: "destructive" });
+    } finally {
+      setFetchingTranscript(false);
+    }
+  }, [youtubeUrl, toast]);
 
   /* Generate quiz */
   const generateMutation = useMutation({
@@ -534,17 +561,22 @@ export default function QuizContent() {
         <div className="lg:col-span-7 space-y-4">
           {/* Tabs */}
           <div className="flex p-1 rounded-2xl bg-[#F0F0F0] w-fit">
-            {(["document", "text"] as const).map(t => (
+            {([
+              { id: "document", label: "Upload File" },
+              { id: "text",     label: "Paste Text" },
+              { id: "youtube",  label: "YouTube" },
+            ] as const).map(t => (
               <button
-                key={t}
-                onClick={() => setSourceTab(t)}
-                className={`px-6 py-2 rounded-xl text-sm font-semibold transition-all ${
-                  sourceTab === t
+                key={t.id}
+                onClick={() => setSourceTab(t.id)}
+                className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                  sourceTab === t.id
                     ? "bg-white shadow-sm text-[#111110]"
                     : "text-[#999990] hover:text-[#666660]"
                 }`}
               >
-                {t === "document" ? "Upload File" : "Paste Text"}
+                {t.id === "youtube" && <Youtube className="w-3.5 h-3.5 text-red-500" />}
+                {t.label}
               </button>
             ))}
           </div>
@@ -563,6 +595,71 @@ export default function QuizContent() {
                     <p className="text-[12px] text-[#999990] mt-3">{sourceText.length} characters</p>
                   )}
                 </>
+              ) : sourceTab === "youtube" ? (
+                <div>
+                  {!youtubeVideo ? (
+                    <>
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="w-12 h-12 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center shrink-0">
+                          <Youtube className="w-6 h-6 text-red-500" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-[#111110] text-[15px]">Generate from YouTube</p>
+                          <p className="text-[13px] text-[#666660]">Paste any YouTube link — we'll extract the transcript and create quiz questions</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <Link className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#BBBBBB]" />
+                          <input
+                            type="url"
+                            value={youtubeUrl}
+                            onChange={e => setYoutubeUrl(e.target.value)}
+                            onKeyDown={e => e.key === "Enter" && handleFetchTranscript()}
+                            placeholder="https://www.youtube.com/watch?v=..."
+                            data-testid="input-youtube-url"
+                            className="w-full pl-10 pr-4 py-3 rounded-2xl border border-[#E5E5E0] focus:border-black focus:outline-none text-[14px] transition-all"
+                          />
+                        </div>
+                        <button
+                          onClick={handleFetchTranscript}
+                          disabled={fetchingTranscript || !youtubeUrl.trim()}
+                          data-testid="button-fetch-transcript"
+                          className="px-5 py-3 rounded-2xl bg-black text-white text-[14px] font-semibold disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 transition-all hover:opacity-90"
+                        >
+                          {fetchingTranscript
+                            ? <><Loader2 className="w-4 h-4 animate-spin" /> Fetching…</>
+                            : "Get Transcript"
+                          }
+                        </button>
+                      </div>
+                      <p className="text-[12px] text-[#999990] mt-3">Works with public YouTube videos that have captions enabled (auto-generated or manual)</p>
+                    </>
+                  ) : (
+                    <div className="text-center">
+                      <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto mb-3">
+                        <CheckCircle className="w-6 h-6 text-emerald-500" />
+                      </div>
+                      <p className="font-semibold text-[#111110] mb-1">Transcript loaded</p>
+                      <p className="text-sm text-[#666660] mb-1">{youtubeVideo.charCount.toLocaleString()} characters from video</p>
+                      <a
+                        href={`https://www.youtube.com/watch?v=${youtubeVideo.id}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="text-[12px] text-red-500 hover:text-red-600 underline mb-4 inline-block"
+                      >
+                        youtube.com/watch?v={youtubeVideo.id}
+                      </a>
+                      <div className="mt-3">
+                        <button
+                          onClick={() => { setYoutubeVideo(null); setYoutubeUrl(""); setSourceText(""); }}
+                          className="text-sm text-[#999990] hover:text-[#666660] underline"
+                        >
+                          Use a different video
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div>
                   <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.doc,.docx,.txt" onChange={handleFileChange} />
