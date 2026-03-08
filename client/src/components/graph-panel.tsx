@@ -67,7 +67,8 @@ export function GraphPanel({ graphSpec }: GraphPanelProps) {
       loadDesmos();
     } else {
       const script = document.createElement("script");
-      script.src = "https://www.desmos.com/api/v1.9/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6";
+      const desmosApiKey = import.meta.env.VITE_DESMOS_API_KEY ?? "dcb31709b452b1cf9dc26972add0fda6";
+      script.src = `https://www.desmos.com/api/v1.9/calculator.js?apiKey=${desmosApiKey}`;
       script.async = true;
       script.onload = loadDesmos;
       document.head.appendChild(script);
