@@ -1796,12 +1796,13 @@ Rules: 3-6 subtopics, 5 possible questions as examples of what can be tested, qu
         return res.status(400).json({ error: "Could not extract a valid YouTube video ID. Please use a standard youtube.com or youtu.be link." });
       }
 
-      // Fetch the YouTube watch page to extract metadata + attempt transcript
+      // Fetch the YouTube watch page
       const pageResp = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
         headers: {
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
           "Accept-Language": "en-US,en;q=0.9",
           "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Cookie": "CONSENT=YES+cb; PREF=f6=40000000",
         },
       });
       if (!pageResp.ok) {
@@ -1819,47 +1820,151 @@ Rules: 3-6 subtopics, 5 possible questions as examples of what can be tested, qu
         ?.replace(/\\n/g, " ")
         ?.replace(/\\"/g, '"')
         ?.replace(/\\\\/g, "\\")
-        ?.slice(0, 1500) || "";
+        ?.slice(0, 2000) || "";
 
       if (!title) {
         return res.status(404).json({ error: "Video not found. Make sure the link is correct and the video is publicly accessible." });
       }
 
-      // Try to get caption track URLs from the page (may be empty on cloud IPs)
+      // Try to extract caption tracks using the reliable "captions" split approach
       let transcript = "";
       try {
-        const captionMatch = html.match(/"captionTracks":(\[[\s\S]*?\])/);
-        if (captionMatch) {
-          const tracks = JSON.parse(captionMatch[1]);
+        const captionsSplit = html.split('"captions":');
+        if (captionsSplit.length > 1) {
+          const captionsRaw = captionsSplit[1].split(',"videoDetails')[0].replace(/\n/g, "");
+          const captionsData = JSON.parse(captionsRaw);
+          const tracks: any[] = captionsData?.playerCaptionsTracklistRenderer?.captionTracks || [];
           const pageCookies = pageResp.headers.getSetCookie?.() || [];
-          const cookieStr = pageCookies.map((c: string) => c.split(";")[0]).join("; ");
+          const cookieStr = "CONSENT=YES+cb; PREF=f6=40000000; " + pageCookies.map((c: string) => c.split(";")[0]).join("; ");
           const enTrack = tracks.find((t: any) => t.languageCode === "en" && !t.kind)
-            || tracks.find((t: any) => t.languageCode === "en")
+            || tracks.find((t: any) => t.languageCode?.startsWith("en"))
             || tracks[0];
           if (enTrack?.baseUrl) {
-            const txResp = await fetch(enTrack.baseUrl + "&fmt=json3", {
-              headers: {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                "Cookie": cookieStr,
-                "Referer": `https://www.youtube.com/watch?v=${videoId}`,
-              },
-            });
-            const txBody = await txResp.text();
-            if (txBody && txBody.length > 50) {
-              const txData = JSON.parse(txBody);
-              transcript = (txData.events || [])
-                .filter((e: any) => e.segs)
-                .map((e: any) => e.segs.map((s: any) => s.utf8 || "").join(""))
-                .join(" ")
-                .replace(/\[.*?\]/g, "")
-                .replace(/\s+/g, " ")
-                .trim()
-                .slice(0, 8000);
+            for (const fmt of ["json3", "vtt", "srv3"]) {
+              const txResp = await fetch(enTrack.baseUrl + `&fmt=${fmt}`, {
+                headers: {
+                  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+                  "Cookie": cookieStr,
+                  "Referer": `https://www.youtube.com/watch?v=${videoId}`,
+                  "Origin": "https://www.youtube.com",
+                },
+              });
+              const txBody = await txResp.text();
+              if (txBody && txBody.length > 100) {
+                if (fmt === "json3") {
+                  const txData = JSON.parse(txBody);
+                  transcript = (txData.events || [])
+                    .filter((e: any) => e.segs)
+                    .map((e: any) => e.segs.map((s: any) => s.utf8 || "").join(""))
+                    .join(" ")
+                    .replace(/\[.*?\]/g, "")
+                    .replace(/\s+/g, " ")
+                    .trim()
+                    .slice(0, 10000);
+                } else if (fmt === "vtt") {
+                  transcript = txBody
+                    .replace(/WEBVTT[\s\S]*?\n\n/, "")
+                    .replace(/\d{2}:\d{2}[\d:.,]* --> [\d:.,\s]+\n/g, "")
+                    .replace(/<[^>]+>/g, "")
+                    .replace(/\[.*?\]/g, "")
+                    .replace(/\s+/g, " ")
+                    .trim()
+                    .slice(0, 10000);
+                } else {
+                  transcript = txBody
+                    .replace(/<[^>]+>/g, " ")
+                    .replace(/\s+/g, " ")
+                    .trim()
+                    .slice(0, 10000);
+                }
+                if (transcript.length > 100) break;
+              }
             }
           }
         }
       } catch (_) {
-        // Transcript fetch failed silently — use metadata instead
+        // Caption extraction failed — will use AI fallback
+      }
+
+      // Also try the Innertube get_transcript endpoint with the continuation params from the page
+      if (transcript.length <= 100) {
+        try {
+          const transcriptPanelMatch = html.match(/"engagement-panel-searchable-transcript"[\s\S]*?"params":"([^"]+)"/);
+          if (transcriptPanelMatch) {
+            const params = decodeURIComponent(transcriptPanelMatch[1]);
+            const innertubeResp = await fetch("https://www.youtube.com/youtubei/v1/get_transcript?prettyPrint=false", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "X-YouTube-Client-Name": "1",
+                "X-YouTube-Client-Version": "2.20240101.01.00",
+                "Cookie": "CONSENT=YES+cb; PREF=f6=40000000",
+              },
+              body: JSON.stringify({
+                context: {
+                  client: {
+                    clientName: "WEB",
+                    clientVersion: "2.20240101.01.00",
+                    hl: "en",
+                    gl: "US",
+                  },
+                },
+                params,
+              }),
+            });
+            if (innertubeResp.ok) {
+              const innertubeData = await innertubeResp.json();
+              const segments = innertubeData?.actions?.[0]?.updateEngagementPanelAction?.content
+                ?.transcriptRenderer?.content?.transcriptSearchPanelRenderer?.body
+                ?.transcriptSegmentListRenderer?.initialSegments || [];
+              if (segments.length > 0) {
+                transcript = segments
+                  .map((s: any) => s?.transcriptSegmentRenderer?.snippet?.runs?.[0]?.text || "")
+                  .filter(Boolean)
+                  .join(" ")
+                  .replace(/\s+/g, " ")
+                  .trim()
+                  .slice(0, 10000);
+              }
+            }
+          }
+        } catch (_) {
+          // Innertube attempt failed
+        }
+      }
+
+      // If transcript still unavailable, use AI to generate rich topic content
+      let aiGenerated = false;
+      let quizContent = transcript;
+      if (transcript.length <= 100) {
+        try {
+          const aiResp = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [
+              {
+                role: "system",
+                content: "You are an educational content specialist. Given a YouTube video title and description, generate a detailed, factual content brief covering what the video discusses. Include key topics, technical details, comparisons, features, and educational points that would be covered. Write in an informative style with specific facts and details. Do not mention that this is AI-generated or that you are summarizing — just write the content directly.",
+              },
+              {
+                role: "user",
+                content: `YouTube Video Title: "${title}"\n\nDescription: ${description || "(no description available)"}\n\nGenerate a detailed educational content brief (400-600 words) covering the key topics, facts, and information that this video discusses.`,
+              },
+            ],
+            max_tokens: 800,
+            temperature: 0.3,
+          });
+          const generatedContent = aiResp.choices[0]?.message?.content?.trim() || "";
+          if (generatedContent.length > 100) {
+            quizContent = generatedContent;
+            aiGenerated = true;
+          }
+        } catch (_) {
+          // AI fallback failed — use basic metadata
+        }
+        if (!aiGenerated) {
+          quizContent = `Video: ${title}\n\nDescription: ${description}`;
+        }
       }
 
       return res.json({
@@ -1868,10 +1973,8 @@ Rules: 3-6 subtopics, 5 possible questions as examples of what can be tested, qu
         description,
         transcript,
         hasTranscript: transcript.length > 100,
-        // Content to use for quiz generation: transcript if available, else title+description
-        quizContent: transcript.length > 100
-          ? transcript
-          : `Video: ${title}\n\nDescription: ${description}`,
+        aiGenerated,
+        quizContent,
       });
     } catch (err: any) {
       console.error("YouTube transcript error:", err);
