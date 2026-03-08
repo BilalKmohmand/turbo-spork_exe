@@ -1796,7 +1796,17 @@ Rules: 3-6 subtopics, 5 possible questions as examples of what can be tested, qu
         return res.status(400).json({ error: "Could not extract a valid YouTube video ID. Please use a standard youtube.com or youtu.be link." });
       }
 
+      // Helper to decode HTML entities in titles
+      const decodeHtmlEntities = (s: string) =>
+        s.replace(/&amp;/g, "&")
+         .replace(/&#39;/g, "'")
+         .replace(/&quot;/g, '"')
+         .replace(/&lt;/g, "<")
+         .replace(/&gt;/g, ">");
+
       // Fetch the YouTube watch page
+      let title = "";
+      let description = "";
       const pageResp = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
         headers: {
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
@@ -1805,22 +1815,32 @@ Rules: 3-6 subtopics, 5 possible questions as examples of what can be tested, qu
           "Cookie": "CONSENT=YES+cb; PREF=f6=40000000",
         },
       });
-      if (!pageResp.ok) {
-        return res.status(404).json({ error: "Video not found or not accessible. Make sure the video is public." });
+      if (pageResp.ok) {
+        const html = await pageResp.text();
+        const titleMatch = html.match(/<title>([^<]+)<\/title>/);
+        title = decodeHtmlEntities(titleMatch?.[1]?.replace(/ - YouTube$/, "").trim() || "");
+        const descMatch = html.match(/"shortDescription":"((?:[^"\\]|\\.)*)"/);
+        description = descMatch?.[1]
+          ?.replace(/\\n/g, " ")
+          ?.replace(/\\"/g, '"')
+          ?.replace(/\\\\/g, "\\")
+          ?.slice(0, 2000) || "";
       }
-      const html = await pageResp.text();
 
-      // Extract title
-      const titleMatch = html.match(/<title>([^<]+)<\/title>/);
-      const title = titleMatch?.[1]?.replace(/ - YouTube$/, "").trim() || "";
-
-      // Extract description
-      const descMatch = html.match(/"shortDescription":"((?:[^"\\]|\\.)*)"/);
-      const description = descMatch?.[1]
-        ?.replace(/\\n/g, " ")
-        ?.replace(/\\"/g, '"')
-        ?.replace(/\\\\/g, "\\")
-        ?.slice(0, 2000) || "";
+      // Fallback: use YouTube oEmbed API to get the title (more reliable, public API)
+      if (!title) {
+        try {
+          const oembedResp = await fetch(
+            `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
+          );
+          if (oembedResp.ok) {
+            const oembedData = await oembedResp.json() as { title?: string; author_name?: string };
+            title = decodeHtmlEntities(oembedData.title || "");
+          }
+        } catch {
+          // oEmbed also failed — fall through to final error
+        }
+      }
 
       if (!title) {
         return res.status(404).json({ error: "Video not found. Make sure the link is correct and the video is publicly accessible." });
