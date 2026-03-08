@@ -4,6 +4,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { renderMathText } from "@/components/math-display";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Send, Paperclip, Sparkles, BookOpen,
   Calculator, FlaskConical, Mic, MicOff,
   User, X, FileImage, FileText, File, FileSpreadsheet,
@@ -297,7 +304,7 @@ export default function SolverContent() {
   const [textProblem, setTextProblem]   = useState("");
   const [chatHistory, setChatHistory]   = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming]   = useState(false);
-  const [openSubMenu, setOpenSubMenu]   = useState<string | null>(null);
+  const [subMenuPopup, setSubMenuPopup] = useState<QuickPrompt | null>(null);
   const [activeMode, setActiveMode]     = useState<AIMode | null>(null);
   const [copiedIdx, setCopiedIdx]       = useState<number | null>(null);
 
@@ -697,7 +704,7 @@ export default function SolverContent() {
     setTextProblem("");
     setAttachedFiles([]);
     setActiveMode(null);
-    setOpenSubMenu(null);
+    setSubMenuPopup(null);
   };
 
   const canSend = (!isStreaming && !isUploadingSolving) && (!!textProblem.trim() || attachedFiles.length > 0);
@@ -814,71 +821,36 @@ export default function SolverContent() {
 
               <div className="grid grid-cols-2 gap-3 w-full max-w-lg">
                 {quickPrompts.map((item) => {
-                  const isOpen = openSubMenu === item.label;
                   const hasSubMenu = !!item.subModes;
                   return (
-                    <div key={item.label} className="flex flex-col gap-2">
-                      <button
-                        data-testid={`quick-prompt-${item.label.toLowerCase()}`}
-                        onClick={() => {
-                          if (hasSubMenu) {
-                            setOpenSubMenu(isOpen ? null : item.label);
+                    <button
+                      key={item.label}
+                      data-testid={`quick-prompt-${item.label.toLowerCase()}`}
+                      onClick={() => {
+                        if (hasSubMenu) {
+                          setSubMenuPopup(item);
+                        } else {
+                          if (item.instruction) {
+                            setActiveMode({ label: item.label, color: item.color, bg: item.bg, instruction: item.instruction });
                           } else {
-                            setOpenSubMenu(null);
-                            if (item.instruction) {
-                              setActiveMode({ label: item.label, color: item.color, bg: item.bg, instruction: item.instruction });
-                            } else {
-                              setActiveMode(null);
-                            }
-                            setTextProblem(item.prompt);
+                            setActiveMode(null);
                           }
-                        }}
-                        className={`flex items-center gap-3 p-4 rounded-xl border transition-all text-left group w-full ${
-                          isOpen
-                            ? `${item.accentBorder} ${item.accentBg}`
-                            : "border-[#E5E5E0] dark:border-[#22221F] bg-white dark:bg-[#111110] hover:bg-[#F9F9F8] dark:hover:bg-[#1A1A1A]"
-                        }`}
-                      >
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform ${
-                          isOpen ? "bg-white/70 dark:bg-black/30" : "bg-[#F0F0F0] dark:bg-[#1A1A1A]"
-                        }`}>
-                          <item.icon className={`w-5 h-5 ${item.color}`} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[14px] font-semibold text-[#111110] dark:text-white">{item.label}</p>
-                          <p className="text-[12px] text-[#999990] leading-tight">{item.desc}</p>
-                        </div>
-                        {hasSubMenu && (
-                          <ChevronRight className={`w-4 h-4 text-[#999990] shrink-0 transition-transform ${isOpen ? "rotate-90" : ""}`} />
-                        )}
-                      </button>
-
-                      {/* Generic sub-menu */}
-                      {hasSubMenu && isOpen && (
-                        <div className="ml-3 flex flex-col gap-1.5 border-l-2 border-[#D5D5D0] dark:border-[#2A2A28] pl-3">
-                          {item.subModes!.map(mode => (
-                            <button
-                              key={mode.label}
-                              data-testid={`sub-mode-${mode.label.toLowerCase().replace(/\s+/g, "-")}`}
-                              onClick={() => {
-                                setActiveMode({ label: mode.label, color: mode.color, bg: mode.bg, instruction: mode.instruction });
-                                setTextProblem(mode.prompt);
-                                setOpenSubMenu(null);
-                              }}
-                              className={`flex items-start gap-3 p-3 rounded-xl border transition-all text-left group w-full ${mode.bg} border-transparent hover:border-current`}
-                            >
-                              <div className="w-8 h-8 rounded-lg bg-white/60 dark:bg-black/20 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                                <mode.icon className={`w-4 h-4 ${mode.color}`} />
-                              </div>
-                              <div className="min-w-0">
-                                <p className={`text-[13px] font-bold ${mode.color}`}>{mode.label}</p>
-                                <p className="text-[11px] text-[#666660] dark:text-[#888880] leading-tight">{mode.desc}</p>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
+                          setTextProblem(item.prompt);
+                        }
+                      }}
+                      className="flex items-center gap-3 p-4 rounded-xl border border-[#E5E5E0] dark:border-[#22221F] bg-white dark:bg-[#111110] hover:bg-[#F9F9F8] dark:hover:bg-[#1A1A1A] transition-all text-left group w-full"
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-[#F0F0F0] dark:bg-[#1A1A1A] flex items-center justify-center group-hover:scale-105 transition-transform">
+                        <item.icon className={`w-5 h-5 ${item.color}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[14px] font-semibold text-[#111110] dark:text-white">{item.label}</p>
+                        <p className="text-[12px] text-[#999990] leading-tight">{item.desc}</p>
+                      </div>
+                      {hasSubMenu && (
+                        <ChevronRight className="w-4 h-4 text-[#999990] shrink-0" />
                       )}
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -1147,6 +1119,52 @@ export default function SolverContent() {
           </p>
         </div>
       </div>
+
+      {/* Sub-mode selection popup */}
+      <Dialog open={!!subMenuPopup} onOpenChange={(open) => { if (!open) setSubMenuPopup(null); }}>
+        <DialogContent className="max-w-md p-0 overflow-hidden rounded-2xl border border-[#E5E5E0] dark:border-[#22221F]">
+          {subMenuPopup && (
+            <>
+              <DialogHeader className="px-6 pt-6 pb-4 border-b border-[#E5E5E0] dark:border-[#22221F]">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${subMenuPopup.bg}`}>
+                    <subMenuPopup.icon className={`w-5 h-5 ${subMenuPopup.color}`} />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-[16px] font-semibold text-[#111110] dark:text-white">
+                      {subMenuPopup.label}
+                    </DialogTitle>
+                    <DialogDescription className="text-[12px] text-[#999990] mt-0.5">{subMenuPopup.desc}</DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+              <div className="p-4 grid grid-cols-1 gap-2 max-h-[60vh] overflow-y-auto">
+                {subMenuPopup.subModes!.map(mode => (
+                  <button
+                    key={mode.label}
+                    data-testid={`sub-mode-${mode.label.toLowerCase().replace(/\s+/g, "-")}`}
+                    onClick={() => {
+                      setActiveMode({ label: mode.label, color: mode.color, bg: mode.bg, instruction: mode.instruction });
+                      setTextProblem(mode.prompt);
+                      setSubMenuPopup(null);
+                    }}
+                    className={`flex items-center gap-3 p-3.5 rounded-xl border border-transparent hover:border-current transition-all text-left group w-full ${mode.bg}`}
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-white/60 dark:bg-black/20 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                      <mode.icon className={`w-4 h-4 ${mode.color}`} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-[13px] font-bold ${mode.color}`}>{mode.label}</p>
+                      <p className="text-[11px] text-[#666660] dark:text-[#888880] leading-tight mt-0.5">{mode.desc}</p>
+                    </div>
+                    <ChevronRight className={`w-4 h-4 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ${mode.color}`} />
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
