@@ -1,4 +1,5 @@
 import { useState } from "react";
+import logoPath from "@assets/generated_images/thehighgrader_logo.png";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -203,9 +204,7 @@ export default function Knowledge() {
             </Button>
           </Link>
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
+            <img src={logoPath} alt="TheHighGrader" className="w-8 h-8 rounded-lg object-cover" />
             <span className="font-bold text-lg hidden sm:inline">TheHighGrader</span>
           </Link>
           <Badge variant="secondary" className="hidden sm:flex">Knowledge Base</Badge>

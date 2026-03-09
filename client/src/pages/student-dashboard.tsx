@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import logoPath from "@assets/generated_images/thehighgrader_logo.png";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -142,9 +143,7 @@ export default function StudentDashboard() {
       <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
+            <img src={logoPath} alt="TheHighGrader" className="w-8 h-8 rounded-lg object-cover" />
             <span className="font-bold text-lg">TheHighGrader</span>
           </Link>
           <div className="flex items-center gap-4">

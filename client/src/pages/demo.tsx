@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import logoPath from "@assets/generated_images/thehighgrader_logo.png";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 import { renderMathText } from "@/components/math-display";
@@ -257,9 +258,7 @@ function DemoSidebar({ active, setActive, collapsed }: { active: string; setActi
   return (
     <aside className={`flex flex-col bg-[#0D0D0C] border-r border-white/5 transition-all duration-300 shrink-0 ${collapsed ? "w-0 overflow-hidden" : "w-[220px]"}`}>
       <div className="h-14 flex items-center gap-2.5 px-4 border-b border-white/5 shrink-0">
-        <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center shrink-0">
-          <Sparkles className="w-3.5 h-3.5 text-black" />
-        </div>
+        <img src={logoPath} alt="TheHighGrader" className="w-7 h-7 rounded-lg object-cover shrink-0" />
         <span className="font-bold text-[15px] text-white">TheHighGrader</span>
       </div>
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">

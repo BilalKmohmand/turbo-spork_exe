@@ -1,4 +1,5 @@
 import { useState } from "react";
+import logoPath from "@assets/generated_images/thehighgrader_logo.png";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { ArrowRight, CheckCircle, Sparkles, X, Zap, Shield, Star, Menu } from "lucide-react";
@@ -108,9 +109,7 @@ export default function Pricing() {
         <div className="max-w-6xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
           <Link href="/">
             <div className="flex items-center gap-2.5 cursor-pointer">
-              <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center shadow-lg">
-                <Sparkles className="w-4 h-4 text-black" />
-              </div>
+              <img src={logoPath} alt="TheHighGrader" className="w-8 h-8 rounded-xl object-cover shadow-lg" />
               <span className="font-bold text-[16px] tracking-tight">TheHighGrader</span>
             </div>
           </Link>

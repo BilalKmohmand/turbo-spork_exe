@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from "react";
+import logoPath from "@assets/generated_images/thehighgrader_logo.png";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -656,9 +657,7 @@ export default function Solver() {
       <header className="flex items-center justify-between px-4 py-3 border-b bg-background/95 backdrop-blur sticky top-0 z-50">
         <Link href="/">
           <div className="flex items-center gap-2 cursor-pointer" data-testid="link-home">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center">
-              <Brain className="w-5 h-5 text-white" />
-            </div>
+            <img src={logoPath} alt="TheHighGrader" className="w-8 h-8 rounded-lg object-cover" />
             <span className="font-bold text-lg">TheHighGrader</span>
           </div>
         </Link>
