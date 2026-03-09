@@ -47,7 +47,7 @@ function Router() {
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="light" storageKey="gradeio-theme">
+      <ThemeProvider defaultTheme="light" storageKey="thehighgrader-theme">
         <QueryClientProvider client={queryClient}>
           <TooltipProvider>
             <SEOHead />

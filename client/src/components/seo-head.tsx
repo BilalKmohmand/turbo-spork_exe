@@ -9,8 +9,8 @@ interface SEOHeadProps {
 }
 
 export function SEOHead({
-  title = "Gradeio - AI-Powered Education Platform",
-  description = "Upload homework, get instant AI solutions, and improve your learning. Gradeio helps students succeed with AI-powered tutoring, quiz generation, essay writing, and lecture note generation.",
+  title = "TheHighGrader - AI-Powered Education Platform",
+  description = "Upload homework, get instant AI solutions, and improve your learning. TheHighGrader helps students succeed with AI-powered tutoring, quiz generation, essay writing, and lecture note generation.",
   keywords = "AI education, homework help, AI tutor, quiz generator, essay writer, lecture notes, student learning, math solver",
   ogImage = "/og-image.png",
   ogType = "website",

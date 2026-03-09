@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import logoPath from "@assets/generated_images/thehighgrader_logo.png";
 import { useAuth } from "@/hooks/use-auth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -125,17 +126,13 @@ function Sidebar({
         <div className="h-[60px] flex items-center justify-between px-4 shrink-0">
           {!isCollapsed && (
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-md bg-black dark:bg-white flex items-center justify-center">
-                <Sparkles className="w-4 h-4 text-white dark:text-black" />
-              </div>
-              <span className="font-semibold text-[15px] tracking-tight text-[#111110] dark:text-[#F9F9F8]">Gradeio</span>
+              <img src={logoPath} alt="TheHighGrader" className="w-7 h-7 rounded-md object-cover" />
+              <span className="font-semibold text-[15px] tracking-tight text-[#111110] dark:text-[#F9F9F8]">TheHighGrader</span>
             </div>
           )}
           {isCollapsed && (
             <div className="w-full flex justify-center">
-              <div className="w-7 h-7 rounded-md bg-black dark:bg-white flex items-center justify-center">
-                <Sparkles className="w-4 h-4 text-white dark:text-black" />
-              </div>
+              <img src={logoPath} alt="TheHighGrader" className="w-7 h-7 rounded-md object-cover" />
             </div>
           )}
           <button

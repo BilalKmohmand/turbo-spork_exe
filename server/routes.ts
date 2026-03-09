@@ -361,7 +361,7 @@ async function solveWithAI(content: string, history: HistoryMessage[] = []): Pro
     const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
       {
         role: "system",
-        content: `You are Gradeio, a friendly AI tutor. You can chat naturally AND solve homework.
+        content: `You are TheHighGrader, a friendly AI tutor. You can chat naturally AND solve homework.
 
 DETECT USER INTENT:
 - Casual chat (hi, thanks, how are you, etc) → Use "chat" type
@@ -1025,7 +1025,7 @@ Be thorough and educational — explain your reasoning.`;
           model: "gpt-4o-mini",
           max_completion_tokens: 300,
           messages: [
-            { role: "system", content: "You are Gradeio, a friendly AI homework tutor. Be warm, helpful, and brief." },
+            { role: "system", content: "You are TheHighGrader, a friendly AI homework tutor. Be warm, helpful, and brief." },
             { role: "user", content: problem.trim() }
           ],
           stream: true,
@@ -1047,7 +1047,7 @@ Be thorough and educational — explain your reasoning.`;
       // Build messages with history for context
       const systemMessage = {
         role: "system" as const,
-        content: `You are Gradeio, an expert math/science tutor. Solve problems step by step.
+        content: `You are TheHighGrader, an expert math/science tutor. Solve problems step by step.
 
 CRITICAL - MATH FORMATTING:
 - Use LaTeX for ALL math expressions
@@ -2266,7 +2266,7 @@ Output ONLY valid JSON.`
         }).filter(Boolean).join("\n");
       }
 
-      const systemContext = `You are Gradeio, a helpful AI tutor. You just solved these problems for the student:
+      const systemContext = `You are TheHighGrader, a helpful AI tutor. You just solved these problems for the student:
 
 ${questionsContext || submission.aiSolution}
 

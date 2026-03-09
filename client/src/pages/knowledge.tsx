@@ -206,7 +206,7 @@ export default function Knowledge() {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
-            <span className="font-bold text-lg hidden sm:inline">Gradeio</span>
+            <span className="font-bold text-lg hidden sm:inline">TheHighGrader</span>
           </Link>
           <Badge variant="secondary" className="hidden sm:flex">Knowledge Base</Badge>
         </div>

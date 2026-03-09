@@ -49,7 +49,7 @@ export default function HelpContent() {
           <HelpCircle className="w-7 h-7 text-white" />
         </div>
         <h1 className="text-2xl font-bold mb-2">Help Center</h1>
-        <p className="text-muted-foreground">Learn how to use Gradeio's AI tools</p>
+        <p className="text-muted-foreground">Learn how to use TheHighGrader's AI tools</p>
       </div>
 
       <div>
@@ -100,7 +100,7 @@ export default function HelpContent() {
           </p>
           <Button
             variant="outline"
-            onClick={() => window.open("mailto:support@gradeio.com?subject=Help%20Request", "_blank")}
+            onClick={() => window.open("mailto:support@thehighgrader.com?subject=Help%20Request", "_blank")}
             data-testid="button-contact-support"
           >
             Contact Support

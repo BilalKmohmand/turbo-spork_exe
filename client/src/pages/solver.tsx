@@ -659,7 +659,7 @@ export default function Solver() {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center">
               <Brain className="w-5 h-5 text-white" />
             </div>
-            <span className="font-bold text-lg">Gradeio</span>
+            <span className="font-bold text-lg">TheHighGrader</span>
           </div>
         </Link>
         <div className="flex items-center gap-2">

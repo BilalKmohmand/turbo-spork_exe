@@ -15,7 +15,7 @@ const PLANS = [
     name: "Free",
     price: { monthly: "$0", annual: "$0" },
     period: "forever",
-    desc: "Perfect for trying out Gradeio",
+    desc: "Perfect for trying out TheHighGrader",
     highlight: false,
     border: "border-white/10",
     bg: "bg-white/[0.03]",
@@ -86,10 +86,10 @@ const PLANS = [
 ];
 
 const FAQS = [
-  { q: "Is there a free plan?", a: "Yes — Gradeio's Free plan is available forever with no credit card required. You get 5 AI Tutor messages per day, basic subject modes, and access to the Photo Solver and Quiz Generator." },
+  { q: "Is there a free plan?", a: "Yes — TheHighGrader's Free plan is available forever with no credit card required. You get 5 AI Tutor messages per day, basic subject modes, and access to the Photo Solver and Quiz Generator." },
   { q: "Can I cancel anytime?", a: "Absolutely. You can cancel your subscription at any time from your account settings. There are no cancellation fees or lock-in periods." },
-  { q: "What subjects does Gradeio support?", a: "Gradeio supports 15+ subjects including Mathematics, Physics, Chemistry, Biology, English (Grammar, Essay, Comprehension), History, Literature, and multiple Languages." },
-  { q: "Is Gradeio suitable for teachers?", a: "Yes! The Team plan includes the AI Evaluator, which lets teachers review and grade student submissions with AI-assisted scoring and feedback. You can also build a shared course library." },
+  { q: "What subjects does TheHighGrader support?", a: "TheHighGrader supports 15+ subjects including Mathematics, Physics, Chemistry, Biology, English (Grammar, Essay, Comprehension), History, Literature, and multiple Languages." },
+  { q: "Is TheHighGrader suitable for teachers?", a: "Yes! The Team plan includes the AI Evaluator, which lets teachers review and grade student submissions with AI-assisted scoring and feedback. You can also build a shared course library." },
   { q: "How does billing work?", a: "You'll be billed monthly or annually depending on your chosen plan. Annual billing saves up to 20%. All payments are processed securely." },
 ];
 
@@ -111,7 +111,7 @@ export default function Pricing() {
               <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center shadow-lg">
                 <Sparkles className="w-4 h-4 text-black" />
               </div>
-              <span className="font-bold text-[16px] tracking-tight">Gradeio</span>
+              <span className="font-bold text-[16px] tracking-tight">TheHighGrader</span>
             </div>
           </Link>
           <div className="flex items-center gap-3">

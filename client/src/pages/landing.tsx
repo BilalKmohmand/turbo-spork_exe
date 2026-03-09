@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import logoPath from "@assets/generated_images/thehighgrader_logo.png";
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import { Link } from "wouter";
 import { renderMathText } from "@/components/math-display";
@@ -108,7 +109,7 @@ const SUBJECTS = [
 
 
 const TESTIMONIALS = [
-  { name: "Sarah M.",   school: "Stanford",  avatar: "SM", color: "from-violet-500 to-indigo-600", rating: 5, text: "Gradeio helped me understand calculus concepts I'd struggled with for months. The step-by-step explanations are unlike anything else." },
+  { name: "Sarah M.",   school: "Stanford",  avatar: "SM", color: "from-violet-500 to-indigo-600", rating: 5, text: "TheHighGrader helped me understand calculus concepts I'd struggled with for months. The step-by-step explanations are unlike anything else." },
   { name: "Michael R.", school: "MIT",       avatar: "MR", color: "from-blue-500 to-cyan-600",     rating: 5, text: "I went from failing physics to getting an A. The AI tutor explains things in a way textbooks never could." },
   { name: "Emily C.",   school: "Harvard",   avatar: "EC", color: "from-fuchsia-500 to-pink-600",  rating: 5, text: "The quiz generator is insane. I paste my notes and 30 seconds later I have a full practice test ready." },
   { name: "James T.",   school: "Oxford",    avatar: "JT", color: "from-emerald-500 to-teal-600",  rating: 5, text: "The AI Course Creator is a game-changer. I built an entire Python course in minutes with actual lessons and quizzes." },
@@ -165,7 +166,7 @@ function HeroDemo() {
         </div>
         <div className="flex items-center gap-1.5 mx-auto">
           <Sparkles className="w-3 h-3 text-violet-400" />
-          <span className="text-[11px] font-semibold text-white/40">Gradeio AI Tutor</span>
+          <span className="text-[11px] font-semibold text-white/40">TheHighGrader AI Tutor</span>
         </div>
       </div>
       <div className="px-4 pt-3 pb-1">
@@ -250,7 +251,7 @@ function DashboardSidebar({ active }: { active: string }) {
         <div className="w-5 h-5 rounded bg-white/90 flex items-center justify-center">
           <Sparkles className="w-3 h-3 text-black" />
         </div>
-        <span className="text-[11px] font-bold text-white/70">Gradeio</span>
+        <span className="text-[11px] font-bold text-white/70">TheHighGrader</span>
       </div>
       <div className="flex-1 py-3 px-2 space-y-0.5">
         {items.map(item => (
@@ -482,7 +483,7 @@ function ProductShowcase() {
         </div>
         {/* URL bar */}
         <div className="flex-1 bg-white/5 border border-white/8 rounded-lg px-3 py-1 text-[10px] text-white/25 text-center">
-          gradeio.app/dashboard
+          thehighgrader.app/dashboard
         </div>
         {/* Tabs */}
         <div className="flex gap-1 shrink-0">
@@ -540,7 +541,7 @@ const DEMO_EXAMPLES: Record<string, string[]> = {
   History:   ["What caused World War 1?", "Explain the French Revolution in 3 points", "Who was Napoleon Bonaparte?"],
 };
 
-const LS_KEY = "gradeio_demo_v1";
+const LS_KEY = "thehighgrader_demo_v1";
 
 function loadDemoState(): { remaining: number; resetAt: number } {
   try {
@@ -722,7 +723,7 @@ function InteractiveDemo() {
               <Sparkles className="w-4 h-4 text-violet-400" />
             </div>
             <div>
-              <p className="text-[14px] font-bold text-white">Try Gradeio AI — no sign up needed</p>
+              <p className="text-[14px] font-bold text-white">Try TheHighGrader AI — no sign up needed</p>
               <p className="text-[11px] text-white/35">Ask any real question and get an instant AI answer</p>
             </div>
           </div>
@@ -894,7 +895,7 @@ export default function Landing() {
               <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center shadow-lg">
                 <Sparkles className="w-4 h-4 text-black" />
               </div>
-              <span className="font-bold text-[16px] tracking-tight text-white">Gradeio</span>
+              <span className="font-bold text-[16px] tracking-tight text-white">TheHighGrader</span>
             </div>
           </Link>
           <nav className="hidden md:flex items-center gap-8">
@@ -1111,7 +1112,7 @@ export default function Landing() {
           </motion.div>
           <div className="grid md:grid-cols-3 gap-5">
             {[
-              { n: "01", icon: Upload,      title: "Upload or ask",     desc: "Type a question, snap a photo, drag a PDF, or speak — Gradeio handles any format from any subject." },
+              { n: "01", icon: Upload,      title: "Upload or ask",     desc: "Type a question, snap a photo, drag a PDF, or speak — TheHighGrader handles any format from any subject." },
               { n: "02", icon: Brain,       title: "AI understands it", desc: "Education-specialist AI reads context, picks the right expert mode, and crafts a tailored explanation." },
               { n: "03", icon: CheckCircle, title: "Actually learn",    desc: "Get step-by-step reasoning — not just answers — so you genuinely understand and can do it yourself." },
             ].map((step, i) => (
@@ -1182,7 +1183,7 @@ export default function Landing() {
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-indigo-400">is waiting.</span>
               </h2>
               <p className="text-[16px] text-white/50 max-w-md mx-auto mb-10 leading-relaxed">
-                Join 2 million students who use Gradeio to learn faster, understand deeper, and get better grades.
+                Join 2 million students who use TheHighGrader to learn faster, understand deeper, and get better grades.
               </p>
               <div className="flex items-center justify-center">
                 <a href="/auth?mode=register" className="flex items-center gap-2 px-10 py-4 bg-white hover:bg-white/90 text-black text-[16px] font-bold rounded-2xl shadow-2xl shadow-white/10 transition-all hover:-translate-y-0.5" data-testid="button-cta-bottom">
@@ -1203,14 +1204,14 @@ export default function Landing() {
               <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center">
                 <Sparkles className="w-3.5 h-3.5 text-black" />
               </div>
-              <span className="font-bold text-[15px] text-white">Gradeio</span>
+              <span className="font-bold text-[15px] text-white">TheHighGrader</span>
             </div>
             <div className="flex items-center gap-8">
               {NAV_LINKS.map(link => (
                 <a key={link.label} href={link.href} className="text-[12px] text-white/25 hover:text-white/60 transition-colors">{link.label}</a>
               ))}
             </div>
-            <p className="text-[12px] text-white/20">© {new Date().getFullYear()} Gradeio. All rights reserved.</p>
+            <p className="text-[12px] text-white/20">© {new Date().getFullYear()} TheHighGrader. All rights reserved.</p>
           </div>
         </div>
       </footer>

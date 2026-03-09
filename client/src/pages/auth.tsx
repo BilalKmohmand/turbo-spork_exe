@@ -1,4 +1,5 @@
 import { useState } from "react";
+import logoPath from "@assets/generated_images/thehighgrader_logo.png";
 import { useLocation, useSearch } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
@@ -93,10 +94,8 @@ export default function AuthPage() {
         <div className="relative z-10">
           {/* Logo */}
           <a href="/" className="flex items-center gap-2.5 mb-12">
-            <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center shadow-lg">
-              <Sparkles className="w-5 h-5 text-black" />
-            </div>
-            <span className="font-bold text-[18px] text-white">Gradeio</span>
+            <img src={logoPath} alt="TheHighGrader" className="w-9 h-9 rounded-xl object-cover shadow-lg" />
+            <span className="font-bold text-[18px] text-white">TheHighGrader</span>
           </a>
 
           {/* Headline */}
@@ -105,7 +104,7 @@ export default function AuthPage() {
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-indigo-400">24/7.</span>
           </h2>
           <p className="text-[15px] text-white/45 mb-10 leading-relaxed">
-            Join 2 million students getting better grades with Gradeio's AI education platform.
+            Join 2 million students getting better grades with TheHighGrader's AI education platform.
           </p>
 
           {/* Feature list */}
@@ -160,10 +159,8 @@ export default function AuthPage() {
         <div className="w-full max-w-[400px] relative z-10">
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-2.5 justify-center mb-8">
-            <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-black" />
-            </div>
-            <span className="font-bold text-[16px] text-white">Gradeio</span>
+            <img src={logoPath} alt="TheHighGrader" className="w-8 h-8 rounded-xl object-cover" />
+            <span className="font-bold text-[16px] text-white">TheHighGrader</span>
           </div>
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.16,1,0.3,1] }}>
@@ -186,7 +183,7 @@ export default function AuthPage() {
                 <TabsContent value="login">
                   <div className="mb-6">
                     <h1 className="text-[22px] font-black text-white mb-1">Welcome back</h1>
-                    <p className="text-[13px] text-white/40">Sign in to your Gradeio account</p>
+                    <p className="text-[13px] text-white/40">Sign in to your TheHighGrader account</p>
                   </div>
                   <form onSubmit={handleLogin} className="space-y-4">
                     <div className="space-y-1.5">
@@ -273,7 +270,7 @@ export default function AuthPage() {
           </motion.div>
 
           <p className="text-center text-[11px] text-white/20 mt-5 px-4 leading-relaxed">
-            By continuing, you agree to Gradeio's Terms of Service and Privacy Policy.
+            By continuing, you agree to TheHighGrader's Terms of Service and Privacy Policy.
           </p>
         </div>
       </div>

@@ -87,7 +87,7 @@ export default function SettingsContent({ user }: { user: UserType }) {
                   <Crown className="w-6 h-6 text-white dark:text-black" />
                 </div>
                 <div>
-                  <p className="font-bold text-lg">Gradeio Plus</p>
+                  <p className="font-bold text-lg">TheHighGrader Plus</p>
                   <p className="text-sm text-[#666660]">Active • $0.00 / month</p>
                 </div>
               </div>
