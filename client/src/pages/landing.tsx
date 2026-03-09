@@ -6,7 +6,7 @@ import { renderMathText } from "@/components/math-display";
 import {
   ArrowRight, Sparkles, Brain, Camera, MessageSquare,
   FileText, Mic, FileEdit, CheckCircle, Star,
-  Zap, Shield, ChevronRight, Menu, AlertCircle,
+  Zap, Shield, ChevronRight, Menu, X, AlertCircle,
   GraduationCap, BookOpen, Users, PenLine, Eye,
   AlignLeft, Calculator, FlaskConical, Globe, RefreshCw,
   BookMarked, Volume2, Upload, Award, Database, LayoutDashboard,
