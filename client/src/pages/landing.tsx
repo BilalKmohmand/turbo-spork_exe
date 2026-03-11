@@ -249,7 +249,7 @@ function DashboardSidebar({ active }: { active: string }) {
     <div className="w-[180px] shrink-0 border-r border-white/5 bg-[#0D0D0C] flex flex-col">
       <div className="h-10 flex items-center gap-2 px-3 border-b border-white/5">
         <img src={logoPath} alt="TheHighGrader" className="w-5 h-5 rounded object-cover" />
-        <span className="text-[11px] font-bold text-white/70">TheHighGrader</span>
+        <span className="text-[11px] font-bold text-white/70">TheHighGrader™</span>
       </div>
       <div className="flex-1 py-3 px-2 space-y-0.5">
         {items.map(item => (
@@ -891,7 +891,7 @@ export default function Landing() {
           <Link href="/">
             <div className="flex items-center gap-2.5 cursor-pointer">
               <img src={logoPath} alt="TheHighGrader" className="w-8 h-8 rounded-xl object-cover shadow-lg" />
-              <span className="font-bold text-[16px] tracking-tight text-white">TheHighGrader</span>
+              <span className="font-bold text-[16px] tracking-tight text-white">TheHighGrader™</span>
             </div>
           </Link>
           <nav className="hidden md:flex items-center gap-8">
@@ -1198,7 +1198,7 @@ export default function Landing() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2.5">
               <img src={logoPath} alt="TheHighGrader" className="w-7 h-7 rounded-lg object-cover" />
-              <span className="font-bold text-[15px] text-white">TheHighGrader</span>
+              <span className="font-bold text-[15px] text-white">TheHighGrader™</span>
             </div>
             <div className="flex items-center gap-8">
               {NAV_LINKS.map(link => (

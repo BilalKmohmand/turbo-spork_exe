@@ -95,7 +95,7 @@ export default function AuthPage() {
           {/* Logo */}
           <a href="/" className="flex items-center gap-2.5 mb-12">
             <img src={logoPath} alt="TheHighGrader" className="w-9 h-9 rounded-xl object-cover shadow-lg" />
-            <span className="font-bold text-[18px] text-white">TheHighGrader</span>
+            <span className="font-bold text-[18px] text-white">TheHighGrader™</span>
           </a>
 
           {/* Headline */}
@@ -160,7 +160,7 @@ export default function AuthPage() {
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-2.5 justify-center mb-8">
             <img src={logoPath} alt="TheHighGrader" className="w-8 h-8 rounded-xl object-cover" />
-            <span className="font-bold text-[16px] text-white">TheHighGrader</span>
+            <span className="font-bold text-[16px] text-white">TheHighGrader™</span>
           </div>
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.16,1,0.3,1] }}>

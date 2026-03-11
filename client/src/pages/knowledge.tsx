@@ -205,7 +205,7 @@ export default function Knowledge() {
           </Link>
           <Link href="/" className="flex items-center gap-2">
             <img src={logoPath} alt="TheHighGrader" className="w-8 h-8 rounded-lg object-cover" />
-            <span className="font-bold text-lg hidden sm:inline">TheHighGrader</span>
+            <span className="font-bold text-lg hidden sm:inline">TheHighGrader™</span>
           </Link>
           <Badge variant="secondary" className="hidden sm:flex">Knowledge Base</Badge>
         </div>

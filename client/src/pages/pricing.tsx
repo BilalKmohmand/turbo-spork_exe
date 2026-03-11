@@ -110,7 +110,7 @@ export default function Pricing() {
           <Link href="/">
             <div className="flex items-center gap-2.5 cursor-pointer">
               <img src={logoPath} alt="TheHighGrader" className="w-8 h-8 rounded-xl object-cover shadow-lg" />
-              <span className="font-bold text-[16px] tracking-tight">TheHighGrader</span>
+              <span className="font-bold text-[16px] tracking-tight">TheHighGrader™</span>
             </div>
           </Link>
           <div className="flex items-center gap-3">

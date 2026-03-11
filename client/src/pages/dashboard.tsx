@@ -127,7 +127,7 @@ function Sidebar({
           {!isCollapsed && (
             <div className="flex items-center gap-2.5">
               <img src={logoPath} alt="TheHighGrader" className="w-7 h-7 rounded-md object-cover" />
-              <span className="font-semibold text-[15px] tracking-tight text-[#111110] dark:text-[#F9F9F8]">TheHighGrader</span>
+              <span className="font-semibold text-[15px] tracking-tight text-[#111110] dark:text-[#F9F9F8]">TheHighGrader™</span>
             </div>
           )}
           {isCollapsed && (

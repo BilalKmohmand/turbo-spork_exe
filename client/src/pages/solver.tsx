@@ -658,7 +658,7 @@ export default function Solver() {
         <Link href="/">
           <div className="flex items-center gap-2 cursor-pointer" data-testid="link-home">
             <img src={logoPath} alt="TheHighGrader" className="w-8 h-8 rounded-lg object-cover" />
-            <span className="font-bold text-lg">TheHighGrader</span>
+            <span className="font-bold text-lg">TheHighGrader™</span>
           </div>
         </Link>
         <div className="flex items-center gap-2">
