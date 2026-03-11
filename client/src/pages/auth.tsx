@@ -270,7 +270,12 @@ export default function AuthPage() {
           </motion.div>
 
           <p className="text-center text-[11px] text-white/20 mt-5 px-4 leading-relaxed">
-            By continuing, you agree to TheHighGrader's Terms of Service and Privacy Policy.
+            By continuing, you agree to TheHighGrader's{" "}
+            <a href="#" className="underline underline-offset-2 hover:text-white/40 transition-colors">Terms of Service</a>{" "}and{" "}
+            <a href="#" className="underline underline-offset-2 hover:text-white/40 transition-colors">Privacy Policy</a>.
+          </p>
+          <p className="text-center text-[11px] text-white/15 mt-3">
+            © {new Date().getFullYear()} TheHighGrader™. All rights reserved.
           </p>
         </div>
       </div>

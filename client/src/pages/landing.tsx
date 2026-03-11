@@ -1193,19 +1193,56 @@ export default function Landing() {
       </section>
 
       {/* ══ FOOTER ══════════════════════════════════════════════ */}
-      <footer className="border-t border-white/5 bg-white/[0.02] py-12">
+      <footer className="border-t border-white/5 bg-[#070706] pt-16 pb-8">
         <div className="max-w-6xl mx-auto px-5 sm:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-2.5">
-              <img src={logoPath} alt="TheHighGrader" className="w-7 h-7 rounded-lg object-cover" />
-              <span className="font-bold text-[15px] text-white">TheHighGrader™</span>
+          {/* Top: brand + columns */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-10 mb-14">
+            {/* Brand column */}
+            <div className="col-span-2">
+              <div className="flex items-center gap-2.5 mb-4">
+                <img src={logoPath} alt="TheHighGrader" className="w-8 h-8 rounded-lg object-cover" />
+                <span className="font-bold text-[16px] text-white">TheHighGrader™</span>
+              </div>
+              <p className="text-[13px] text-white/35 leading-relaxed max-w-[220px]">
+                Your personal AI tutor — helping students learn faster, understand deeper, and get better grades.
+              </p>
             </div>
-            <div className="flex items-center gap-8">
-              {NAV_LINKS.map(link => (
-                <a key={link.label} href={link.href} className="text-[12px] text-white/25 hover:text-white/60 transition-colors">{link.label}</a>
-              ))}
+            {/* Product */}
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-white/25 mb-4">Product</p>
+              <ul className="space-y-3">
+                {["AI Tutor","Quiz Generator","Essay Writer","Photo Solver","Lecture Notes"].map(item => (
+                  <li key={item}><a href="/auth?mode=register" className="text-[13px] text-white/40 hover:text-white/80 transition-colors">{item}</a></li>
+                ))}
+              </ul>
             </div>
-            <p className="text-[12px] text-white/20">© {new Date().getFullYear()} TheHighGrader. All rights reserved.</p>
+            {/* Company */}
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-white/25 mb-4">Company</p>
+              <ul className="space-y-3">
+                {[["Pricing","/pricing"],["Demo","/demo"],["Sign up","/auth?mode=register"],["Sign in","/auth"]].map(([label, href]) => (
+                  <li key={label}><a href={href} className="text-[13px] text-white/40 hover:text-white/80 transition-colors">{label}</a></li>
+                ))}
+              </ul>
+            </div>
+            {/* Legal */}
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-white/25 mb-4">Legal</p>
+              <ul className="space-y-3">
+                {["Privacy Policy","Terms of Service","Cookie Policy","GDPR"].map(item => (
+                  <li key={item}><a href="#" className="text-[13px] text-white/40 hover:text-white/80 transition-colors">{item}</a></li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          {/* Bottom bar */}
+          <div className="border-t border-white/5 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p className="text-[12px] text-white/20">© {new Date().getFullYear()} TheHighGrader™. All rights reserved.</p>
+            <div className="flex items-center gap-6">
+              <a href="#" className="text-[12px] text-white/20 hover:text-white/50 transition-colors">Privacy Policy</a>
+              <a href="#" className="text-[12px] text-white/20 hover:text-white/50 transition-colors">Terms of Service</a>
+              <a href="#" className="text-[12px] text-white/20 hover:text-white/50 transition-colors">Cookie Policy</a>
+            </div>
           </div>
         </div>
       </footer>

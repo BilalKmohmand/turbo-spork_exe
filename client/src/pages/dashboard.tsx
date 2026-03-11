@@ -212,6 +212,11 @@ function Sidebar({
             )}
           </div>
         </div>
+        {!isCollapsed && (
+          <p className="text-center text-[9px] text-[#CCCCCC]/30 dark:text-white/15 px-4 py-2 border-t border-[#E5E5E0] dark:border-[#22221F]">
+            © {new Date().getFullYear()} TheHighGrader™
+          </p>
+        )}
       </aside>
     </>
   );

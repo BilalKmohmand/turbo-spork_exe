@@ -279,6 +279,52 @@ export default function Pricing() {
         </div>
 
       </div>
+
+      {/* Footer */}
+      <footer className="border-t border-white/5 bg-[#070706] pt-12 pb-6 mt-16">
+        <div className="max-w-6xl mx-auto px-5 sm:px-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
+            <div className="col-span-2 md:col-span-1">
+              <div className="flex items-center gap-2 mb-3">
+                <img src={logoPath} alt="TheHighGrader" className="w-7 h-7 rounded-lg object-cover" />
+                <span className="font-bold text-[14px] text-white">TheHighGrader™</span>
+              </div>
+              <p className="text-[12px] text-white/30 leading-relaxed">AI-powered education for every student.</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-white/20 mb-3">Product</p>
+              <ul className="space-y-2">
+                {["AI Tutor","Quiz Generator","Essay Writer","Photo Solver"].map(item => (
+                  <li key={item}><a href="/auth?mode=register" className="text-[12px] text-white/35 hover:text-white/70 transition-colors">{item}</a></li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-white/20 mb-3">Company</p>
+              <ul className="space-y-2">
+                {[["Home","/"],["Demo","/demo"],["Sign up","/auth?mode=register"]].map(([label, href]) => (
+                  <li key={label}><a href={href} className="text-[12px] text-white/35 hover:text-white/70 transition-colors">{label}</a></li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-white/20 mb-3">Legal</p>
+              <ul className="space-y-2">
+                {["Privacy Policy","Terms of Service","Cookie Policy"].map(item => (
+                  <li key={item}><a href="#" className="text-[12px] text-white/35 hover:text-white/70 transition-colors">{item}</a></li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-white/5 pt-5 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <p className="text-[11px] text-white/20">© {new Date().getFullYear()} TheHighGrader™. All rights reserved.</p>
+            <div className="flex items-center gap-5">
+              <a href="#" className="text-[11px] text-white/20 hover:text-white/45 transition-colors">Privacy Policy</a>
+              <a href="#" className="text-[11px] text-white/20 hover:text-white/45 transition-colors">Terms of Service</a>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
