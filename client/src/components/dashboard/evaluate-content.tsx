@@ -303,7 +303,31 @@ export default function EvaluateContent() {
                 data-testid="input-file-upload"
               />
 
-              {!content ? (
+              <div className="space-y-3">
+                {uploadedFileName && (
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800">
+                    <FileText className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                    <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300 flex-1 truncate">
+                      {uploadedFileName}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={clearFile}
+                      className="w-6 h-6 flex-shrink-0"
+                      data-testid="button-clear-file"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                )}
+                <Textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder="Paste student's work here… or upload a file below."
+                  className="min-h-[160px] resize-none border-border/40"
+                  data-testid="input-student-work"
+                />
                 <div
                   onDragOver={(e) => {
                     e.preventDefault();
@@ -312,7 +336,7 @@ export default function EvaluateContent() {
                   onDragLeave={() => setIsDragOver(false)}
                   onDrop={handleFileDrop}
                   onClick={() => fileInputRef.current?.click()}
-                  className={`relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all ${
+                  className={`relative border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all ${
                     isDragOver
                       ? "border-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/20"
                       : "border-border/60 hover:border-emerald-300 hover:bg-muted/30"
@@ -320,64 +344,20 @@ export default function EvaluateContent() {
                   data-testid="dropzone-upload"
                 >
                   {uploadMutation.isPending ? (
-                    <div className="flex flex-col items-center gap-2">
-                      <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2 className="w-4 h-4 text-emerald-600 animate-spin" />
                       <p className="text-sm font-medium">Extracting text...</p>
                     </div>
                   ) : (
-                    <>
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900/30 dark:to-teal-900/30 flex items-center justify-center mx-auto mb-3">
-                        <Upload className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-                      </div>
-                      <p className="font-medium text-sm mb-1">
-                        Drop file here or click to browse
+                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                      <Upload className="w-4 h-4" />
+                      <p className="text-sm">
+                        {uploadedFileName ? "Upload different file" : "Or drop a file here (PDF, Word, TXT)"}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        PDF, Word, TXT, and more supported
-                      </p>
-                    </>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {uploadedFileName && (
-                    <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800">
-                      <FileText className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                      <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300 flex-1 truncate">
-                        {uploadedFileName}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={clearFile}
-                        className="w-6 h-6 flex-shrink-0"
-                        data-testid="button-clear-file"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </Button>
                     </div>
                   )}
-                  <Textarea
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    placeholder="Or paste student's work directly here..."
-                    className="min-h-[160px] resize-none border-border/40"
-                    data-testid="input-student-work"
-                  />
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="gap-1.5 text-xs"
-                      data-testid="button-upload-file"
-                    >
-                      <Upload className="w-3.5 h-3.5" />
-                      {uploadedFileName ? "Upload different file" : "Upload file instead"}
-                    </Button>
-                  </div>
                 </div>
-              )}
+              </div>
             </CardContent>
           </Card>
 

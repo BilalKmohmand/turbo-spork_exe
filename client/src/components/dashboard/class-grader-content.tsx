@@ -109,16 +109,18 @@ export default function ClassGraderContent() {
 
       const submissionIds: string[] = [];
       for (const s of valid) {
-        const sub = await apiRequest("POST", "/api/rubric-submissions", {
+        const subRes = await apiRequest("POST", "/api/rubric-submissions", {
           rubricId,
           studentName: s.name.trim(),
-          title: `${s.name.trim()}'s Submission`,
+          title: s.name.trim() + "'s Submission",
           content: s.content.trim(),
-        }) as any;
+        });
+        const sub = await subRes.json();
         submissionIds.push(sub.id);
       }
 
-      const batchRes = await apiRequest("POST", "/api/rubric-evaluate-batch", { submissionIds }) as any;
+      const batchResponse = await apiRequest("POST", "/api/rubric-evaluate-batch", { submissionIds });
+      const batchRes = await batchResponse.json();
 
       const enriched = batchRes.results.map((r: any, i: number) => ({
         ...r,
