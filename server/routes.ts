@@ -3232,6 +3232,64 @@ Respond with ONLY valid JSON (no markdown):
     }
   });
 
+  /* ── Report Card Generator ─────────────────────────────────────── */
+  app.post("/api/generate-report-card", requireAuth, async (req, res) => {
+    try {
+      const { studentName, subject, grade, tone = "encouraging", notes = "" } = req.body;
+      if (!studentName || !subject || !grade) {
+        return res.status(400).json({ error: "Student name, subject, and grade are required" });
+      }
+
+      const toneInstructions: Record<string, string> = {
+        encouraging: "Write in a warm, encouraging tone that motivates the student and celebrates progress.",
+        formal: "Write in a formal, professional tone suitable for official school records.",
+        constructive: "Write in a constructive tone that balances strengths with clear, actionable areas for improvement.",
+        detailed: "Write in a detailed, comprehensive tone covering multiple aspects of the student's performance.",
+      };
+
+      const gradeDescriptions: Record<string, string> = {
+        A: "excellent performance, consistently exceeding expectations",
+        B: "good performance, meeting and often exceeding expectations",
+        C: "satisfactory performance, meeting expectations",
+        D: "performance that needs improvement, often below expectations",
+        F: "performance that is significantly below expectations and requires immediate intervention",
+      };
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        max_completion_tokens: 400,
+        messages: [
+          {
+            role: "system",
+            content: `You are an experienced teacher writing professional report card comments. Write exactly ONE paragraph (3-5 sentences) for a student's report card. ${toneInstructions[tone] || toneInstructions.encouraging}
+            
+Rules:
+- Use the student's first name naturally
+- Reference their specific subject
+- Match the performance level described
+- Sound authentic, not generic
+- Do NOT use buzzwords like "journey" or "leverage"
+- Output ONLY the comment paragraph, nothing else`
+          },
+          {
+            role: "user",
+            content: `Student: ${studentName}
+Subject: ${subject}
+Grade: ${grade} (${gradeDescriptions[grade] || "average performance"})
+Tone: ${tone}
+${notes ? `Teacher notes: ${notes}` : ""}`
+          }
+        ],
+      });
+
+      const comment = response.choices[0]?.message?.content?.trim() || "";
+      res.json({ comment, tone, studentName, subject, grade });
+    } catch (error: any) {
+      console.error("Report card error:", error);
+      res.status(500).json({ error: "Failed to generate report card comment" });
+    }
+  });
+
   /* ── Course API ────────────────────────────────────────────────── */
 
   // Generate a new AI course

@@ -50,7 +50,7 @@ Preferred communication style: Simple, everyday language.
 
 ### User Roles
 - **Student**: Upload homework, get AI solutions, view submission history
-- **Teacher**: Review student submissions, provide scores and feedback
+- **Teacher**: Review student submissions, provide scores and feedback; access full teacher suite (Assignments, Class Grader, Grade Book, Report Cards)
 
 ### Data Models
 - **Users**: id, email, displayName, password (hashed), role (student/teacher), createdAt
@@ -61,6 +61,14 @@ Preferred communication style: Simple, everyday language.
 - **Courses**: id, userId, title, topic, difficulty, audience, description, coverEmoji, chapters (JSONB), totalLessons, createdAt
 - **LessonContents**: id, courseId, lessonKey (e.g. "0-2"), content (markdown), quiz (JSONB array), createdAt
 - **LessonProgress**: id, userId, courseId, lessonKey, score, completedAt
+
+### Teacher Feature Suite (Examino-inspired)
+Teacher accounts see a dedicated "Teacher" section in the sidebar with 5 tools:
+- **AI Evaluator** (existing): Quick ad-hoc grading with custom criteria, file upload, instant AI scoring
+- **Assignments**: Create/manage rubric-based assignments (name, subject, multi-criteria with point values); stored in `rubrics` + `rubric_criteria` DB tables; `POST /api/rubrics`, `GET /api/rubrics`
+- **Class Grader**: Bulk grade an entire class — select assignment, paste each student's work, AI grades all simultaneously; uses `POST /api/rubric-submissions` + `POST /api/rubric-evaluate-batch`; shows per-student score, grade letter (A–F), criteria breakdown, class stats; export to CSV
+- **Grade Book**: View all grading history per assignment; table of student | score | % | grade | per-criterion scores; class stats (avg, highest, lowest, distribution); export to CSV; uses `GET /api/rubric-evaluations/:rubricId`
+- **Report Cards**: AI generates professional report card comments; inputs: student name, subject, grade (A–F), tone (encouraging/formal/constructive/detailed), optional notes; `POST /api/generate-report-card`
 
 ### Research Assessment Feature
 - **Research tab** in dashboard sidebar (Globe icon)

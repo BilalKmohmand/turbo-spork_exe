@@ -8,7 +8,8 @@ import {
   MessageSquare, Mic, FileText, FileEdit, Brain,
   LogOut, LayoutDashboard, Sparkles, Settings,
   HelpCircle, Crown, ClipboardCheck, GraduationCap,
-  Menu, PanelLeftClose, PanelLeftOpen, Globe
+  Menu, PanelLeftClose, PanelLeftOpen, Globe,
+  BookMarked, Users, BookOpen, FileSignature,
 } from "lucide-react";
 
 import SolverContent    from "@/components/dashboard/solver-content";
@@ -18,9 +19,13 @@ import EssayContent     from "@/components/dashboard/essay-content";
 import OverviewContent  from "@/components/dashboard/overview-content";
 import HelpContent      from "@/components/dashboard/help-content";
 import SettingsContent  from "@/components/dashboard/settings-content";
-import EvaluateContent  from "@/components/dashboard/evaluate-content";
-import CoursesContent   from "@/components/dashboard/courses-content";
-import ResearchContent  from "@/components/dashboard/research-content";
+import EvaluateContent      from "@/components/dashboard/evaluate-content";
+import CoursesContent       from "@/components/dashboard/courses-content";
+import ResearchContent      from "@/components/dashboard/research-content";
+import AssignmentsContent   from "@/components/dashboard/assignments-content";
+import ClassGraderContent   from "@/components/dashboard/class-grader-content";
+import GradebookContent     from "@/components/dashboard/gradebook-content";
+import ReportCardContent    from "@/components/dashboard/report-card-content";
 
 /* ─── Nav config ─────────────────────────────────────────────── */
 const NAV = [
@@ -41,7 +46,11 @@ const NAV = [
 const TEACHER_NAV = {
   group: "Teacher",
   items: [
-    { id: "evaluate", label: "AI Evaluator", icon: ClipboardCheck, badge: "New" },
+    { id: "evaluate",    label: "AI Evaluator",   icon: ClipboardCheck, badge: "New" },
+    { id: "assignments", label: "Assignments",     icon: BookMarked },
+    { id: "classgrader", label: "Class Grader",    icon: Users, badge: "New" },
+    { id: "gradebook",   label: "Grade Book",      icon: BookOpen },
+    { id: "reportcard",  label: "Report Cards",    icon: FileSignature, badge: "New" },
   ],
 };
 
@@ -302,7 +311,11 @@ export default function Dashboard() {
             {active === "notes"     && <NotesContent />}
             {active === "quiz"      && <QuizContent />}
             {active === "essay"     && <EssayContent />}
-            {active === "evaluate"  && user.role === "teacher" && <EvaluateContent />}
+            {active === "evaluate"    && user.role === "teacher" && <EvaluateContent />}
+            {active === "assignments" && user.role === "teacher" && <AssignmentsContent />}
+            {active === "classgrader" && user.role === "teacher" && <ClassGraderContent />}
+            {active === "gradebook"   && user.role === "teacher" && <GradebookContent />}
+            {active === "reportcard"  && user.role === "teacher" && <ReportCardContent />}
             {active === "help"      && <HelpContent />}
             {active === "settings"  && <SettingsContent user={user} />}
           </div>
