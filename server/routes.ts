@@ -2850,6 +2850,7 @@ Do NOT use markdown formatting - use plain text with clear structure.`,
       }
 
       const { name, subject, criteria } = parsed.data;
+      const { gradeLevel, assignmentType, studentInstructions, estimatedTime, description } = req.body;
       const totalPoints = criteria.reduce((sum, c) => sum + c.maxPoints, 0);
 
       const rubric = await storage.createRubric({
@@ -2857,6 +2858,11 @@ Do NOT use markdown formatting - use plain text with clear structure.`,
         name,
         subject,
         totalPoints,
+        gradeLevel: gradeLevel || null,
+        assignmentType: assignmentType || null,
+        studentInstructions: studentInstructions || null,
+        estimatedTime: estimatedTime || null,
+        description: description || null,
       });
 
       const criteriaData = criteria.map((c, i) => ({
@@ -3232,42 +3238,48 @@ Respond with ONLY valid JSON (no markdown):
     }
   });
 
-  /* ── AI Rubric Generator ───────────────────────────────────────── */
-  app.post("/api/generate-rubric", requireAuth, requireTeacher, async (req, res) => {
+  /* ── AI Assignment Generator ───────────────────────────────────── */
+  app.post("/api/generate-assignment", requireAuth, requireTeacher, async (req, res) => {
     try {
-      const { assignmentName, subject, description = "" } = req.body;
-      if (!assignmentName || !subject) {
-        return res.status(400).json({ error: "Assignment name and subject are required" });
+      const { topic, subject, gradeLevel, assignmentType, additionalInstructions = "" } = req.body;
+      if (!topic || !subject || !gradeLevel || !assignmentType) {
+        return res.status(400).json({ error: "Topic, subject, grade level, and assignment type are required" });
       }
 
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
-        max_completion_tokens: 800,
+        max_completion_tokens: 1200,
         messages: [
           {
             role: "system",
-            content: `You are an expert teacher creating a grading rubric. Generate 4-6 clear, specific rubric criteria for the given assignment.
+            content: `You are an expert teacher creating a complete assignment. Generate a full, ready-to-use assignment with student instructions and a grading rubric.
 
 Respond with ONLY valid JSON in this exact format:
 {
+  "title": "Assignment title (specific and descriptive)",
+  "studentInstructions": "Full instructions for students, 3-5 paragraphs with clear task description, requirements, and formatting guidelines",
+  "estimatedTime": "e.g. 45 minutes, 2 hours, 1 week",
   "criteria": [
-    { "name": "Criterion Name", "description": "What this evaluates and what good work looks like", "maxPoints": 25 },
+    { "name": "Criterion Name", "description": "What this evaluates and what excellent work looks like", "maxPoints": 25 },
     ...
   ]
 }
 
 Rules:
-- Criteria must be specific to the subject and assignment type
-- Total points across all criteria should add up to 100
-- Each criterion name should be 2-4 words
-- Each description should be 1-2 sentences
+- Write student instructions as if addressing students directly
+- Include: what to do, how to do it, what to submit, any special requirements
+- Generate 4-5 specific rubric criteria tailored to the assignment type
+- Criteria total points must add up to exactly 100
+- Make it appropriate for the grade level specified
 - Output ONLY valid JSON, nothing else`
           },
           {
             role: "user",
-            content: `Assignment: "${assignmentName}"
+            content: `Topic: "${topic}"
 Subject: ${subject}
-${description ? `Additional context: ${description}` : ""}`
+Grade Level: ${gradeLevel}
+Assignment Type: ${assignmentType}
+${additionalInstructions ? `Additional Requirements: ${additionalInstructions}` : ""}`
           }
         ],
       });
@@ -3281,10 +3293,15 @@ ${description ? `Additional context: ${description}` : ""}`
         return res.status(500).json({ error: "AI returned invalid response, please try again" });
       }
 
-      res.json({ criteria: parsed.criteria || [] });
+      res.json({
+        title: parsed.title || "",
+        studentInstructions: parsed.studentInstructions || "",
+        estimatedTime: parsed.estimatedTime || "",
+        criteria: parsed.criteria || [],
+      });
     } catch (error: any) {
-      console.error("Generate rubric error:", error);
-      res.status(500).json({ error: "Failed to generate rubric" });
+      console.error("Generate assignment error:", error);
+      res.status(500).json({ error: "Failed to generate assignment" });
     }
   });
 

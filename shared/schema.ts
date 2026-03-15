@@ -201,6 +201,11 @@ export const rubrics = pgTable("rubrics", {
   name: text("name").notNull(),
   subject: text("subject").notNull().default("General"),
   totalPoints: integer("total_points").notNull().default(100),
+  description: text("description"),
+  gradeLevel: text("grade_level"),
+  assignmentType: text("assignment_type"),
+  studentInstructions: text("student_instructions"),
+  estimatedTime: text("estimated_time"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

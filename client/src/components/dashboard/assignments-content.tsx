@@ -5,13 +5,14 @@ import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Plus, Trash2, BookOpen, ChevronDown, ChevronUp,
-  ClipboardList, Loader2, X, GripVertical,
+  Sparkles, BookOpen, ChevronDown, ChevronUp,
+  ClipboardList, Loader2, Trash2, Clock, Copy, Check,
+  FileText, GraduationCap, Save,
 } from "lucide-react";
 
 interface Criterion {
@@ -29,11 +30,16 @@ interface RubricCriterion {
   orderIndex: number;
 }
 
-interface Rubric {
+interface Assignment {
   id: string;
   name: string;
   subject: string;
   totalPoints: number;
+  description?: string | null;
+  gradeLevel?: string | null;
+  assignmentType?: string | null;
+  studentInstructions?: string | null;
+  estimatedTime?: string | null;
   createdAt: string;
   criteria: RubricCriterion[];
 }
@@ -44,272 +50,465 @@ const SUBJECTS = [
   "Art", "Music", "Physical Education", "Economics", "Psychology", "Other",
 ];
 
+const GRADE_LEVELS = [
+  "K - Grade 2", "Grade 3 - 5", "Grade 6 - 8",
+  "Grade 9 - 10", "Grade 11 - 12", "College / University",
+];
+
+const ASSIGNMENT_TYPES = [
+  "Essay", "Research Paper", "Lab Report", "Short Answer",
+  "Multiple Choice Quiz", "Creative Writing", "Math Problem Set",
+  "Presentation", "Case Study", "Book Report", "Project", "Debate",
+];
+
+interface GeneratedAssignment {
+  title: string;
+  studentInstructions: string;
+  estimatedTime: string;
+  criteria: Criterion[];
+}
+
 export default function AssignmentsContent() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const [showForm, setShowForm] = useState(false);
-  const [name, setName] = useState("");
+  const [topic, setTopic] = useState("");
   const [subject, setSubject] = useState("");
-  const [criteria, setCriteria] = useState<Criterion[]>([
-    { name: "Content & Accuracy", description: "Accuracy and relevance of ideas", maxPoints: 25 },
-    { name: "Organization", description: "Clear structure and logical flow", maxPoints: 25 },
-    { name: "Writing Quality", description: "Grammar, spelling, and style", maxPoints: 25 },
-    { name: "Critical Thinking", description: "Analysis, insight and argumentation", maxPoints: 25 },
-  ]);
+  const [gradeLevel, setGradeLevel] = useState("");
+  const [assignmentType, setAssignmentType] = useState("");
+  const [additionalInstructions, setAdditionalInstructions] = useState("");
 
-  const { data: rubrics = [], isLoading } = useQuery<Rubric[]>({
+  const [generated, setGenerated] = useState<GeneratedAssignment | null>(null);
+  const [editedCriteria, setEditedCriteria] = useState<Criterion[]>([]);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const { data: assignments = [], isLoading } = useQuery<Assignment[]>({
     queryKey: ["/api/rubrics"],
   });
 
-  const createMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/rubrics", { name, subject, criteria }),
+  const generateMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/generate-assignment", {
+        topic, subject, gradeLevel, assignmentType, additionalInstructions,
+      });
+      return res.json();
+    },
+    onSuccess: (data: GeneratedAssignment) => {
+      setGenerated(data);
+      setEditedCriteria(data.criteria);
+    },
+    onError: () => {
+      toast({ title: "Generation failed", description: "Please try again.", variant: "destructive" });
+    },
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      if (!generated) return;
+      const res = await apiRequest("POST", "/api/rubrics", {
+        name: generated.title,
+        subject,
+        criteria: editedCriteria,
+        gradeLevel,
+        assignmentType,
+        studentInstructions: generated.studentInstructions,
+        estimatedTime: generated.estimatedTime,
+        description: topic,
+      });
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rubrics"] });
-      toast({ title: "Assignment created!" });
-      setShowForm(false);
-      setName("");
+      toast({ title: "Assignment saved!", description: "It now appears in your saved list below." });
+      setGenerated(null);
+      setTopic("");
       setSubject("");
-      setCriteria([
-        { name: "Content & Accuracy", description: "Accuracy and relevance of ideas", maxPoints: 25 },
-        { name: "Organization", description: "Clear structure and logical flow", maxPoints: 25 },
-        { name: "Writing Quality", description: "Grammar, spelling, and style", maxPoints: 25 },
-        { name: "Critical Thinking", description: "Analysis, insight and argumentation", maxPoints: 25 },
-      ]);
+      setGradeLevel("");
+      setAssignmentType("");
+      setAdditionalInstructions("");
+      setEditedCriteria([]);
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: () => {
+      toast({ title: "Save failed", description: "Please try again.", variant: "destructive" });
+    },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiRequest("DELETE", `/api/rubrics/${id}`, undefined),
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/rubrics/${id}`);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rubrics"] });
       toast({ title: "Assignment deleted" });
     },
   });
 
-  function addCriterion() {
-    setCriteria(prev => [...prev, { name: "", description: "", maxPoints: 10 }]);
-  }
+  const handleCopyInstructions = (assignment: Assignment) => {
+    const text = [
+      `ASSIGNMENT: ${assignment.name}`,
+      assignment.gradeLevel ? `Grade Level: ${assignment.gradeLevel}` : "",
+      assignment.assignmentType ? `Type: ${assignment.assignmentType}` : "",
+      assignment.estimatedTime ? `Estimated Time: ${assignment.estimatedTime}` : "",
+      "",
+      "STUDENT INSTRUCTIONS:",
+      assignment.studentInstructions || "",
+      "",
+      "GRADING RUBRIC:",
+      ...assignment.criteria.map((c, i) => `${i + 1}. ${c.name} (${c.maxPoints} pts): ${c.description}`),
+      "",
+      `Total Points: ${assignment.totalPoints}`,
+    ].filter(Boolean).join("\n");
 
-  function removeCriterion(i: number) {
-    setCriteria(prev => prev.filter((_, idx) => idx !== i));
-  }
+    navigator.clipboard.writeText(text);
+    setCopiedId(assignment.id);
+    setTimeout(() => setCopiedId(null), 2000);
+    toast({ title: "Copied to clipboard!" });
+  };
 
-  function updateCriterion(i: number, field: keyof Criterion, value: string | number) {
-    setCriteria(prev => prev.map((c, idx) => idx === i ? { ...c, [field]: value } : c));
-  }
-
-  const totalPoints = criteria.reduce((s, c) => s + (Number(c.maxPoints) || 0), 0);
-
-  function letterGrade(pct: number) {
-    if (pct >= 90) return "A";
-    if (pct >= 80) return "B";
-    if (pct >= 70) return "C";
-    if (pct >= 60) return "D";
-    return "F";
-  }
+  const totalEditedPoints = editedCriteria.reduce((s, c) => s + c.maxPoints, 0);
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-[#111110] dark:text-[#F9F9F8]">Assignments</h2>
-          <p className="text-sm text-[#999990] mt-1">Create grading rubrics for your class assignments</p>
-        </div>
-        <Button
-          onClick={() => setShowForm(v => !v)}
-          data-testid="button-new-assignment"
-          className="h-10 px-5 rounded-xl bg-black dark:bg-white text-white dark:text-black hover:opacity-80"
-        >
-          {showForm ? <X className="w-4 h-4 mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
-          {showForm ? "Cancel" : "New Assignment"}
-        </Button>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-foreground">Assignment Generator</h2>
+        <p className="text-muted-foreground mt-1">
+          Describe your topic and let AI create a complete assignment with student instructions and a grading rubric.
+        </p>
       </div>
 
-      {showForm && (
-        <Card className="border-[#E5E5E0] dark:border-[#22221F] rounded-[24px]">
-          <CardContent className="p-6 space-y-6">
-            <h3 className="font-semibold text-[#111110] dark:text-[#F9F9F8]">Create Assignment / Rubric</h3>
+      {/* Generator Form */}
+      <Card className="border border-border bg-card">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Sparkles className="h-5 w-5 text-primary" />
+            Generate New Assignment
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="topic-input">Assignment Topic / Description</Label>
+            <Textarea
+              id="topic-input"
+              data-testid="input-assignment-topic"
+              placeholder="e.g. The causes and effects of World War I, Photosynthesis lab experiment, Analyzing a Shakespeare sonnet..."
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              rows={3}
+              className="resize-none"
+            />
+          </div>
 
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="assign-name">Assignment Title</Label>
-                <Input
-                  id="assign-name"
-                  data-testid="input-assignment-name"
-                  placeholder="e.g. Persuasive Essay — Unit 3"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  className="rounded-xl border-[#E5E5E0] dark:border-[#22221F]"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Subject</Label>
-                <Select value={subject} onValueChange={setSubject}>
-                  <SelectTrigger data-testid="select-subject" className="rounded-xl border-[#E5E5E0] dark:border-[#22221F]">
-                    <SelectValue placeholder="Select subject…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SUBJECTS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>Subject</Label>
+              <Select value={subject} onValueChange={setSubject}>
+                <SelectTrigger data-testid="select-subject">
+                  <SelectValue placeholder="Select subject" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SUBJECTS.map((s) => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label>Grading Criteria</Label>
-                <span className="text-xs text-[#999990]">Total: <strong>{totalPoints} pts</strong></span>
-              </div>
+            <div className="space-y-2">
+              <Label>Grade Level</Label>
+              <Select value={gradeLevel} onValueChange={setGradeLevel}>
+                <SelectTrigger data-testid="select-grade-level">
+                  <SelectValue placeholder="Select grade" />
+                </SelectTrigger>
+                <SelectContent>
+                  {GRADE_LEVELS.map((g) => (
+                    <SelectItem key={g} value={g}>{g}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-              {criteria.map((c, i) => (
-                <div key={i} className="grid grid-cols-12 gap-2 items-start bg-[#F9F9F8] dark:bg-[#111110] rounded-xl p-3">
-                  <div className="col-span-1 flex items-center justify-center pt-2">
-                    <GripVertical className="w-4 h-4 text-[#C0C0BB]" />
-                  </div>
-                  <div className="col-span-4">
-                    <Input
-                      data-testid={`input-criterion-name-${i}`}
-                      placeholder="Criterion name"
-                      value={c.name}
-                      onChange={e => updateCriterion(i, "name", e.target.value)}
-                      className="rounded-lg border-[#E5E5E0] dark:border-[#22221F] text-sm"
-                    />
-                  </div>
-                  <div className="col-span-5">
-                    <Input
-                      data-testid={`input-criterion-desc-${i}`}
-                      placeholder="Description / expectations"
-                      value={c.description}
-                      onChange={e => updateCriterion(i, "description", e.target.value)}
-                      className="rounded-lg border-[#E5E5E0] dark:border-[#22221F] text-sm"
-                    />
-                  </div>
-                  <div className="col-span-1">
-                    <Input
-                      data-testid={`input-criterion-pts-${i}`}
-                      type="number"
-                      min={1}
-                      max={100}
-                      value={c.maxPoints}
-                      onChange={e => updateCriterion(i, "maxPoints", parseInt(e.target.value) || 0)}
-                      className="rounded-lg border-[#E5E5E0] dark:border-[#22221F] text-sm text-center"
-                    />
-                  </div>
-                  <div className="col-span-1 flex items-center justify-center pt-2">
-                    <button
-                      data-testid={`button-remove-criterion-${i}`}
-                      onClick={() => removeCriterion(i)}
-                      className="text-[#C0C0BB] hover:text-red-500 transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+            <div className="space-y-2">
+              <Label>Assignment Type</Label>
+              <Select value={assignmentType} onValueChange={setAssignmentType}>
+                <SelectTrigger data-testid="select-assignment-type">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ASSIGNMENT_TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="extra-instructions">Additional Requirements (optional)</Label>
+            <Input
+              id="extra-instructions"
+              data-testid="input-additional-instructions"
+              placeholder="e.g. Must include citations, minimum 500 words, group project..."
+              value={additionalInstructions}
+              onChange={(e) => setAdditionalInstructions(e.target.value)}
+            />
+          </div>
+
+          <Button
+            data-testid="button-generate-assignment"
+            onClick={() => generateMutation.mutate()}
+            disabled={!topic || !subject || !gradeLevel || !assignmentType || generateMutation.isPending}
+            className="w-full"
+          >
+            {generateMutation.isPending ? (
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generating Assignment…</>
+            ) : (
+              <><Sparkles className="h-4 w-4 mr-2" /> Generate Assignment</>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Generated Preview */}
+      {generated && (
+        <Card className="border-2 border-primary/40 bg-card">
+          <CardHeader className="pb-3">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <CardTitle className="text-xl text-foreground">{generated.title}</CardTitle>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <Badge variant="secondary">{subject}</Badge>
+                  <Badge variant="outline">{gradeLevel}</Badge>
+                  <Badge variant="outline">{assignmentType}</Badge>
+                  {generated.estimatedTime && (
+                    <Badge variant="outline" className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {generated.estimatedTime}
+                    </Badge>
+                  )}
                 </div>
-              ))}
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={addCriterion}
-                data-testid="button-add-criterion"
-                className="rounded-xl border-dashed border-[#C0C0BB] text-[#666660]"
-              >
-                <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Criterion
-              </Button>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setGenerated(null)}
+                >
+                  Discard
+                </Button>
+                <Button
+                  data-testid="button-save-assignment"
+                  size="sm"
+                  onClick={() => saveMutation.mutate()}
+                  disabled={saveMutation.isPending}
+                >
+                  {saveMutation.isPending ? (
+                    <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Saving…</>
+                  ) : (
+                    <><Save className="h-4 w-4 mr-1" /> Save Assignment</>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {/* Student Instructions */}
+            <div>
+              <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-2">
+                <FileText className="h-4 w-4" /> Student Instructions
+              </h4>
+              <div className="bg-muted/50 rounded-lg p-4 text-sm leading-relaxed whitespace-pre-wrap">
+                {generated.studentInstructions}
+              </div>
             </div>
 
-            <Button
-              onClick={() => createMutation.mutate()}
-              disabled={createMutation.isPending || !name.trim() || !subject || criteria.length === 0}
-              data-testid="button-create-assignment"
-              className="w-full h-11 rounded-xl bg-black dark:bg-white text-white dark:text-black"
-            >
-              {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <ClipboardList className="w-4 h-4 mr-2" />}
-              Create Assignment
-            </Button>
+            {/* Rubric */}
+            <div>
+              <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-2">
+                <ClipboardList className="h-4 w-4" /> Grading Rubric
+                <span className={`ml-auto text-xs font-medium ${totalEditedPoints !== 100 ? "text-destructive" : "text-green-600 dark:text-green-400"}`}>
+                  {totalEditedPoints} / 100 pts
+                </span>
+              </h4>
+              <div className="space-y-2">
+                {editedCriteria.map((c, i) => (
+                  <div key={i} className="bg-muted/50 rounded-lg p-3 flex items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                      <Input
+                        value={c.name}
+                        onChange={(e) => {
+                          const updated = [...editedCriteria];
+                          updated[i] = { ...updated[i], name: e.target.value };
+                          setEditedCriteria(updated);
+                        }}
+                        className="h-7 text-sm font-medium mb-1 bg-background"
+                        data-testid={`input-criterion-name-${i}`}
+                      />
+                      <Input
+                        value={c.description}
+                        onChange={(e) => {
+                          const updated = [...editedCriteria];
+                          updated[i] = { ...updated[i], description: e.target.value };
+                          setEditedCriteria(updated);
+                        }}
+                        className="h-7 text-xs text-muted-foreground bg-background"
+                        data-testid={`input-criterion-desc-${i}`}
+                      />
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Input
+                        type="number"
+                        value={c.maxPoints}
+                        onChange={(e) => {
+                          const updated = [...editedCriteria];
+                          updated[i] = { ...updated[i], maxPoints: parseInt(e.target.value) || 0 };
+                          setEditedCriteria(updated);
+                        }}
+                        className="w-16 h-7 text-sm text-center bg-background"
+                        data-testid={`input-criterion-points-${i}`}
+                      />
+                      <span className="text-xs text-muted-foreground">pts</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
 
-      {isLoading ? (
-        <div className="flex items-center justify-center py-20 text-[#999990]">
-          <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading assignments…
-        </div>
-      ) : rubrics.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-[#F0F0ED] dark:bg-[#1A1A17] flex items-center justify-center mb-4">
-            <BookOpen className="w-7 h-7 text-[#999990]" />
-          </div>
-          <p className="font-medium text-[#111110] dark:text-[#F9F9F8]">No assignments yet</p>
-          <p className="text-sm text-[#999990] mt-1">Create your first assignment rubric above</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {rubrics.map((r) => {
-            const isOpen = expanded === r.id;
-            return (
-              <Card
-                key={r.id}
-                data-testid={`card-assignment-${r.id}`}
-                className="border-[#E5E5E0] dark:border-[#22221F] rounded-[20px] overflow-hidden"
-              >
-                <button
-                  className="w-full flex items-center gap-4 p-5 text-left hover:bg-[#F9F9F8] dark:hover:bg-[#111110] transition-colors"
-                  onClick={() => setExpanded(isOpen ? null : r.id)}
-                  data-testid={`button-expand-assignment-${r.id}`}
-                >
-                  <div className="w-10 h-10 rounded-xl bg-[#F0F0ED] dark:bg-[#1A1A17] flex items-center justify-center shrink-0">
-                    <ClipboardList className="w-4 h-4 text-[#666660]" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-[#111110] dark:text-[#F9F9F8] truncate">{r.name}</p>
-                    <p className="text-xs text-[#999990] mt-0.5">
-                      {r.subject} · {r.criteria?.length ?? 0} criteria · {r.totalPoints} pts total
-                    </p>
-                  </div>
-                  <Badge className="text-[11px] shrink-0 border-[#E5E5E0] dark:border-[#22221F] bg-transparent text-[#666660]">
-                    {new Date(r.createdAt).toLocaleDateString()}
-                  </Badge>
-                  {isOpen ? <ChevronUp className="w-4 h-4 text-[#999990] shrink-0" /> : <ChevronDown className="w-4 h-4 text-[#999990] shrink-0" />}
-                </button>
+      {/* Saved Assignments List */}
+      <div>
+        <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+          <BookOpen className="h-5 w-5" />
+          Saved Assignments
+          {assignments.length > 0 && (
+            <Badge variant="secondary" className="ml-1">{assignments.length}</Badge>
+          )}
+        </h3>
 
-                {isOpen && (
-                  <div className="border-t border-[#E5E5E0] dark:border-[#22221F] px-5 pb-5 pt-4 space-y-3">
-                    <div className="grid gap-2">
-                      {r.criteria?.map((c) => (
-                        <div key={c.id} className="flex items-start gap-3 bg-[#F9F9F8] dark:bg-[#111110] rounded-xl p-3">
-                          <div className="w-7 h-7 rounded-lg bg-black dark:bg-white text-white dark:text-black flex items-center justify-center text-[11px] font-bold shrink-0 mt-0.5">
-                            {c.maxPoints}
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-[#111110] dark:text-[#F9F9F8]">{c.name}</p>
-                            <p className="text-xs text-[#999990] mt-0.5">{c.description}</p>
-                          </div>
-                        </div>
-                      ))}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-10">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : assignments.length === 0 ? (
+          <Card className="border-dashed border-border bg-muted/20">
+            <CardContent className="py-12 text-center">
+              <ClipboardList className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
+              <p className="text-muted-foreground font-medium">No assignments yet</p>
+              <p className="text-sm text-muted-foreground/70 mt-1">Generate your first assignment above</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {assignments.map((a) => (
+              <Card
+                key={a.id}
+                className="border border-border bg-card"
+                data-testid={`card-assignment-${a.id}`}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <h4 className="font-semibold text-foreground">{a.name}</h4>
+                        {a.assignmentType && <Badge variant="secondary" className="text-xs">{a.assignmentType}</Badge>}
+                      </div>
+                      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <BookOpen className="h-3 w-3" />{a.subject}
+                        </span>
+                        {a.gradeLevel && (
+                          <span className="flex items-center gap-1">
+                            <GraduationCap className="h-3 w-3" />{a.gradeLevel}
+                          </span>
+                        )}
+                        {a.estimatedTime && (
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />{a.estimatedTime}
+                          </span>
+                        )}
+                        <span>{a.totalPoints} pts total</span>
+                        <span>{a.criteria.length} criteria</span>
+                      </div>
                     </div>
-                    <div className="flex justify-end">
+                    <div className="flex items-center gap-1 shrink-0">
                       <Button
                         variant="ghost"
-                        size="sm"
-                        onClick={() => deleteMutation.mutate(r.id)}
-                        disabled={deleteMutation.isPending}
-                        data-testid={`button-delete-assignment-${r.id}`}
-                        className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleCopyInstructions(a)}
+                        title="Copy full assignment"
+                        data-testid={`button-copy-assignment-${a.id}`}
                       >
-                        <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Delete Assignment
+                        {copiedId === a.id ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setExpandedId(expandedId === a.id ? null : a.id)}
+                        data-testid={`button-expand-assignment-${a.id}`}
+                      >
+                        {expandedId === a.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={() => deleteMutation.mutate(a.id)}
+                        data-testid={`button-delete-assignment-${a.id}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
-                )}
+
+                  {expandedId === a.id && (
+                    <div className="mt-4 space-y-4 border-t border-border pt-4">
+                      {/* Student Instructions */}
+                      {a.studentInstructions && (
+                        <div>
+                          <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1">
+                            <FileText className="h-3.5 w-3.5" /> Student Instructions
+                          </h5>
+                          <div className="bg-muted/40 rounded-lg p-3 text-sm leading-relaxed whitespace-pre-wrap">
+                            {a.studentInstructions}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Rubric Criteria */}
+                      <div>
+                        <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1">
+                          <ClipboardList className="h-3.5 w-3.5" /> Grading Rubric
+                        </h5>
+                        <div className="space-y-2">
+                          {a.criteria.map((c) => (
+                            <div
+                              key={c.id}
+                              className="flex items-start gap-3 bg-muted/40 rounded-lg p-3"
+                              data-testid={`criterion-${c.id}`}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-foreground">{c.name}</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">{c.description}</p>
+                              </div>
+                              <Badge variant="outline" className="shrink-0 text-xs">
+                                {c.maxPoints} pts
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
               </Card>
-            );
-          })}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
