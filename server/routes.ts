@@ -3232,6 +3232,62 @@ Respond with ONLY valid JSON (no markdown):
     }
   });
 
+  /* ── AI Rubric Generator ───────────────────────────────────────── */
+  app.post("/api/generate-rubric", requireAuth, requireTeacher, async (req, res) => {
+    try {
+      const { assignmentName, subject, description = "" } = req.body;
+      if (!assignmentName || !subject) {
+        return res.status(400).json({ error: "Assignment name and subject are required" });
+      }
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        max_completion_tokens: 800,
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert teacher creating a grading rubric. Generate 4-6 clear, specific rubric criteria for the given assignment.
+
+Respond with ONLY valid JSON in this exact format:
+{
+  "criteria": [
+    { "name": "Criterion Name", "description": "What this evaluates and what good work looks like", "maxPoints": 25 },
+    ...
+  ]
+}
+
+Rules:
+- Criteria must be specific to the subject and assignment type
+- Total points across all criteria should add up to 100
+- Each criterion name should be 2-4 words
+- Each description should be 1-2 sentences
+- Output ONLY valid JSON, nothing else`
+          },
+          {
+            role: "user",
+            content: `Assignment: "${assignmentName}"
+Subject: ${subject}
+${description ? `Additional context: ${description}` : ""}`
+          }
+        ],
+      });
+
+      let text = response.choices[0]?.message?.content?.trim() || "";
+      const match = text.match(/\{[\s\S]*\}/);
+      if (match) text = match[0];
+
+      let parsed: any;
+      try { parsed = JSON.parse(text); } catch {
+        return res.status(500).json({ error: "AI returned invalid response, please try again" });
+      }
+
+      res.json({ criteria: parsed.criteria || [] });
+    } catch (error: any) {
+      console.error("Generate rubric error:", error);
+      res.status(500).json({ error: "Failed to generate rubric" });
+    }
+  });
+
   /* ── Report Card Generator ─────────────────────────────────────── */
   app.post("/api/generate-report-card", requireAuth, async (req, res) => {
     try {
