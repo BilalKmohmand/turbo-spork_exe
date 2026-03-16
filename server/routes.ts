@@ -3246,18 +3246,35 @@ Respond with ONLY valid JSON (no markdown):
         return res.status(400).json({ error: "Topic, subject, grade level, and assignment type are required" });
       }
 
+      const assignmentTypeGuide: Record<string, string> = {
+        "Essay": "Write the actual essay PROMPT/QUESTION the student must answer. Include: the specific question or thesis to argue, required length (word count), structural requirements (intro, body paragraphs, conclusion), and any source requirements.",
+        "Research Paper": "Write the specific research question or topic the student must investigate. Include: thesis guidance, required number of sources, citation style (APA/MLA), section structure, and minimum page count.",
+        "Lab Report": "Write the full experiment setup: hypothesis to test, materials list, step-by-step procedure, data table templates the student must fill in, and what to include in their analysis and conclusion.",
+        "Short Answer": "Write 6-10 actual short-answer questions the student must answer. Number each question. Make them specific, thought-provoking, and directly tied to the topic. Each question should require 2-5 sentences to answer.",
+        "Multiple Choice Quiz": "Write 10 actual multiple choice questions, each with 4 options (A, B, C, D). Clearly mark the correct answer in parentheses after each question. Cover different aspects of the topic.",
+        "Creative Writing": "Write the specific creative writing prompt including: the scenario or starting line, genre requirements, required length, any character or setting constraints, and what elements must be included.",
+        "Math Problem Set": "Write 8-12 actual numbered math problems the student must solve. Start with simpler problems and increase in difficulty. Show the exact equations, numbers, and what to calculate. Do NOT describe problems — write the actual math.",
+        "Presentation": "Write the specific presentation topic and requirements: number of slides, time limit, required sections (intro, main points, conclusion), visual requirements, and the specific argument or information to cover.",
+        "Case Study": "Write the actual case study scenario in detail: the situation, relevant background data/facts, the specific questions the student must analyze and answer, and what decisions or recommendations they must make.",
+        "Book Report": "Write the specific book analysis requirements: which aspects to analyze (plot, characters, themes, writing style), required length, specific discussion questions to address, and how to structure the report.",
+        "Project": "Write the full project brief: the specific deliverable, step-by-step requirements, materials or resources needed, timeline/milestones, and what the final submission must include.",
+        "Debate": "Write the specific debate proposition (e.g., 'This house believes that...'). Include: which side to argue, required argument structure, evidence requirements, rebuttal expectations, and format (written or oral).",
+      };
+
+      const contentGuide = assignmentTypeGuide[assignmentType] || "Write the actual assignment content — specific questions, problems, or prompts the student must respond to directly.";
+
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
-        max_completion_tokens: 1200,
+        max_completion_tokens: 2500,
         messages: [
           {
             role: "system",
-            content: `You are an expert teacher creating a complete assignment. Generate a full, ready-to-use assignment with student instructions and a grading rubric.
+            content: `You are an expert teacher creating a COMPLETE, READY-TO-USE assignment. Your job is to generate the ACTUAL assignment content — not a description of what the student should do, but the real problems, questions, prompts, or tasks themselves.
 
 Respond with ONLY valid JSON in this exact format:
 {
-  "title": "Assignment title (specific and descriptive)",
-  "studentInstructions": "Full instructions for students, 3-5 paragraphs with clear task description, requirements, and formatting guidelines",
+  "title": "Specific descriptive assignment title",
+  "studentInstructions": "The complete assignment content here",
   "estimatedTime": "e.g. 45 minutes, 2 hours, 1 week",
   "criteria": [
     { "name": "Criterion Name", "description": "What this evaluates and what excellent work looks like", "maxPoints": 25 },
@@ -3265,12 +3282,16 @@ Respond with ONLY valid JSON in this exact format:
   ]
 }
 
-Rules:
-- Write student instructions as if addressing students directly
-- Include: what to do, how to do it, what to submit, any special requirements
-- Generate 4-5 specific rubric criteria tailored to the assignment type
-- Criteria total points must add up to exactly 100
-- Make it appropriate for the grade level specified
+CRITICAL RULE for studentInstructions:
+${contentGuide}
+
+The studentInstructions field MUST contain the actual assignment — real questions, real problems, real prompts. NOT generic descriptions like "you will complete 10 problems" or "you will write about the topic." Write the actual content students work on.
+
+Additional rules:
+- Address students directly ("You will..." or imperative form)
+- Make content appropriate for: ${gradeLevel}
+- Generate 4-5 rubric criteria specific to this assignment type
+- Criteria total points MUST add up to exactly 100
 - Output ONLY valid JSON, nothing else`
           },
           {
