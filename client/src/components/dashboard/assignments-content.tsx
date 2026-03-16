@@ -10,108 +10,255 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Sparkles, BookOpen, ChevronDown, ChevronUp,
+  Sparkles, BookOpen, ChevronDown, ChevronUp, Users,
   ClipboardList, Loader2, Trash2, Clock, Copy, Check,
-  FileText, GraduationCap, Save,
+  FileText, GraduationCap, Save, Plus, X, Award, TrendingUp,
 } from "lucide-react";
 
-interface Criterion {
-  name: string;
-  description: string;
-  maxPoints: number;
-}
-
-interface RubricCriterion {
-  id: string;
-  rubricId: string;
-  name: string;
-  description: string;
-  maxPoints: number;
-  orderIndex: number;
-}
-
+/* ─── Types ──────────────────────────────────────────────────── */
+interface Criterion { name: string; description: string; maxPoints: number; }
+interface RubricCriterion { id: string; rubricId: string; name: string; description: string; maxPoints: number; orderIndex: number; }
 interface Assignment {
-  id: string;
-  name: string;
-  subject: string;
-  totalPoints: number;
-  description?: string | null;
-  gradeLevel?: string | null;
-  assignmentType?: string | null;
-  studentInstructions?: string | null;
-  estimatedTime?: string | null;
-  createdAt: string;
-  criteria: RubricCriterion[];
+  id: string; name: string; subject: string; totalPoints: number;
+  description?: string | null; gradeLevel?: string | null;
+  assignmentType?: string | null; studentInstructions?: string | null;
+  estimatedTime?: string | null; createdAt: string; criteria: RubricCriterion[];
+}
+interface GeneratedAssignment { title: string; studentInstructions: string; estimatedTime: string; criteria: Criterion[]; }
+interface CriterionScore { criterionId: string; criterionName: string; score: number; maxPoints: number; feedback: string; }
+interface EvalResult { submissionId: string; overallScore: number; overallFeedback: string; criteriaScores: CriterionScore[]; studentName?: string; error?: string; }
+interface StudentEntry { name: string; work: string; }
+
+/* ─── Constants ───────────────────────────────────────────────── */
+const SUBJECTS = ["Mathematics","English / Literature","Science","History","Geography","Physics","Chemistry","Biology","Computer Science","Art","Music","Physical Education","Economics","Psychology","Other"];
+const GRADE_LEVELS = ["K - Grade 2","Grade 3 - 5","Grade 6 - 8","Grade 9 - 10","Grade 11 - 12","College / University"];
+const ASSIGNMENT_TYPES = ["Essay","Research Paper","Lab Report","Short Answer","Multiple Choice Quiz","Creative Writing","Math Problem Set","Presentation","Case Study","Book Report","Project","Debate"];
+
+function letterGrade(pct: number) {
+  if (pct >= 90) return { letter: "A", color: "text-green-600 dark:text-green-400" };
+  if (pct >= 80) return { letter: "B", color: "text-blue-600 dark:text-blue-400" };
+  if (pct >= 70) return { letter: "C", color: "text-yellow-600 dark:text-yellow-400" };
+  if (pct >= 60) return { letter: "D", color: "text-orange-600 dark:text-orange-400" };
+  return { letter: "F", color: "text-red-600 dark:text-red-400" };
 }
 
-const SUBJECTS = [
-  "Mathematics", "English / Literature", "Science", "History",
-  "Geography", "Physics", "Chemistry", "Biology", "Computer Science",
-  "Art", "Music", "Physical Education", "Economics", "Psychology", "Other",
-];
+/* ─── Grading Panel ───────────────────────────────────────────── */
+function GradingPanel({ assignment, onClose }: { assignment: Assignment; onClose: () => void }) {
+  const { toast } = useToast();
+  const [students, setStudents] = useState<StudentEntry[]>([{ name: "", work: "" }]);
+  const [results, setResults] = useState<EvalResult[] | null>(null);
+  const [phase, setPhase] = useState<"input" | "grading" | "done">("input");
 
-const GRADE_LEVELS = [
-  "K - Grade 2", "Grade 3 - 5", "Grade 6 - 8",
-  "Grade 9 - 10", "Grade 11 - 12", "College / University",
-];
+  const addStudent = () => setStudents([...students, { name: "", work: "" }]);
+  const removeStudent = (i: number) => setStudents(students.filter((_, idx) => idx !== i));
+  const updateStudent = (i: number, field: keyof StudentEntry, val: string) => {
+    const updated = [...students];
+    updated[i] = { ...updated[i], [field]: val };
+    setStudents(updated);
+  };
 
-const ASSIGNMENT_TYPES = [
-  "Essay", "Research Paper", "Lab Report", "Short Answer",
-  "Multiple Choice Quiz", "Creative Writing", "Math Problem Set",
-  "Presentation", "Case Study", "Book Report", "Project", "Debate",
-];
+  const handleGrade = async () => {
+    const valid = students.filter((s) => s.name.trim() && s.work.trim());
+    if (valid.length === 0) {
+      toast({ title: "Add at least one student with their work.", variant: "destructive" });
+      return;
+    }
+    setPhase("grading");
+    try {
+      // Step 1: create a submission for each student
+      const submissionIds: string[] = [];
+      for (const s of valid) {
+        const res = await (await apiRequest("POST", "/api/rubric-submissions", {
+          rubricId: assignment.id,
+          studentName: s.name.trim(),
+          title: assignment.name,
+          content: s.work.trim(),
+          status: "pending",
+        })).json();
+        submissionIds.push(res.id);
+      }
 
-interface GeneratedAssignment {
-  title: string;
-  studentInstructions: string;
-  estimatedTime: string;
-  criteria: Criterion[];
+      // Step 2: batch evaluate all submissions
+      const batchRes = await (await apiRequest("POST", "/api/rubric-evaluate-batch", {
+        submissionIds,
+      })).json();
+
+      // Step 3: attach student names to results
+      const enriched = (batchRes.results as EvalResult[]).map((r, i) => ({
+        ...r,
+        studentName: valid[i]?.name || "Student",
+      }));
+
+      setResults(enriched);
+      setPhase("done");
+    } catch (err) {
+      setPhase("input");
+      toast({ title: "Grading failed", description: "Please try again.", variant: "destructive" });
+    }
+  };
+
+  const handleReset = () => {
+    setStudents([{ name: "", work: "" }]);
+    setResults(null);
+    setPhase("input");
+  };
+
+  return (
+    <div className="border-t border-primary/30 mt-4 pt-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h4 className="font-semibold text-sm flex items-center gap-2">
+          <Users className="h-4 w-4 text-primary" />
+          Grade Students — {assignment.name}
+        </h4>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {phase !== "done" ? (
+        <>
+          <div className="space-y-3">
+            {students.map((s, i) => (
+              <div key={i} className="bg-muted/40 rounded-lg p-3 space-y-2" data-testid={`student-entry-${i}`}>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <Input
+                      placeholder={`Student ${i + 1} name`}
+                      value={s.name}
+                      onChange={(e) => updateStudent(i, "name", e.target.value)}
+                      className="h-8 text-sm"
+                      data-testid={`input-student-name-${i}`}
+                    />
+                  </div>
+                  {students.length > 1 && (
+                    <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => removeStudent(i)}>
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
+                <Textarea
+                  placeholder={`Paste ${s.name || "student"}'s work here…`}
+                  value={s.work}
+                  onChange={(e) => updateStudent(i, "work", e.target.value)}
+                  rows={4}
+                  className="resize-none text-sm"
+                  data-testid={`input-student-work-${i}`}
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={addStudent} data-testid="button-add-student">
+              <Plus className="h-3.5 w-3.5 mr-1" /> Add Student
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleGrade}
+              disabled={phase === "grading"}
+              className="flex-1"
+              data-testid="button-grade-all"
+            >
+              {phase === "grading" ? (
+                <><Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> Grading {students.filter(s => s.name && s.work).length} student(s)…</>
+              ) : (
+                <><Award className="h-3.5 w-3.5 mr-1" /> Grade All Students</>
+              )}
+            </Button>
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Results */}
+          <div className="space-y-3">
+            {results?.map((r, i) => {
+              const pct = assignment.totalPoints > 0 ? Math.round((r.overallScore / assignment.totalPoints) * 100) : 0;
+              const grade = letterGrade(pct);
+              return r.error ? (
+                <div key={i} className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-sm">
+                  <p className="font-medium">{r.studentName}</p>
+                  <p className="text-destructive text-xs mt-1">Grading failed: {r.error}</p>
+                </div>
+              ) : (
+                <div key={i} className="bg-muted/40 rounded-lg p-3" data-testid={`result-student-${i}`}>
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div>
+                      <p className="font-semibold text-sm">{r.studentName}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{r.overallFeedback}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className={`text-2xl font-bold ${grade.color}`}>{grade.letter}</p>
+                      <p className="text-xs text-muted-foreground">{r.overallScore}/{assignment.totalPoints} ({pct}%)</p>
+                    </div>
+                  </div>
+                  <div className="space-y-1 mt-2 border-t border-border pt-2">
+                    {r.criteriaScores?.map((cs, j) => (
+                      <div key={j} className="flex items-start gap-2 text-xs">
+                        <div className="flex-1 min-w-0">
+                          <span className="font-medium">{cs.criterionName}:</span>{" "}
+                          <span className="text-muted-foreground">{cs.feedback}</span>
+                        </div>
+                        <span className="shrink-0 font-medium">
+                          {cs.score}/{cs.maxPoints}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex gap-2 pt-1">
+            <Button variant="outline" size="sm" onClick={handleReset} data-testid="button-grade-again">
+              Grade More Students
+            </Button>
+            <Button variant="ghost" size="sm" onClick={onClose}>Done</Button>
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
+/* ─── Main Component ──────────────────────────────────────────── */
 export default function AssignmentsContent() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Generator form state
   const [topic, setTopic] = useState("");
   const [subject, setSubject] = useState("");
   const [gradeLevel, setGradeLevel] = useState("");
   const [assignmentType, setAssignmentType] = useState("");
   const [additionalInstructions, setAdditionalInstructions] = useState("");
-
   const [generated, setGenerated] = useState<GeneratedAssignment | null>(null);
   const [editedCriteria, setEditedCriteria] = useState<Criterion[]>([]);
+
+  // List state
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [gradingId, setGradingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const { data: assignments = [], isLoading } = useQuery<Assignment[]>({
-    queryKey: ["/api/rubrics"],
-  });
+  const { data: assignments = [], isLoading } = useQuery<Assignment[]>({ queryKey: ["/api/rubrics"] });
 
   const generateMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/generate-assignment", {
-        topic, subject, gradeLevel, assignmentType, additionalInstructions,
-      });
+      const res = await apiRequest("POST", "/api/generate-assignment", { topic, subject, gradeLevel, assignmentType, additionalInstructions });
       return res.json();
     },
     onSuccess: (data: GeneratedAssignment) => {
       setGenerated(data);
       setEditedCriteria(data.criteria);
     },
-    onError: () => {
-      toast({ title: "Generation failed", description: "Please try again.", variant: "destructive" });
-    },
+    onError: () => toast({ title: "Generation failed", description: "Please try again.", variant: "destructive" }),
   });
 
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!generated) return;
       const res = await apiRequest("POST", "/api/rubrics", {
-        name: generated.title,
-        subject,
-        criteria: editedCriteria,
-        gradeLevel,
-        assignmentType,
+        name: generated.title, subject, criteria: editedCriteria,
+        gradeLevel, assignmentType,
         studentInstructions: generated.studentInstructions,
         estimatedTime: generated.estimatedTime,
         description: topic,
@@ -121,192 +268,127 @@ export default function AssignmentsContent() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rubrics"] });
       toast({ title: "Assignment saved!", description: "It now appears in your saved list below." });
-      setGenerated(null);
-      setTopic("");
-      setSubject("");
-      setGradeLevel("");
-      setAssignmentType("");
-      setAdditionalInstructions("");
-      setEditedCriteria([]);
+      setGenerated(null); setTopic(""); setSubject(""); setGradeLevel(""); setAssignmentType(""); setAdditionalInstructions(""); setEditedCriteria([]);
     },
-    onError: () => {
-      toast({ title: "Save failed", description: "Please try again.", variant: "destructive" });
-    },
+    onError: () => toast({ title: "Save failed", description: "Please try again.", variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/api/rubrics/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/rubrics"] });
-      toast({ title: "Assignment deleted" });
-    },
+    mutationFn: async (id: string) => { await apiRequest("DELETE", `/api/rubrics/${id}`); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/rubrics"] }); toast({ title: "Assignment deleted" }); },
   });
 
-  const handleCopyInstructions = (assignment: Assignment) => {
+  const handleCopy = (a: Assignment) => {
     const text = [
-      `ASSIGNMENT: ${assignment.name}`,
-      assignment.gradeLevel ? `Grade Level: ${assignment.gradeLevel}` : "",
-      assignment.assignmentType ? `Type: ${assignment.assignmentType}` : "",
-      assignment.estimatedTime ? `Estimated Time: ${assignment.estimatedTime}` : "",
-      "",
-      "STUDENT INSTRUCTIONS:",
-      assignment.studentInstructions || "",
-      "",
-      "GRADING RUBRIC:",
-      ...assignment.criteria.map((c, i) => `${i + 1}. ${c.name} (${c.maxPoints} pts): ${c.description}`),
-      "",
-      `Total Points: ${assignment.totalPoints}`,
+      `ASSIGNMENT: ${a.name}`,
+      a.gradeLevel ? `Grade Level: ${a.gradeLevel}` : "",
+      a.assignmentType ? `Type: ${a.assignmentType}` : "",
+      a.estimatedTime ? `Estimated Time: ${a.estimatedTime}` : "",
+      "", "STUDENT INSTRUCTIONS:", a.studentInstructions || "",
+      "", "GRADING RUBRIC:",
+      ...a.criteria.map((c, i) => `${i + 1}. ${c.name} (${c.maxPoints} pts): ${c.description}`),
+      "", `Total Points: ${a.totalPoints}`,
     ].filter(Boolean).join("\n");
-
     navigator.clipboard.writeText(text);
-    setCopiedId(assignment.id);
+    setCopiedId(a.id);
     setTimeout(() => setCopiedId(null), 2000);
     toast({ title: "Copied to clipboard!" });
   };
 
-  const totalEditedPoints = editedCriteria.reduce((s, c) => s + c.maxPoints, 0);
+  const totalPts = editedCriteria.reduce((s, c) => s + c.maxPoints, 0);
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-foreground">Assignment Generator</h2>
         <p className="text-muted-foreground mt-1">
-          Describe your topic and let AI create a complete assignment with student instructions and a grading rubric.
+          Create AI-generated assignments with student instructions and grading rubrics, then grade your students instantly.
         </p>
       </div>
 
-      {/* Generator Form */}
+      {/* ── Generator Form ── */}
       <Card className="border border-border bg-card">
         <CardHeader className="pb-4">
           <CardTitle className="flex items-center gap-2 text-lg">
-            <Sparkles className="h-5 w-5 text-primary" />
-            Generate New Assignment
+            <Sparkles className="h-5 w-5 text-primary" /> Generate New Assignment
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="topic-input">Assignment Topic / Description</Label>
+            <Label>Assignment Topic / Description</Label>
             <Textarea
-              id="topic-input"
               data-testid="input-assignment-topic"
-              placeholder="e.g. The causes and effects of World War I, Photosynthesis lab experiment, Analyzing a Shakespeare sonnet..."
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              rows={3}
-              className="resize-none"
+              placeholder="e.g. The causes and effects of World War I, Photosynthesis lab experiment, Analyzing a Shakespeare sonnet…"
+              value={topic} onChange={(e) => setTopic(e.target.value)}
+              rows={3} className="resize-none"
             />
           </div>
-
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>Subject</Label>
               <Select value={subject} onValueChange={setSubject}>
-                <SelectTrigger data-testid="select-subject">
-                  <SelectValue placeholder="Select subject" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SUBJECTS.map((s) => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                  ))}
-                </SelectContent>
+                <SelectTrigger data-testid="select-subject"><SelectValue placeholder="Select subject" /></SelectTrigger>
+                <SelectContent>{SUBJECTS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-
             <div className="space-y-2">
               <Label>Grade Level</Label>
               <Select value={gradeLevel} onValueChange={setGradeLevel}>
-                <SelectTrigger data-testid="select-grade-level">
-                  <SelectValue placeholder="Select grade" />
-                </SelectTrigger>
-                <SelectContent>
-                  {GRADE_LEVELS.map((g) => (
-                    <SelectItem key={g} value={g}>{g}</SelectItem>
-                  ))}
-                </SelectContent>
+                <SelectTrigger data-testid="select-grade-level"><SelectValue placeholder="Select grade" /></SelectTrigger>
+                <SelectContent>{GRADE_LEVELS.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-
             <div className="space-y-2">
               <Label>Assignment Type</Label>
               <Select value={assignmentType} onValueChange={setAssignmentType}>
-                <SelectTrigger data-testid="select-assignment-type">
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ASSIGNMENT_TYPES.map((t) => (
-                    <SelectItem key={t} value={t}>{t}</SelectItem>
-                  ))}
-                </SelectContent>
+                <SelectTrigger data-testid="select-assignment-type"><SelectValue placeholder="Select type" /></SelectTrigger>
+                <SelectContent>{ASSIGNMENT_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
               </Select>
             </div>
           </div>
-
           <div className="space-y-2">
-            <Label htmlFor="extra-instructions">Additional Requirements (optional)</Label>
+            <Label>Additional Requirements (optional)</Label>
             <Input
-              id="extra-instructions"
               data-testid="input-additional-instructions"
-              placeholder="e.g. Must include citations, minimum 500 words, group project..."
-              value={additionalInstructions}
-              onChange={(e) => setAdditionalInstructions(e.target.value)}
+              placeholder="e.g. Must include citations, minimum 500 words, group project…"
+              value={additionalInstructions} onChange={(e) => setAdditionalInstructions(e.target.value)}
             />
           </div>
-
           <Button
             data-testid="button-generate-assignment"
             onClick={() => generateMutation.mutate()}
             disabled={!topic || !subject || !gradeLevel || !assignmentType || generateMutation.isPending}
             className="w-full"
           >
-            {generateMutation.isPending ? (
-              <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generating Assignment…</>
-            ) : (
-              <><Sparkles className="h-4 w-4 mr-2" /> Generate Assignment</>
-            )}
+            {generateMutation.isPending
+              ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generating Assignment…</>
+              : <><Sparkles className="h-4 w-4 mr-2" /> Generate Assignment</>}
           </Button>
         </CardContent>
       </Card>
 
-      {/* Generated Preview */}
+      {/* ── Generated Preview ── */}
       {generated && (
         <Card className="border-2 border-primary/40 bg-card">
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <CardTitle className="text-xl text-foreground">{generated.title}</CardTitle>
+                <CardTitle className="text-xl">{generated.title}</CardTitle>
                 <div className="flex flex-wrap gap-2 mt-2">
                   <Badge variant="secondary">{subject}</Badge>
                   <Badge variant="outline">{gradeLevel}</Badge>
                   <Badge variant="outline">{assignmentType}</Badge>
                   {generated.estimatedTime && (
                     <Badge variant="outline" className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {generated.estimatedTime}
+                      <Clock className="h-3 w-3" />{generated.estimatedTime}
                     </Badge>
                   )}
                 </div>
               </div>
               <div className="flex gap-2 shrink-0">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setGenerated(null)}
-                >
-                  Discard
-                </Button>
-                <Button
-                  data-testid="button-save-assignment"
-                  size="sm"
-                  onClick={() => saveMutation.mutate()}
-                  disabled={saveMutation.isPending}
-                >
-                  {saveMutation.isPending ? (
-                    <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Saving…</>
-                  ) : (
-                    <><Save className="h-4 w-4 mr-1" /> Save Assignment</>
-                  )}
+                <Button variant="outline" size="sm" onClick={() => setGenerated(null)}>Discard</Button>
+                <Button data-testid="button-save-assignment" size="sm" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+                  {saveMutation.isPending ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" />Saving…</> : <><Save className="h-4 w-4 mr-1" />Save Assignment</>}
                 </Button>
               </div>
             </div>
@@ -314,59 +396,30 @@ export default function AssignmentsContent() {
           <CardContent className="space-y-5">
             {/* Student Instructions */}
             <div>
-              <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-2">
+              <h4 className="font-semibold text-xs text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-2">
                 <FileText className="h-4 w-4" /> Student Instructions
               </h4>
               <div className="bg-muted/50 rounded-lg p-4 text-sm leading-relaxed whitespace-pre-wrap">
                 {generated.studentInstructions}
               </div>
             </div>
-
             {/* Rubric */}
             <div>
-              <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-2">
+              <h4 className="font-semibold text-xs text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-2">
                 <ClipboardList className="h-4 w-4" /> Grading Rubric
-                <span className={`ml-auto text-xs font-medium ${totalEditedPoints !== 100 ? "text-destructive" : "text-green-600 dark:text-green-400"}`}>
-                  {totalEditedPoints} / 100 pts
+                <span className={`ml-auto text-xs font-medium ${totalPts !== 100 ? "text-destructive" : "text-green-600 dark:text-green-400"}`}>
+                  {totalPts} / 100 pts
                 </span>
               </h4>
               <div className="space-y-2">
                 {editedCriteria.map((c, i) => (
                   <div key={i} className="bg-muted/50 rounded-lg p-3 flex items-start gap-3">
-                    <div className="flex-1 min-w-0">
-                      <Input
-                        value={c.name}
-                        onChange={(e) => {
-                          const updated = [...editedCriteria];
-                          updated[i] = { ...updated[i], name: e.target.value };
-                          setEditedCriteria(updated);
-                        }}
-                        className="h-7 text-sm font-medium mb-1 bg-background"
-                        data-testid={`input-criterion-name-${i}`}
-                      />
-                      <Input
-                        value={c.description}
-                        onChange={(e) => {
-                          const updated = [...editedCriteria];
-                          updated[i] = { ...updated[i], description: e.target.value };
-                          setEditedCriteria(updated);
-                        }}
-                        className="h-7 text-xs text-muted-foreground bg-background"
-                        data-testid={`input-criterion-desc-${i}`}
-                      />
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <Input value={c.name} onChange={(e) => { const u=[...editedCriteria]; u[i]={...u[i],name:e.target.value}; setEditedCriteria(u); }} className="h-7 text-sm font-medium bg-background" data-testid={`input-criterion-name-${i}`} />
+                      <Input value={c.description} onChange={(e) => { const u=[...editedCriteria]; u[i]={...u[i],description:e.target.value}; setEditedCriteria(u); }} className="h-7 text-xs text-muted-foreground bg-background" data-testid={`input-criterion-desc-${i}`} />
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
-                      <Input
-                        type="number"
-                        value={c.maxPoints}
-                        onChange={(e) => {
-                          const updated = [...editedCriteria];
-                          updated[i] = { ...updated[i], maxPoints: parseInt(e.target.value) || 0 };
-                          setEditedCriteria(updated);
-                        }}
-                        className="w-16 h-7 text-sm text-center bg-background"
-                        data-testid={`input-criterion-points-${i}`}
-                      />
+                      <Input type="number" value={c.maxPoints} onChange={(e) => { const u=[...editedCriteria]; u[i]={...u[i],maxPoints:parseInt(e.target.value)||0}; setEditedCriteria(u); }} className="w-16 h-7 text-sm text-center bg-background" data-testid={`input-criterion-points-${i}`} />
                       <span className="text-xs text-muted-foreground">pts</span>
                     </div>
                   </div>
@@ -377,14 +430,11 @@ export default function AssignmentsContent() {
         </Card>
       )}
 
-      {/* Saved Assignments List */}
+      {/* ── Saved Assignments ── */}
       <div>
         <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-          <BookOpen className="h-5 w-5" />
-          Saved Assignments
-          {assignments.length > 0 && (
-            <Badge variant="secondary" className="ml-1">{assignments.length}</Badge>
-          )}
+          <BookOpen className="h-5 w-5" /> Saved Assignments
+          {assignments.length > 0 && <Badge variant="secondary" className="ml-1">{assignments.length}</Badge>}
         </h3>
 
         {isLoading ? (
@@ -402,71 +452,51 @@ export default function AssignmentsContent() {
         ) : (
           <div className="space-y-3">
             {assignments.map((a) => (
-              <Card
-                key={a.id}
-                className="border border-border bg-card"
-                data-testid={`card-assignment-${a.id}`}
-              >
+              <Card key={a.id} className="border border-border bg-card" data-testid={`card-assignment-${a.id}`}>
                 <CardContent className="p-4">
+                  {/* Header row */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
                         <h4 className="font-semibold text-foreground">{a.name}</h4>
                         {a.assignmentType && <Badge variant="secondary" className="text-xs">{a.assignmentType}</Badge>}
                       </div>
-                      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <BookOpen className="h-3 w-3" />{a.subject}
-                        </span>
-                        {a.gradeLevel && (
-                          <span className="flex items-center gap-1">
-                            <GraduationCap className="h-3 w-3" />{a.gradeLevel}
-                          </span>
-                        )}
-                        {a.estimatedTime && (
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />{a.estimatedTime}
-                          </span>
-                        )}
-                        <span>{a.totalPoints} pts total</span>
-                        <span>{a.criteria.length} criteria</span>
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1"><BookOpen className="h-3 w-3" />{a.subject}</span>
+                        {a.gradeLevel && <span className="flex items-center gap-1"><GraduationCap className="h-3 w-3" />{a.gradeLevel}</span>}
+                        {a.estimatedTime && <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{a.estimatedTime}</span>}
+                        <span>{a.totalPoints} pts · {a.criteria.length} criteria</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
+                      {/* Grade Students button */}
                       <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleCopyInstructions(a)}
-                        title="Copy full assignment"
-                        data-testid={`button-copy-assignment-${a.id}`}
+                        variant={gradingId === a.id ? "default" : "outline"}
+                        size="sm"
+                        className="h-8 gap-1 text-xs"
+                        onClick={() => {
+                          setGradingId(gradingId === a.id ? null : a.id);
+                          setExpandedId(null);
+                        }}
+                        data-testid={`button-grade-students-${a.id}`}
                       >
+                        <Users className="h-3.5 w-3.5" /> Grade Students
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleCopy(a)} title="Copy" data-testid={`button-copy-assignment-${a.id}`}>
                         {copiedId === a.id ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setExpandedId(expandedId === a.id ? null : a.id)}
-                        data-testid={`button-expand-assignment-${a.id}`}
-                      >
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setExpandedId(expandedId === a.id ? null : a.id); setGradingId(null); }} data-testid={`button-expand-assignment-${a.id}`}>
                         {expandedId === a.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => deleteMutation.mutate(a.id)}
-                        data-testid={`button-delete-assignment-${a.id}`}
-                      >
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => deleteMutation.mutate(a.id)} data-testid={`button-delete-assignment-${a.id}`}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
 
+                  {/* Assignment details (expanded) */}
                   {expandedId === a.id && (
                     <div className="mt-4 space-y-4 border-t border-border pt-4">
-                      {/* Student Instructions */}
                       {a.studentInstructions && (
                         <div>
                           <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1">
@@ -477,31 +507,28 @@ export default function AssignmentsContent() {
                           </div>
                         </div>
                       )}
-
-                      {/* Rubric Criteria */}
                       <div>
                         <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1">
                           <ClipboardList className="h-3.5 w-3.5" /> Grading Rubric
                         </h5>
                         <div className="space-y-2">
                           {a.criteria.map((c) => (
-                            <div
-                              key={c.id}
-                              className="flex items-start gap-3 bg-muted/40 rounded-lg p-3"
-                              data-testid={`criterion-${c.id}`}
-                            >
+                            <div key={c.id} className="flex items-start gap-3 bg-muted/40 rounded-lg p-3" data-testid={`criterion-${c.id}`}>
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-foreground">{c.name}</p>
+                                <p className="text-sm font-medium">{c.name}</p>
                                 <p className="text-xs text-muted-foreground mt-0.5">{c.description}</p>
                               </div>
-                              <Badge variant="outline" className="shrink-0 text-xs">
-                                {c.maxPoints} pts
-                              </Badge>
+                              <Badge variant="outline" className="shrink-0 text-xs">{c.maxPoints} pts</Badge>
                             </div>
                           ))}
                         </div>
                       </div>
                     </div>
+                  )}
+
+                  {/* Grading panel */}
+                  {gradingId === a.id && (
+                    <GradingPanel assignment={a} onClose={() => setGradingId(null)} />
                   )}
                 </CardContent>
               </Card>
