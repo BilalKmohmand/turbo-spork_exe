@@ -463,7 +463,12 @@ export default function QuizContent() {
 
         <Card className="border-[#E5E5E0] rounded-[28px] shadow-sm">
           <CardContent className="p-8 lg:p-10">
-            <h3 className="text-xl font-semibold mb-8 leading-snug">{currentQuestion?.question}</h3>
+            <h3 className="text-xl font-semibold leading-snug">{currentQuestion?.question}</h3>
+            {currentType === "multiple_choice" ? (
+              <p className="text-[12px] text-[#999990] mt-2 mb-6 font-medium">Select all that apply</p>
+            ) : (
+              <div className="mb-8" />
+            )}
 
             <div className="space-y-3">
               {currentType === "single_choice" && currentQuestion?.options?.map((opt, i) => (
@@ -485,6 +490,40 @@ export default function QuizContent() {
                   <span className="text-[15px]">{opt}</span>
                 </button>
               ))}
+
+              {currentType === "multiple_choice" && currentQuestion?.options?.map((opt, i) => {
+                const isSelected = selectedMulti.has(i);
+                const correctSet = new Set(currentQuestion.correctAnswers || []);
+                const isCorrect = correctSet.has(i);
+                return (
+                  <button
+                    key={i}
+                    disabled={showFeedback}
+                    onClick={() => {
+                      if (showFeedback) return;
+                      setSelectedMulti(prev => {
+                        const next = new Set(prev);
+                        next.has(i) ? next.delete(i) : next.add(i);
+                        return next;
+                      });
+                    }}
+                    className={`w-full p-4 rounded-2xl border text-left flex items-center gap-4 transition-all ${
+                      showFeedback && isCorrect
+                        ? "border-emerald-400 bg-emerald-50 text-emerald-800"
+                        : showFeedback && isSelected && !isCorrect
+                        ? "border-red-400 bg-red-50 text-red-800"
+                        : isSelected
+                        ? "border-black bg-[#F9F9F8]"
+                        : "border-[#E5E5E0] hover:bg-[#F9F9F8]"
+                    }`}
+                  >
+                    <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 border-2 transition-all ${
+                      isSelected ? "bg-black text-white border-black" : "bg-[#F0F0F0] border-transparent"
+                    }`}>{OPTION_LETTERS[i]}</span>
+                    <span className="text-[15px]">{opt}</span>
+                  </button>
+                );
+              })}
 
               {currentType === "true_false" && (
                 <div className="grid grid-cols-2 gap-3">
