@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mic, Square, Loader2, Copy, Check, Sparkles, Wand2, Download } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Mic, Square, Loader2, Copy, Check, Sparkles, Wand2, Download, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface TranscriptChunk {
@@ -10,7 +11,9 @@ interface TranscriptChunk {
 }
 
 export default function NotesContent() {
-  const [isRecording, setIsRecording]     = useState(false);
+  const [mode, setMode]                       = useState<"record" | "paste">("record");
+  const [pastedText, setPastedText]           = useState("");
+  const [isRecording, setIsRecording]         = useState(false);
   const [transcriptChunks, setTranscriptChunks] = useState<TranscriptChunk[]>([]);
   const [liveTranscript, setLiveTranscript]   = useState("");
   const [interimTranscript, setInterimTranscript] = useState("");
@@ -167,7 +170,9 @@ export default function NotesContent() {
   };
 
   const generateNotes = async () => {
-    const fullTranscript = transcriptChunks.map(c => c.text).join(" ");
+    const fullTranscript = mode === "paste"
+      ? pastedText.trim()
+      : transcriptChunks.map(c => c.text).join(" ");
     if (!fullTranscript.trim()) return;
     setIsGeneratingNotes(true);
     try {
@@ -222,6 +227,10 @@ export default function NotesContent() {
     return height;
   });
 
+  const canGenerate = mode === "paste"
+    ? pastedText.trim().length > 0
+    : transcriptChunks.length > 0;
+
   return (
     <div className="max-w-5xl mx-auto py-8 px-6">
       <header className="mb-12 text-center">
@@ -229,14 +238,62 @@ export default function NotesContent() {
           <Mic className="w-8 h-8 text-white dark:text-black" />
         </div>
         <h2 className="text-3xl font-bold tracking-tight mb-2">Lecture Notes</h2>
-        <p className="text-[#666660]">Record audio and let AI generate structured study notes</p>
+        <p className="text-[#666660]">Record audio or paste text and let AI generate structured study notes</p>
       </header>
 
+      {/* Mode tabs */}
+      <div className="flex gap-2 mb-6 p-1 bg-[#F0F0EE] dark:bg-[#1A1A18] rounded-2xl w-fit mx-auto">
+        <button
+          onClick={() => setMode("record")}
+          data-testid="tab-record-audio"
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+            mode === "record"
+              ? "bg-white dark:bg-[#2A2A28] text-[#111110] dark:text-white shadow-sm"
+              : "text-[#888880] hover:text-[#111110] dark:hover:text-white"
+          }`}
+        >
+          <Mic className="w-4 h-4" /> Record Audio
+        </button>
+        <button
+          onClick={() => setMode("paste")}
+          data-testid="tab-paste-text"
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+            mode === "paste"
+              ? "bg-white dark:bg-[#2A2A28] text-[#111110] dark:text-white shadow-sm"
+              : "text-[#888880] hover:text-[#111110] dark:hover:text-white"
+          }`}
+        >
+          <FileText className="w-4 h-4" /> Paste Text
+        </button>
+      </div>
+
       <div className="grid lg:grid-cols-12 gap-8">
-        {/* Left — recorder */}
+        {/* Left — recorder or paste */}
         <div className="lg:col-span-7">
           <Card className="border-[#E5E5E0] dark:border-[#22221F] rounded-[32px] overflow-hidden">
-            <CardContent className="p-8 lg:p-10 text-center">
+            <CardContent className="p-8 lg:p-10">
+              {/* Paste Text Mode */}
+              {mode === "paste" ? (
+                <div className="space-y-3">
+                  <p className="text-sm font-semibold text-[#999990] uppercase tracking-widest text-center mb-4">
+                    Paste Lecture Text
+                  </p>
+                  <Textarea
+                    data-testid="input-lecture-text"
+                    placeholder="Paste your lecture notes, textbook excerpt, or any text you want to convert into structured study notes…"
+                    value={pastedText}
+                    onChange={(e) => setPastedText(e.target.value)}
+                    rows={14}
+                    className="resize-none text-sm leading-relaxed border-[#E5E5E0] dark:border-[#22221F] rounded-2xl bg-[#F9F9F8] dark:bg-[#111110] focus-visible:ring-1"
+                  />
+                  {pastedText && (
+                    <p className="text-xs text-[#999990] text-right">
+                      ~{pastedText.split(/\s+/).filter(Boolean).length} words
+                    </p>
+                  )}
+                </div>
+              ) : (
+              <div className="text-center">
               {/* Timer */}
               <div className="mb-8">
                 {isRecording ? (
@@ -322,6 +379,8 @@ export default function NotesContent() {
                   ~{liveTranscript.split(/\s+/).filter(Boolean).length} words captured
                 </p>
               )}
+              </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -356,7 +415,8 @@ export default function NotesContent() {
               <div className="mt-8 pt-6 border-t border-[#E5E5E0] dark:border-[#22221F] space-y-3">
                 <Button
                   onClick={generateNotes}
-                  disabled={isRecording || transcriptChunks.length === 0 || isGeneratingNotes}
+                  disabled={isRecording || !canGenerate || isGeneratingNotes}
+                  data-testid="button-generate-notes"
                   className="w-full h-12 rounded-2xl bg-black dark:bg-white text-white dark:text-black font-bold hover:bg-[#222] dark:hover:bg-[#EEE] disabled:opacity-40"
                 >
                   {isGeneratingNotes ? (
