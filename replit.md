@@ -20,7 +20,7 @@ Preferred communication style: Simple, everyday language.
 - **Health Check**: GET /health returns { status, timestamp, uptime, env }
 - **Graceful Shutdown**: SIGTERM/SIGINT handlers close HTTP server then DB pool, 10s forced exit
 - **Error Handling**: Global error handler (no re-throw), API 404 handler, uncaughtException/unhandledRejection handlers
-- **Voice Input (AI Tutor)**: Continuous SpeechRecognition with auto-restart on silence, proper baseText+finalized+interim tracking, cleanup on unmount
+- **AI Tutor**: All-subject tutoring (Math, Science, English, History, etc.) — students can ask homework questions and get expert explanations. Subject-aware system prompts guide responses based on the subject. Voice input supported with continuous SpeechRecognition, auto-restart on silence, proper tracking, cleanup on unmount.
 - **Lecture Notes Mic**: Audio level analyser for waveform visualisation, auto-restart recognition on silence, download notes as .txt
 
 ### To Add Stripe Payments Later

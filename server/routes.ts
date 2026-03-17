@@ -1044,38 +1044,32 @@ Be thorough and educational — explain your reasoning.`;
         return;
       }
 
-      // Build messages with history for context
+      // Check if problem contains embedded tutor instruction
+      const tutorModeMatch = problem.match(/\[TUTOR MODE: ([\s\S]*?)\]\n\nStudent question:/);
+      let systemContent: string;
+      let cleanedProblem = problem;
+
+      if (tutorModeMatch) {
+        // Use the embedded instruction from the frontend
+        systemContent = tutorModeMatch[1].trim();
+        // Remove the tutor mode prefix from the problem
+        cleanedProblem = problem.replace(/\[TUTOR MODE: [\s\S]*?\]\n\nStudent question: /, "").trim();
+      } else {
+        // Fall back to default comprehensive tutor
+        systemContent = `You are TheHighGrader, a friendly AI tutor skilled in math, science, English, history, and all school subjects. Help students learn by providing clear, step-by-step explanations.
+
+Be thorough but concise. Adapt your explanation style to the subject:
+- Math/Science: Use step-by-step solutions with LaTeX for equations
+- History: Provide timelines, context, and cause-and-effect relationships
+- English: Focus on clarity, structure, and reasoning
+- Other subjects: Explain concepts thoroughly with examples
+
+For math/science, use LaTeX formatting when needed: $x^2 + 2x + 1$`;
+      }
+
       const systemMessage = {
         role: "system" as const,
-        content: `You are TheHighGrader, an expert math/science tutor. Solve problems step by step.
-
-CRITICAL - MATH FORMATTING:
-- Use LaTeX for ALL math expressions
-- Inline math: \\(x^2 + 2x + 1\\) or $x^2 + 2x + 1$
-- Display/block math: \\[x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}\\]
-- NEVER use plain text for equations like "x^2 = 4" - always use LaTeX: $x^2 = 4$
-
-FORMAT:
-Step 1: [title]
-[explanation with LaTeX math]
-
-Step 2: [title]
-[continue with LaTeX math...]
-
-**Answer:** $[final answer in LaTeX]$
-
-EXAMPLES OF CORRECT LATEX:
-- Fractions: $\\frac{a}{b}$
-- Exponents: $x^2$, $x^{10}$
-- Square roots: $\\sqrt{x}$, $\\sqrt[3]{x}$
-- Equals: $x = 5$
-- Plus/minus: $\\pm$
-- Greek letters: $\\alpha$, $\\beta$, $\\pi$
-
-RULES:
-- Always use LaTeX for any math symbol or equation
-- Be thorough but clear
-- Explain each step`,
+        content: systemContent,
       };
       
       // Include history if provided
@@ -1089,8 +1083,8 @@ RULES:
         }
       }
       
-      // Add current problem
-      conversationMessages.push({ role: "user", content: problem.trim() });
+      // Add current problem (use cleaned version without tutor mode wrapper)
+      conversationMessages.push({ role: "user", content: cleanedProblem });
       
       // For homework problems - stream readable solution
       const stream = await openai.chat.completions.create({
