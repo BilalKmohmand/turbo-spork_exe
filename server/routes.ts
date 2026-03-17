@@ -1784,7 +1784,8 @@ Rules: 3-6 subtopics, 5 possible questions as examples of what can be tested, qu
 
       // Extract video ID
       const patterns = [
-        /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([A-Za-z0-9_-]{11})/,
+        /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/|youtube\.com\/live\/|youtube\.com\/v\/)([A-Za-z0-9_-]{11})/,
+        /[?&]v=([A-Za-z0-9_-]{11})/,
         /^([A-Za-z0-9_-]{11})$/,
       ];
       let videoId: string | null = null;
@@ -1848,6 +1849,13 @@ Rules: 3-6 subtopics, 5 possible questions as examples of what can be tested, qu
       }
 
       // Try to extract caption tracks using the reliable "captions" split approach
+      // Helper: fetch with timeout (ms)
+      const fetchWithTimeout = (url: string, options: RequestInit, timeoutMs: number) => {
+        const ac = new AbortController();
+        const timer = setTimeout(() => ac.abort(), timeoutMs);
+        return fetch(url, { ...options, signal: ac.signal }).finally(() => clearTimeout(timer));
+      };
+
       let transcript = "";
       try {
         const captionsSplit = html.split('"captions":');
@@ -1862,43 +1870,49 @@ Rules: 3-6 subtopics, 5 possible questions as examples of what can be tested, qu
             || tracks[0];
           if (enTrack?.baseUrl) {
             for (const fmt of ["json3", "vtt", "srv3"]) {
-              const txResp = await fetch(enTrack.baseUrl + `&fmt=${fmt}`, {
-                headers: {
-                  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-                  "Cookie": cookieStr,
-                  "Referer": `https://www.youtube.com/watch?v=${videoId}`,
-                  "Origin": "https://www.youtube.com",
-                },
-              });
-              const txBody = await txResp.text();
-              if (txBody && txBody.length > 100) {
-                if (fmt === "json3") {
-                  const txData = JSON.parse(txBody);
-                  transcript = (txData.events || [])
-                    .filter((e: any) => e.segs)
-                    .map((e: any) => e.segs.map((s: any) => s.utf8 || "").join(""))
-                    .join(" ")
-                    .replace(/\[.*?\]/g, "")
-                    .replace(/\s+/g, " ")
-                    .trim()
-                    .slice(0, 10000);
-                } else if (fmt === "vtt") {
-                  transcript = txBody
-                    .replace(/WEBVTT[\s\S]*?\n\n/, "")
-                    .replace(/\d{2}:\d{2}[\d:.,]* --> [\d:.,\s]+\n/g, "")
-                    .replace(/<[^>]+>/g, "")
-                    .replace(/\[.*?\]/g, "")
-                    .replace(/\s+/g, " ")
-                    .trim()
-                    .slice(0, 10000);
-                } else {
-                  transcript = txBody
-                    .replace(/<[^>]+>/g, " ")
-                    .replace(/\s+/g, " ")
-                    .trim()
-                    .slice(0, 10000);
+              try {
+                const txResp = await fetchWithTimeout(enTrack.baseUrl + `&fmt=${fmt}`, {
+                  headers: {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+                    "Cookie": cookieStr,
+                    "Referer": `https://www.youtube.com/watch?v=${videoId}`,
+                    "Origin": "https://www.youtube.com",
+                  },
+                }, 4000);
+                const txBody = await txResp.text();
+                // If body is empty, YouTube is blocking — skip remaining formats
+                if (!txBody || txBody.length === 0) break;
+                if (txBody.length > 100) {
+                  if (fmt === "json3") {
+                    const txData = JSON.parse(txBody);
+                    transcript = (txData.events || [])
+                      .filter((e: any) => e.segs)
+                      .map((e: any) => e.segs.map((s: any) => s.utf8 || "").join(""))
+                      .join(" ")
+                      .replace(/\[.*?\]/g, "")
+                      .replace(/\s+/g, " ")
+                      .trim()
+                      .slice(0, 10000);
+                  } else if (fmt === "vtt") {
+                    transcript = txBody
+                      .replace(/WEBVTT[\s\S]*?\n\n/, "")
+                      .replace(/\d{2}:\d{2}[\d:.,]* --> [\d:.,\s]+\n/g, "")
+                      .replace(/<[^>]+>/g, "")
+                      .replace(/\[.*?\]/g, "")
+                      .replace(/\s+/g, " ")
+                      .trim()
+                      .slice(0, 10000);
+                  } else {
+                    transcript = txBody
+                      .replace(/<[^>]+>/g, " ")
+                      .replace(/\s+/g, " ")
+                      .trim()
+                      .slice(0, 10000);
+                  }
+                  if (transcript.length > 100) break;
                 }
-                if (transcript.length > 100) break;
+              } catch (_) {
+                break; // timeout or error — stop trying formats
               }
             }
           }
@@ -1913,7 +1927,7 @@ Rules: 3-6 subtopics, 5 possible questions as examples of what can be tested, qu
           const transcriptPanelMatch = html.match(/"engagement-panel-searchable-transcript"[\s\S]*?"params":"([^"]+)"/);
           if (transcriptPanelMatch) {
             const params = decodeURIComponent(transcriptPanelMatch[1]);
-            const innertubeResp = await fetch("https://www.youtube.com/youtubei/v1/get_transcript?prettyPrint=false", {
+            const innertubeResp = await fetchWithTimeout("https://www.youtube.com/youtubei/v1/get_transcript?prettyPrint=false", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -1933,7 +1947,7 @@ Rules: 3-6 subtopics, 5 possible questions as examples of what can be tested, qu
                 },
                 params,
               }),
-            });
+            }, 1500);
             if (innertubeResp.ok) {
               const innertubeData = await innertubeResp.json();
               const segments = innertubeData?.actions?.[0]?.updateEngagementPanelAction?.content
