@@ -1738,6 +1738,52 @@ RULES:
     }
   });
 
+  /* ── Tutor Sessions ─────────────────────────────────────────── */
+  app.get("/api/tutor-sessions", requireAuth, async (req, res) => {
+    try {
+      const sessions = await storage.getTutorSessionsByUser(req.session.userId!);
+      res.json(sessions);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch sessions" });
+    }
+  });
+
+  app.post("/api/tutor-sessions", requireAuth, async (req, res) => {
+    try {
+      const { title, messages, subject } = req.body;
+      const session = await storage.createTutorSession({
+        userId: req.session.userId!,
+        title: title || "New Conversation",
+        messages: messages || [],
+        subject: subject || null,
+      });
+      res.status(201).json(session);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to create session" });
+    }
+  });
+
+  app.patch("/api/tutor-sessions/:id", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { messages, title } = req.body;
+      const session = await storage.updateTutorSession(id, { messages, title });
+      if (!session) return res.status(404).json({ error: "Session not found" });
+      res.json(session);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to update session" });
+    }
+  });
+
+  app.delete("/api/tutor-sessions/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteTutorSession(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to delete session" });
+    }
+  });
+
   app.post("/api/analyze-topics", async (req, res) => {
     try {
       const { text } = req.body;

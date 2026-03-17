@@ -23,6 +23,8 @@ import {
   type InsertLessonContent,
   type LessonProgressRow,
   type InsertLessonProgress,
+  type TutorSession,
+  type InsertTutorSession,
   users,
   submissions,
   evaluations,
@@ -34,6 +36,7 @@ import {
   courses,
   lessonContents,
   lessonProgress,
+  tutorSessions,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, inArray, gte, lt } from "drizzle-orm";
@@ -94,6 +97,13 @@ export interface IStorage {
   // Lesson progress
   getLessonProgress(userId: string, courseId: string): Promise<LessonProgressRow[]>;
   markLessonComplete(data: InsertLessonProgress): Promise<LessonProgressRow>;
+
+  // Tutor session operations
+  createTutorSession(data: InsertTutorSession): Promise<TutorSession>;
+  getTutorSession(id: string): Promise<TutorSession | undefined>;
+  getTutorSessionsByUser(userId: string): Promise<TutorSession[]>;
+  updateTutorSession(id: string, data: { messages?: any[]; title?: string; updatedAt?: Date }): Promise<TutorSession | undefined>;
+  deleteTutorSession(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -474,6 +484,35 @@ export class DatabaseStorage implements IStorage {
     }
     const [lp] = await db.insert(lessonProgress).values(data).returning();
     return lp;
+  }
+
+  /* ── Tutor Sessions ──────────────────────────────────────── */
+  async createTutorSession(data: InsertTutorSession): Promise<TutorSession> {
+    const [session] = await db.insert(tutorSessions).values(data).returning();
+    return session;
+  }
+
+  async getTutorSession(id: string): Promise<TutorSession | undefined> {
+    const [session] = await db.select().from(tutorSessions).where(eq(tutorSessions.id, id));
+    return session;
+  }
+
+  async getTutorSessionsByUser(userId: string): Promise<TutorSession[]> {
+    return await db.select().from(tutorSessions)
+      .where(eq(tutorSessions.userId, userId))
+      .orderBy(desc(tutorSessions.updatedAt));
+  }
+
+  async updateTutorSession(id: string, data: { messages?: any[]; title?: string; updatedAt?: Date }): Promise<TutorSession | undefined> {
+    const updateData: any = { updatedAt: new Date() };
+    if (data.messages !== undefined) updateData.messages = data.messages;
+    if (data.title !== undefined) updateData.title = data.title;
+    const [session] = await db.update(tutorSessions).set(updateData).where(eq(tutorSessions.id, id)).returning();
+    return session;
+  }
+
+  async deleteTutorSession(id: string): Promise<void> {
+    await db.delete(tutorSessions).where(eq(tutorSessions.id, id));
   }
 }
 

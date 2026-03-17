@@ -381,6 +381,26 @@ export const insertKnowledgeChunkSchema = createInsertSchema(knowledgeChunks).om
 export type InsertKnowledgeChunk = z.infer<typeof insertKnowledgeChunkSchema>;
 export type KnowledgeChunk = typeof knowledgeChunks.$inferSelect;
 
+// Tutor chat sessions for persistent history
+export const tutorSessions = pgTable("tutor_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  title: text("title").notNull().default("New Conversation"),
+  messages: jsonb("messages").notNull().default(sql`'[]'::jsonb`),
+  subject: text("subject"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertTutorSessionSchema = createInsertSchema(tutorSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type TutorSession = typeof tutorSessions.$inferSelect;
+export type InsertTutorSession = z.infer<typeof insertTutorSessionSchema>;
+
 // Schema for uploading knowledge content
 export const uploadKnowledgeSchema = z.object({
   content: z.string().min(1, "Content is required"),

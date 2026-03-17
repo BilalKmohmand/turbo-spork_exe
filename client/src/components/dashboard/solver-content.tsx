@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { renderMathText } from "@/components/math-display";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import {
   Dialog,
   DialogContent,
@@ -16,7 +18,7 @@ import {
   User, X, FileImage, FileText, File, FileSpreadsheet,
   Atom, TestTube, Leaf, ChevronRight, Copy, Check,
   Trash2, PenLine, Eye, AlignLeft, RefreshCw, BookMarked, GraduationCap,
-  Brain, Sigma, Lightbulb, ClipboardList,
+  Brain, Sigma, Lightbulb, ClipboardList, Clock, Plus, MessageSquare,
 } from "lucide-react";
 
 /* ─── Accepted file types ────────────────────────────────────────── */
@@ -299,6 +301,19 @@ function StreamingCursor() {
   );
 }
 
+/* ─── Helpers ────────────────────────────────────────────────────── */
+function timeAgo(dateStr: string) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins  = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days  = Math.floor(diff / 86400000);
+  if (mins < 1)   return "Just now";
+  if (mins < 60)  return `${mins}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days < 7)   return `${days}d ago`;
+  return new Date(dateStr).toLocaleDateString();
+}
+
 /* ─── Component ──────────────────────────────────────────────────── */
 export default function SolverContent() {
   const [textProblem, setTextProblem]   = useState("");
@@ -307,6 +322,11 @@ export default function SolverContent() {
   const [subMenuPopup, setSubMenuPopup] = useState<QuickPrompt | null>(null);
   const [activeMode, setActiveMode]     = useState<AIMode | null>(null);
   const [copiedIdx, setCopiedIdx]       = useState<number | null>(null);
+
+  /* Session history state */
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [showHistory, setShowHistory]           = useState(false);
+  const queryClient = useQueryClient();
 
   /* File attachment state — supports multiple images */
   const [attachedFiles, setAttachedFiles]           = useState<AttachedFile[]>([]);
@@ -327,6 +347,70 @@ export default function SolverContent() {
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const { toast }        = useToast();
+
+  /* ── Session history queries ─────────────────────────────────── */
+  const { data: sessions = [] } = useQuery<any[]>({
+    queryKey: ["/api/tutor-sessions"],
+  });
+
+  const createSessionMutation = useMutation({
+    mutationFn: async (data: { title: string; messages: any[]; subject?: string }) =>
+      (await apiRequest("POST", "/api/tutor-sessions", data)).json(),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/tutor-sessions"] }),
+  });
+
+  const updateSessionMutation = useMutation({
+    mutationFn: async ({ id, messages, title }: { id: string; messages: any[]; title?: string }) =>
+      (await apiRequest("PATCH", `/api/tutor-sessions/${id}`, { messages, title })).json(),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/tutor-sessions"] }),
+  });
+
+  const deleteSessionMutation = useMutation({
+    mutationFn: async (id: string) =>
+      (await apiRequest("DELETE", `/api/tutor-sessions/${id}`)).json(),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/tutor-sessions"] }),
+  });
+
+  /* Persist chat after AI response */
+  const currentSessionIdRef = useRef<string | null>(null);
+  useEffect(() => { currentSessionIdRef.current = currentSessionId; }, [currentSessionId]);
+
+  const saveSession = useCallback((msgs: ChatMessage[]) => {
+    if (msgs.length < 2) return; // need at least one user + one ai message
+    const title = msgs[0]?.content?.slice(0, 60) || "New Conversation";
+    const sessionId = currentSessionIdRef.current;
+    const serialised = msgs.map(m => ({
+      role: m.role,
+      content: m.content,
+      imagePreviews: m.imagePreviews,
+    }));
+    if (sessionId) {
+      updateSessionMutation.mutate({ id: sessionId, messages: serialised, title });
+    } else {
+      createSessionMutation.mutateAsync({ title, messages: serialised }).then(s => {
+        if (s?.id) {
+          setCurrentSessionId(s.id);
+          currentSessionIdRef.current = s.id;
+        }
+      });
+    }
+  }, []);
+
+  /* Load a past session */
+  const loadSession = useCallback((session: any) => {
+    const msgs: ChatMessage[] = (session.messages || []).map((m: any) => ({
+      role: m.role,
+      content: m.content,
+      imagePreviews: m.imagePreviews,
+    }));
+    setChatHistory(msgs);
+    setCurrentSessionId(session.id);
+    currentSessionIdRef.current = session.id;
+    setShowHistory(false);
+    setTextProblem("");
+    setAttachedFiles([]);
+    setActiveMode(null);
+  }, []);
 
   /* Clean up recognition on unmount */
   useEffect(() => {
@@ -403,6 +487,11 @@ export default function SolverContent() {
     } finally {
       setIsStreaming(false);
       scrollToBottom();
+      // Auto-save session after streaming completes
+      setChatHistory(prev => {
+        saveSession(prev);
+        return prev;
+      });
     }
   };
 
@@ -431,7 +520,11 @@ export default function SolverContent() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Failed to analyse images");
-      setChatHistory(prev => [...prev, { role: "assistant", content: data.solution || "No response." }]);
+      setChatHistory(prev => {
+        const next = [...prev, { role: "assistant" as const, content: data.solution || "No response." }];
+        saveSession(next);
+        return next;
+      });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
@@ -500,6 +593,7 @@ export default function SolverContent() {
     } finally {
       setIsStreaming(false);
       scrollToBottom();
+      setChatHistory(prev => { saveSession(prev); return prev; });
     }
   };
 
@@ -698,13 +792,15 @@ export default function SolverContent() {
     setTimeout(() => setCopiedIdx(null), 2000);
   };
 
-  /* Clear conversation -------------------------------------------- */
+  /* Clear conversation / new chat --------------------------------- */
   const clearChat = () => {
     setChatHistory([]);
     setTextProblem("");
     setAttachedFiles([]);
     setActiveMode(null);
     setSubMenuPopup(null);
+    setCurrentSessionId(null);
+    currentSessionIdRef.current = null;
   };
 
   const canSend = (!isStreaming && !isUploadingSolving) && (!!textProblem.trim() || attachedFiles.length > 0);
@@ -791,19 +887,95 @@ export default function SolverContent() {
         onChange={handleFileChange}
       />
 
-      {/* Top bar — clear button when there's history */}
-      {chatHistory.length > 0 && (
-        <div className="flex justify-end px-6 pt-3 pb-0">
-          <button
-            onClick={clearChat}
-            className="flex items-center gap-1.5 text-[12px] text-[#999990] hover:text-red-500 transition-colors px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20"
-            title="Clear conversation"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            Clear chat
-          </button>
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-6 pt-3 pb-0 shrink-0">
+        <button
+          onClick={() => setShowHistory(h => !h)}
+          className={`flex items-center gap-1.5 text-[12px] font-medium px-2.5 py-1.5 rounded-lg transition-colors ${
+            showHistory
+              ? "bg-[#111110] dark:bg-white text-white dark:text-black"
+              : "text-[#666660] hover:text-[#111110] dark:hover:text-white hover:bg-[#F0F0F0] dark:hover:bg-[#1A1A1A]"
+          }`}
+          title="Chat history"
+        >
+          <Clock className="w-3.5 h-3.5" />
+          History {sessions.length > 0 && <span className="ml-0.5 opacity-60">({sessions.length})</span>}
+        </button>
+        <div className="flex items-center gap-2">
+          {chatHistory.length > 0 && (
+            <button
+              onClick={clearChat}
+              className="flex items-center gap-1.5 text-[12px] text-[#999990] hover:text-[#111110] dark:hover:text-white transition-colors px-2.5 py-1.5 rounded-lg hover:bg-[#F0F0F0] dark:hover:bg-[#1A1A1A]"
+              title="New chat"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              New chat
+            </button>
+          )}
         </div>
-      )}
+      </div>
+
+      {/* History sidebar panel */}
+      <AnimatePresence>
+        {showHistory && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            className="shrink-0 border-b border-[#E5E5E0] dark:border-[#22221F] overflow-hidden bg-[#FAFAF9] dark:bg-[#0D0D0C]"
+          >
+            <div className="px-6 py-3">
+              <div className="max-w-3xl mx-auto">
+                {sessions.length === 0 ? (
+                  <p className="text-[13px] text-[#999990] py-2">No past conversations yet. Start asking questions!</p>
+                ) : (
+                  <div className="flex flex-col gap-1 max-h-48 overflow-y-auto no-scrollbar">
+                    {sessions.map((session: any) => {
+                      const isActive = session.id === currentSessionId;
+                      const msgCount = (session.messages || []).length;
+                      return (
+                        <div
+                          key={session.id}
+                          className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all ${
+                            isActive
+                              ? "bg-[#111110] dark:bg-white text-white dark:text-black"
+                              : "hover:bg-[#F0F0F0] dark:hover:bg-[#1A1A1A]"
+                          }`}
+                          onClick={() => loadSession(session)}
+                        >
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${isActive ? "bg-white/20" : "bg-[#E8E8E4] dark:bg-[#1A1A1A]"}`}>
+                            <MessageSquare className={`w-3.5 h-3.5 ${isActive ? "text-white dark:text-black" : "text-[#666660]"}`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-[13px] font-medium truncate ${isActive ? "text-white dark:text-black" : "text-[#111110] dark:text-white"}`}>
+                              {session.title}
+                            </p>
+                            <p className={`text-[11px] ${isActive ? "text-white/60 dark:text-black/60" : "text-[#999990]"}`}>
+                              {msgCount} message{msgCount !== 1 ? "s" : ""} · {timeAgo(session.updatedAt)}
+                            </p>
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteSessionMutation.mutate(session.id);
+                              if (session.id === currentSessionId) clearChat();
+                            }}
+                            className={`opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 ${isActive ? "text-white/70 hover:text-red-300" : "text-[#999990] hover:text-red-500"}`}
+                            title="Delete conversation"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Scrollable chat area */}
       <div ref={chatContainerRef} className="flex-1 overflow-y-auto no-scrollbar pt-4 pb-6">
