@@ -382,11 +382,13 @@ export default function QuizContent() {
     setShowFeedback(true);
 
     if (currentIndex + 1 === totalQuestions) {
+      const finalCorrectCount = Object.values(newAnswers).filter(a => a.correct).length;
+      const finalScore = Math.round((finalCorrectCount / totalQuestions) * 100);
       saveAttemptMutation.mutate({
         topic: quiz?.topic || "Quiz",
-        score: newScore,
+        score: finalScore,
         totalQuestions,
-        correctCount: Object.values(newAnswers).filter(a => a.correct).length,
+        correctCount: finalCorrectCount,
         difficulty: level,
         quizType,
       });
@@ -401,6 +403,7 @@ export default function QuizContent() {
   /* ── Finished screen ─────────────────────────────────────── */
   if (finished) {
     const correctCount = Object.values(answers).filter(a => a.correct).length;
+    const displayScore = Math.round((correctCount / totalQuestions) * 100);
     return (
       <div className="max-w-2xl mx-auto py-12 px-6 text-center">
         <div className="w-20 h-20 rounded-full bg-black flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-black/10">
@@ -411,7 +414,7 @@ export default function QuizContent() {
         <div className="grid grid-cols-3 gap-4 mb-10">
           <div className="p-6 rounded-3xl bg-[#F9F9F8] border border-[#E5E5E0]">
             <p className="text-[11px] font-bold uppercase tracking-wider text-[#999990] mb-1">Score</p>
-            <p className={`text-4xl font-black ${scoreColor(smartScore)}`}>{smartScore}%</p>
+            <p className={`text-4xl font-black ${scoreColor(displayScore)}`}>{displayScore}%</p>
           </div>
           <div className="p-6 rounded-3xl bg-[#F9F9F8] border border-[#E5E5E0]">
             <p className="text-[11px] font-bold uppercase tracking-wider text-[#999990] mb-1">Correct</p>
@@ -452,7 +455,7 @@ export default function QuizContent() {
             <p className="text-sm text-[#666660]">Question {currentIndex + 1} of {totalQuestions}</p>
           </div>
           <div className="text-right">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-[#999990]">Score</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[#999990]">Streak Score</p>
             <p className={`text-2xl font-black ${scoreColor(smartScore)}`}>{smartScore}</p>
           </div>
         </div>
