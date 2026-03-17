@@ -1807,6 +1807,7 @@ Rules: 3-6 subtopics, 5 possible questions as examples of what can be tested, qu
       // Fetch the YouTube watch page
       let title = "";
       let description = "";
+      let html = "";
       const pageResp = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
         headers: {
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
@@ -1816,7 +1817,7 @@ Rules: 3-6 subtopics, 5 possible questions as examples of what can be tested, qu
         },
       });
       if (pageResp.ok) {
-        const html = await pageResp.text();
+        html = await pageResp.text();
         const titleMatch = html.match(/<title>([^<]+)<\/title>/);
         title = decodeHtmlEntities(titleMatch?.[1]?.replace(/ - YouTube$/, "").trim() || "");
         const descMatch = html.match(/"shortDescription":"((?:[^"\\]|\\.)*)"/);
