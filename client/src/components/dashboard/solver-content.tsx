@@ -1034,67 +1034,112 @@ export default function SolverContent() {
             </div>
           ) : (
             /* ── Chat messages ── */
-            <div className="space-y-8 py-4">
+            <div className="space-y-6 py-4">
               {chatHistory.map((msg, idx) => {
                 const isLastAssistant = msg.role === "assistant" && idx === chatHistory.length - 1;
                 const showCursor = isLastAssistant && (isStreaming || isUploadingSolving) && msg.content.length > 0;
+                const isAssistant = msg.role === "assistant";
                 return (
                   <motion.div
                     key={idx}
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                    className={`flex gap-5 group ${msg.role === "user" ? "justify-end" : ""}`}
+                    className={`flex gap-4 group ${isAssistant ? "items-start" : "justify-end items-end"}`}
                   >
-                    {msg.role === "assistant" && (
-                      <div className={`w-8 h-8 rounded-lg bg-[#111110] dark:bg-white flex items-center justify-center flex-shrink-0 mt-1 ${showCursor ? "animate-pulse" : ""}`}>
+                    {isAssistant && (
+                      <div className={`w-8 h-8 rounded-lg bg-[#111110] dark:bg-white flex items-center justify-center flex-shrink-0 mt-0.5 ${showCursor ? "animate-pulse" : ""}`}>
                         <Sparkles className="w-4 h-4 text-white dark:text-black" />
                       </div>
                     )}
-                    <div className={`max-w-[85%] relative ${msg.role === "user" ? "bg-[#F0F0F0] dark:bg-[#1A1A1A] px-4 py-3 rounded-2xl text-[#111110] dark:text-white" : "text-[#111110] dark:text-[#E5E5E0]"}`}>
-                      {/* Image previews — supports both single (legacy) and multiple */}
-                      {(msg.imagePreviews && msg.imagePreviews.length > 0) && (
-                        <div className={`flex flex-wrap gap-2 mb-2 ${msg.imagePreviews.length === 1 ? "" : "max-w-[320px]"}`}>
-                          {msg.imagePreviews.map((src, pi) => (
-                            <img
-                              key={pi}
-                              src={src}
-                              alt={`Image ${pi + 1}`}
-                              className={`rounded-xl border border-[#E5E5E0] object-cover ${
-                                msg.imagePreviews!.length === 1 ? "max-w-[240px] max-h-[200px]" :
-                                msg.imagePreviews!.length <= 4 ? "w-[140px] h-[110px]" : "w-[100px] h-[80px]"
-                              }`}
-                            />
-                          ))}
-                        </div>
-                      )}
-                      {msg.imagePreview && !msg.imagePreviews && (
-                        <img src={msg.imagePreview} alt="attachment" className="max-w-[240px] rounded-xl mb-2 border border-[#E5E5E0]" />
-                      )}
-                      <div className="text-[15px] leading-[1.6]">
-                        {msg.role === "assistant" ? (
-                          <>
+
+                    {isAssistant ? (
+                      /* ── Assistant bubble — full-width card ── */
+                      <div className="flex-1 min-w-0 relative group/msg">
+                        {/* Image previews */}
+                        {(msg.imagePreviews && msg.imagePreviews.length > 0) && (
+                          <div className={`flex flex-wrap gap-2 mb-3 ${msg.imagePreviews.length === 1 ? "" : "max-w-[320px]"}`}>
+                            {msg.imagePreviews.map((src, pi) => (
+                              <img
+                                key={pi}
+                                src={src}
+                                alt={`Image ${pi + 1}`}
+                                className={`rounded-xl border border-[#E5E5E0] dark:border-[#2A2A28] object-cover ${
+                                  msg.imagePreviews!.length === 1 ? "max-w-[240px] max-h-[200px]" :
+                                  msg.imagePreviews!.length <= 4 ? "w-[140px] h-[110px]" : "w-[100px] h-[80px]"
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        )}
+                        {msg.imagePreview && !msg.imagePreviews && (
+                          <img src={msg.imagePreview} alt="attachment" className="max-w-[240px] rounded-xl mb-3 border border-[#E5E5E0] dark:border-[#2A2A28]" />
+                        )}
+                        {/* Content card */}
+                        <div className="bg-white dark:bg-[#111110] border border-[#E8E8E4] dark:border-[#222220] rounded-2xl px-5 py-4 shadow-sm">
+                          <div className="text-[15px] text-[#111110] dark:text-[#E5E5E0]">
                             {renderMathText(msg.content)}
                             {showCursor && <StreamingCursor />}
-                          </>
-                        ) : msg.content}
+                          </div>
+                        </div>
+                        {/* Copy button below card */}
+                        {msg.content && (
+                          <button
+                            onClick={() => copyMessage(msg.content, idx)}
+                            className="mt-1.5 opacity-0 group-hover/msg:opacity-100 transition-opacity flex items-center gap-1 text-[11px] text-[#999990] hover:text-[#444440] dark:hover:text-[#BBBBBB] py-0.5 px-2 rounded"
+                            title="Copy message"
+                          >
+                            {copiedIdx === idx
+                              ? <><Check className="w-3 h-3 text-emerald-500" /><span className="text-emerald-500">Copied</span></>
+                              : <><Copy className="w-3 h-3" />Copy</>
+                            }
+                          </button>
+                        )}
                       </div>
-                      {/* Copy button */}
-                      {msg.content && (
-                        <button
-                          onClick={() => copyMessage(msg.content, idx)}
-                          className={`absolute -bottom-6 ${msg.role === "user" ? "right-0" : "left-0"} opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-[11px] text-[#999990] hover:text-[#444440] dark:hover:text-[#BBBBBB] py-0.5 px-2 rounded`}
-                          title="Copy message"
-                        >
-                          {copiedIdx === idx
-                            ? <><Check className="w-3 h-3 text-emerald-500" /><span className="text-emerald-500">Copied</span></>
-                            : <><Copy className="w-3 h-3" />Copy</>
-                          }
-                        </button>
-                      )}
-                    </div>
-                    {msg.role === "user" && (
-                      <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-950 flex items-center justify-center flex-shrink-0 mt-1 border border-violet-200 dark:border-violet-900">
+                    ) : (
+                      /* ── User bubble ── */
+                      <div className="max-w-[80%] relative group/msg">
+                        {/* Image previews */}
+                        {(msg.imagePreviews && msg.imagePreviews.length > 0) && (
+                          <div className={`flex flex-wrap gap-2 mb-2 justify-end ${msg.imagePreviews.length === 1 ? "" : "max-w-[320px]"}`}>
+                            {msg.imagePreviews.map((src, pi) => (
+                              <img
+                                key={pi}
+                                src={src}
+                                alt={`Image ${pi + 1}`}
+                                className={`rounded-xl border border-[#E5E5E0] dark:border-[#2A2A28] object-cover ${
+                                  msg.imagePreviews!.length === 1 ? "max-w-[240px] max-h-[200px]" :
+                                  msg.imagePreviews!.length <= 4 ? "w-[140px] h-[110px]" : "w-[100px] h-[80px]"
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        )}
+                        {msg.imagePreview && !msg.imagePreviews && (
+                          <img src={msg.imagePreview} alt="attachment" className="max-w-[240px] rounded-xl mb-2 border border-[#E5E5E0] dark:border-[#2A2A28]" />
+                        )}
+                        <div className="bg-[#F0F0EE] dark:bg-[#1E1E1C] px-4 py-3 rounded-2xl text-[15px] text-[#111110] dark:text-[#E5E5E0] leading-[1.65]">
+                          {msg.content}
+                        </div>
+                        {msg.content && (
+                          <div className="flex justify-end mt-1.5">
+                            <button
+                              onClick={() => copyMessage(msg.content, idx)}
+                              className="opacity-0 group-hover/msg:opacity-100 transition-opacity flex items-center gap-1 text-[11px] text-[#999990] hover:text-[#444440] dark:hover:text-[#BBBBBB] py-0.5 px-2 rounded"
+                              title="Copy message"
+                            >
+                              {copiedIdx === idx
+                                ? <><Check className="w-3 h-3 text-emerald-500" /><span className="text-emerald-500">Copied</span></>
+                                : <><Copy className="w-3 h-3" />Copy</>
+                              }
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {!isAssistant && (
+                      <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-950 flex items-center justify-center flex-shrink-0 mb-0.5 border border-violet-200 dark:border-violet-900">
                         <User className="w-4 h-4 text-violet-600 dark:text-violet-400" />
                       </div>
                     )}
