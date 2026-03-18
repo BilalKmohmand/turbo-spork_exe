@@ -3145,6 +3145,7 @@ Do NOT use markdown formatting - use plain text with clear structure.`,
     try {
       const rubric = await storage.getRubric(req.params.id);
       if (!rubric) return res.status(404).json({ error: "Rubric not found" });
+      if (rubric.teacherId !== req.session.userId) return res.status(403).json({ error: "Forbidden" });
       const criteria = await storage.getCriteriaByRubric(rubric.id);
       res.json({ ...rubric, criteria });
     } catch (error) {
@@ -3155,6 +3156,9 @@ Do NOT use markdown formatting - use plain text with clear structure.`,
   // Delete rubric
   app.delete("/api/rubrics/:id", requireAuth, requireTeacher, async (req, res) => {
     try {
+      const rubric = await storage.getRubric(req.params.id);
+      if (!rubric) return res.status(404).json({ error: "Rubric not found" });
+      if (rubric.teacherId !== req.session.userId) return res.status(403).json({ error: "Forbidden" });
       await storage.deleteRubric(req.params.id);
       res.json({ success: true });
     } catch (error) {
@@ -3170,6 +3174,11 @@ Do NOT use markdown formatting - use plain text with clear structure.`,
         return res.status(400).json({ error: parsed.error.errors[0]?.message || "Invalid data" });
       }
 
+      // Verify rubric belongs to this teacher
+      const rubric = await storage.getRubric(parsed.data.rubricId);
+      if (!rubric) return res.status(404).json({ error: "Rubric not found" });
+      if (rubric.teacherId !== req.session.userId) return res.status(403).json({ error: "Forbidden" });
+
       const sub = await storage.createRubricSubmission({
         ...parsed.data,
         teacherId: req.session.userId!,
@@ -3183,6 +3192,9 @@ Do NOT use markdown formatting - use plain text with clear structure.`,
   // Get submissions for a rubric
   app.get("/api/rubric-submissions/:rubricId", requireAuth, requireTeacher, async (req, res) => {
     try {
+      const rubric = await storage.getRubric(req.params.rubricId);
+      if (!rubric) return res.status(404).json({ error: "Rubric not found" });
+      if (rubric.teacherId !== req.session.userId) return res.status(403).json({ error: "Forbidden" });
       const subs = await storage.getRubricSubmissionsByRubric(req.params.rubricId);
       res.json(subs);
     } catch (error) {
@@ -3198,6 +3210,7 @@ Do NOT use markdown formatting - use plain text with clear structure.`,
 
       const rubric = await storage.getRubric(submission.rubricId);
       if (!rubric) return res.status(404).json({ error: "Rubric not found" });
+      if (rubric.teacherId !== req.session.userId) return res.status(403).json({ error: "Forbidden" });
 
       const criteria = await storage.getCriteriaByRubric(rubric.id);
       if (criteria.length === 0) return res.status(400).json({ error: "Rubric has no criteria" });
@@ -3303,6 +3316,7 @@ RULES:
               if (!submission) { resolve({ submissionId: subId, error: "Not found" }); return; }
               const rubric = await storage.getRubric(submission.rubricId);
               if (!rubric) { resolve({ submissionId: subId, error: "Rubric not found" }); return; }
+              if (rubric.teacherId !== req.session.userId) { resolve({ submissionId: subId, error: "Forbidden" }); return; }
               const criteria = await storage.getCriteriaByRubric(rubric.id);
 
               const criteriaPrompt = criteria.map((c, i) => 
@@ -3368,6 +3382,9 @@ RULES: Each score MUST be 0 to maxPoints. Evaluate strictly. Output ONLY JSON.`
   // Get evaluation history for a rubric (spreadsheet data)
   app.get("/api/rubric-evaluations/:rubricId", requireAuth, requireTeacher, async (req, res) => {
     try {
+      const rubric = await storage.getRubric(req.params.rubricId);
+      if (!rubric) return res.status(404).json({ error: "Rubric not found" });
+      if (rubric.teacherId !== req.session.userId) return res.status(403).json({ error: "Forbidden" });
       const evals = await storage.getRubricEvaluationsByRubric(req.params.rubricId);
       const subs = await storage.getRubricSubmissionsByRubric(req.params.rubricId);
       const criteria = await storage.getCriteriaByRubric(req.params.rubricId);
