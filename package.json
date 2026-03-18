@@ -88,7 +88,6 @@
     "react-resizable-panels": "^2.1.7",
     "recharts": "^2.15.4",
     "rehype-katex": "^7.0.1",
-    "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
     "rollup": "^4.59.0",

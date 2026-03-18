@@ -1049,9 +1049,17 @@ Be thorough and educational — explain your reasoning.`;
       let systemContent: string;
       let cleanedProblem = problem;
 
+      const FORMATTING_SUFFIX = `
+
+When responding to math or science problems, structure your answer like this:
+1. One brief introductory sentence stating the approach.
+2. Numbered steps using ## headings (e.g. ## Step 1: Set Up the Equation).
+3. Use LaTeX for all mathematical expressions — inline: $x^2$, display: $$\\frac{a}{b}=c$$.
+4. End with a ## Answer section stating the final result clearly.`;
+
       if (tutorModeMatch) {
-        // Use the embedded instruction from the frontend
-        systemContent = tutorModeMatch[1].trim();
+        // Use the embedded instruction from the frontend, appended with formatting guidance
+        systemContent = tutorModeMatch[1].trim() + FORMATTING_SUFFIX;
         // Remove the tutor mode prefix from the problem
         cleanedProblem = problem.replace(/\[TUTOR MODE: [\s\S]*?\]\n\nStudent question: /, "").trim();
       } else {

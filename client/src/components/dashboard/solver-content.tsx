@@ -1039,9 +1039,17 @@ export default function SolverContent() {
                 const isLastAssistant = msg.role === "assistant" && idx === chatHistory.length - 1;
                 const showCursor = isLastAssistant && (isStreaming || isUploadingSolving) && msg.content.length > 0;
                 const isAssistant = msg.role === "assistant";
+                const showSeparator = idx > 0 && isAssistant && chatHistory[idx - 1]?.role === "user";
                 return (
+                  <div key={idx}>
+                    {showSeparator && (
+                      <div className="flex items-center gap-3 my-2 px-1">
+                        <div className="flex-1 h-px bg-[#E8E8E4] dark:bg-[#222220]" />
+                        <span className="text-[10px] text-[#CCCCCC] dark:text-[#333330] tracking-widest uppercase font-medium select-none">Answer</span>
+                        <div className="flex-1 h-px bg-[#E8E8E4] dark:bg-[#222220]" />
+                      </div>
+                    )}
                   <motion.div
-                    key={idx}
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
@@ -1144,6 +1152,7 @@ export default function SolverContent() {
                       </div>
                     )}
                   </motion.div>
+                  </div>
                 );
               })}
               {/* Thinking dots — only before first tokens arrive */}
