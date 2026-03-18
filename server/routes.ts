@@ -3390,9 +3390,17 @@ RULES: Each score MUST be 0 to maxPoints. Evaluate strictly. Output ONLY JSON.`
     }
   });
 
-  app.post("/api/quick-evaluate", requireAuth, async (req, res) => {
+  app.post("/api/quick-evaluate", requireAuth, requireTeacher, async (req, res) => {
     try {
       const { criteria, studentName, content, classId } = req.body;
+
+      // If classId provided, verify ownership
+      if (classId) {
+        const cls = await storage.getClass(classId);
+        if (!cls || cls.teacherId !== req.session.userId) {
+          return res.status(403).json({ error: "Forbidden: class not found or not yours" });
+        }
+      }
 
       if (!criteria || !Array.isArray(criteria) || criteria.length === 0) {
         return res.status(400).json({ error: "Please add at least one criterion" });
@@ -3565,9 +3573,17 @@ ${additionalInstructions ? `Additional Requirements: ${additionalInstructions}` 
   });
 
   /* ── Report Card Generator ─────────────────────────────────────── */
-  app.post("/api/generate-report-card", requireAuth, async (req, res) => {
+  app.post("/api/generate-report-card", requireAuth, requireTeacher, async (req, res) => {
     try {
       const { studentName, subject, grade, tone = "encouraging", notes = "", classId } = req.body;
+
+      // If classId provided, verify ownership
+      if (classId) {
+        const cls = await storage.getClass(classId);
+        if (!cls || cls.teacherId !== req.session.userId) {
+          return res.status(403).json({ error: "Forbidden: class not found or not yours" });
+        }
+      }
       if (!studentName || !subject || !grade) {
         return res.status(400).json({ error: "Student name, subject, and grade are required" });
       }

@@ -392,6 +392,7 @@ export default function ClassGraderContent() {
               <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Student
             </Button>
           </div>
+        </div>
 
         {students.map((s, i) => (
           <Card key={s.id} className="border-[#E5E5E0] dark:border-[#22221F] rounded-[20px]">
