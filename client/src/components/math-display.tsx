@@ -2,6 +2,7 @@ import "katex/dist/katex.min.css";
 import katex from "katex";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
+import remarkGfm from "remark-gfm";
 import rehypeKatex from "rehype-katex";
 import type { StepObject } from "@shared/schema";
 import type { Components } from "react-markdown";
@@ -117,7 +118,7 @@ export function renderMathText(text: string): JSX.Element {
   return (
     <ReactMarkdown
       className="math-content leading-relaxed"
-      remarkPlugins={[remarkMath]}
+      remarkPlugins={[remarkGfm, remarkMath]}
       rehypePlugins={[rehypeKatex]}
       components={mdComponents}
     >
@@ -131,7 +132,7 @@ function renderInlineText(text: string): JSX.Element {
   return (
     <ReactMarkdown
       className="inline"
-      remarkPlugins={[remarkMath]}
+      remarkPlugins={[remarkGfm, remarkMath]}
       rehypePlugins={[rehypeKatex]}
       components={{
         p: ({ children }) => <span>{children}</span>,
