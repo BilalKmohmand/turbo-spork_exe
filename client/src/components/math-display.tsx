@@ -3,7 +3,6 @@ import katex from "katex";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
-import rehypeRaw from "rehype-raw";
 import type { StepObject } from "@shared/schema";
 import type { Components } from "react-markdown";
 
@@ -119,8 +118,29 @@ export function renderMathText(text: string): JSX.Element {
     <ReactMarkdown
       className="math-content leading-relaxed"
       remarkPlugins={[remarkMath]}
-      rehypePlugins={[rehypeKatex, rehypeRaw]}
+      rehypePlugins={[rehypeKatex]}
       components={mdComponents}
+    >
+      {text}
+    </ReactMarkdown>
+  );
+}
+
+function renderInlineText(text: string): JSX.Element {
+  if (!text) return <span />;
+  return (
+    <ReactMarkdown
+      className="inline"
+      remarkPlugins={[remarkMath]}
+      rehypePlugins={[rehypeKatex]}
+      components={{
+        p: ({ children }) => <span>{children}</span>,
+        strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+        em: ({ children }) => <em className="italic">{children}</em>,
+        code: ({ children }) => (
+          <code className="inline-block px-1 py-0.5 bg-muted/70 rounded text-[0.85em] font-mono">{children}</code>
+        ),
+      }}
     >
       {text}
     </ReactMarkdown>
@@ -134,7 +154,7 @@ export function SolutionStep({ step, index }: { step: StepObject; index: number 
         <div className="flex-shrink-0 w-6 h-6 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-violet-600 font-medium text-sm">
           {index + 1}
         </div>
-        <h4 className="font-semibold text-foreground pt-0.5">{renderMathText(step.title)}</h4>
+        <span className="font-semibold text-foreground pt-0.5 leading-snug">{renderInlineText(step.title)}</span>
       </div>
       {step.math && (
         <div className="ml-9 py-3 text-center overflow-x-auto">
