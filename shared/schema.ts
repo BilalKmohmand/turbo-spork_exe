@@ -401,6 +401,53 @@ export const insertTutorSessionSchema = createInsertSchema(tutorSessions).omit({
 export type TutorSession = typeof tutorSessions.$inferSelect;
 export type InsertTutorSession = z.infer<typeof insertTutorSessionSchema>;
 
+// ── Teacher Profile ─────────────────────────────────────────────
+export const teacherProfiles = pgTable("teacher_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull().unique(),
+  school: text("school"),
+  subjects: text("subjects").array().notNull().default(sql`'{}'::text[]`),
+  gradeLevel: text("grade_level"),
+  bio: text("bio"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertTeacherProfileSchema = createInsertSchema(teacherProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type TeacherProfile = typeof teacherProfiles.$inferSelect;
+export type InsertTeacherProfile = z.infer<typeof insertTeacherProfileSchema>;
+
+// ── Classes ─────────────────────────────────────────────────────
+export const classes = pgTable("classes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  teacherId: varchar("teacher_id").references(() => users.id).notNull(),
+  name: text("name").notNull(),
+  subject: text("subject").notNull().default("General"),
+  gradeLevel: text("grade_level"),
+  classCode: varchar("class_code", { length: 8 }).notNull().unique(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertClassSchema = createInsertSchema(classes).omit({ id: true, createdAt: true });
+export type Class = typeof classes.$inferSelect;
+export type InsertClass = z.infer<typeof insertClassSchema>;
+
+// ── Class Memberships ────────────────────────────────────────────
+export const classMemberships = pgTable("class_memberships", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  classId: varchar("class_id").references(() => classes.id).notNull(),
+  studentId: varchar("student_id").references(() => users.id).notNull(),
+  joinedAt: timestamp("joined_at").defaultNow(),
+});
+
+export const insertClassMembershipSchema = createInsertSchema(classMemberships).omit({ id: true, joinedAt: true });
+export type ClassMembership = typeof classMemberships.$inferSelect;
+export type InsertClassMembership = z.infer<typeof insertClassMembershipSchema>;
+
 // Schema for uploading knowledge content
 export const uploadKnowledgeSchema = z.object({
   content: z.string().min(1, "Content is required"),

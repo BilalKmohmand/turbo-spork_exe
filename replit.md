@@ -22,6 +22,10 @@ Preferred communication style: Simple, everyday language.
 - **Error Handling**: Global error handler (no re-throw), API 404 handler, uncaughtException/unhandledRejection handlers
 - **AI Tutor**: All-subject tutoring (Math, Science, English, History, etc.) — students can ask homework questions and get expert explanations. Subject-aware system prompts guide responses based on the subject. Voice input supported with continuous SpeechRecognition, auto-restart on silence, proper tracking, cleanup on unmount.
 - **Lecture Notes Mic**: Audio level analyser for waveform visualisation, auto-restart recognition on silence, download notes as .txt
+- **Persistent Chat History**: Tutor sessions saved per-user with collapsible history sidebar, auto-save, session switching, "New chat" button, and per-session delete.
+- **Teacher Accounts**: Role-based teacher dashboard. Teacher onboarding modal on first login collects school, grade level, and subjects. Teacher sidebar shows Teacher badge and school name. Teacher home overview shows quick-access tools and class cards.
+- **Class Management (Teacher)**: Teachers create classes with auto-generated 6-char class codes. My Classes page shows all classes with student counts, copy-code button, and roster viewer (with join date). Classes can be deleted.
+- **Student Class Join**: Students join classes via Settings → My Classes by entering a class code. Joined classes shown in Settings. Duplicate join prevented server-side.
 
 ### To Add Stripe Payments Later
 1. Use the Replit integrations to set up Stripe connector

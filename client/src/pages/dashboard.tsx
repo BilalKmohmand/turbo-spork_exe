@@ -1,31 +1,44 @@
 import { useState, useRef, useEffect } from "react";
 import logoPath from "@assets/generated_images/thehighgrader_logo.png";
 import { useAuth } from "@/hooks/use-auth";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
 import {
   MessageSquare, Mic, FileText, FileEdit, Brain,
   LogOut, LayoutDashboard, Sparkles, Settings,
   HelpCircle, Crown, ClipboardCheck, GraduationCap,
   Menu, PanelLeftClose, PanelLeftOpen, Globe,
-  BookMarked, Users, BookOpen, FileSignature,
+  BookMarked, Users, BookOpen, FileSignature, School,
+  Loader2, Plus,
 } from "lucide-react";
 
-import SolverContent    from "@/components/dashboard/solver-content";
-import NotesContent     from "@/components/dashboard/notes-content";
-import QuizContent      from "@/components/dashboard/quiz-content";
-import EssayContent     from "@/components/dashboard/essay-content";
-import OverviewContent  from "@/components/dashboard/overview-content";
-import HelpContent      from "@/components/dashboard/help-content";
-import SettingsContent  from "@/components/dashboard/settings-content";
-import EvaluateContent      from "@/components/dashboard/evaluate-content";
-import CoursesContent       from "@/components/dashboard/courses-content";
-import ResearchContent      from "@/components/dashboard/research-content";
-import AssignmentsContent   from "@/components/dashboard/assignments-content";
-import ClassGraderContent   from "@/components/dashboard/class-grader-content";
-import GradebookContent     from "@/components/dashboard/gradebook-content";
-import ReportCardContent    from "@/components/dashboard/report-card-content";
+import SolverContent          from "@/components/dashboard/solver-content";
+import NotesContent           from "@/components/dashboard/notes-content";
+import QuizContent            from "@/components/dashboard/quiz-content";
+import EssayContent           from "@/components/dashboard/essay-content";
+import OverviewContent        from "@/components/dashboard/overview-content";
+import HelpContent            from "@/components/dashboard/help-content";
+import SettingsContent        from "@/components/dashboard/settings-content";
+import EvaluateContent        from "@/components/dashboard/evaluate-content";
+import CoursesContent         from "@/components/dashboard/courses-content";
+import ResearchContent        from "@/components/dashboard/research-content";
+import AssignmentsContent     from "@/components/dashboard/assignments-content";
+import ClassGraderContent     from "@/components/dashboard/class-grader-content";
+import GradebookContent       from "@/components/dashboard/gradebook-content";
+import ReportCardContent      from "@/components/dashboard/report-card-content";
+import TeacherClassesContent  from "@/components/dashboard/teacher-classes-content";
+import TeacherHomeContent     from "@/components/dashboard/teacher-home-content";
 
 /* ─── Nav config ─────────────────────────────────────────────── */
 const NAV = [
@@ -51,6 +64,7 @@ const TEACHER_NAV = {
     { id: "classgrader", label: "Class Grader",    icon: Users, badge: "New" },
     { id: "gradebook",   label: "Grade Book",      icon: BookOpen },
     { id: "reportcard",  label: "Report Cards",    icon: FileSignature, badge: "New" },
+    { id: "myclasses",   label: "My Classes",       icon: School },
   ],
 };
 
@@ -62,8 +76,122 @@ const SUPPORT_NAV = {
   ],
 };
 
+const SUBJECTS = ["Mathematics","English / Literature","Science","History","Geography",
+  "Physics","Chemistry","Biology","Computer Science","Art","Music","Economics","Psychology","Other"];
+const GRADE_LEVELS = ["K - Grade 2","Grade 3 - 5","Grade 6 - 8","Grade 9 - 10","Grade 11 - 12","College / University"];
+
 function initials(name: string) {
   return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+}
+
+/* ─── Teacher Onboarding Modal ───────────────────────────────── */
+function TeacherOnboardingModal({
+  open,
+  onClose,
+}: { open: boolean; onClose: () => void }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [school, setSchool]     = useState("");
+  const [subjects, setSubjects] = useState<string[]>([]);
+  const [grade, setGrade]       = useState("");
+  const [bio, setBio]           = useState("");
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/teacher/profile", { school, subjects, gradeLevel: grade, bio });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/teacher/profile"] });
+      toast({ title: "Profile saved! Welcome to TheHighGrader™" });
+      onClose();
+    },
+    onError: () => toast({ title: "Failed to save profile", variant: "destructive" }),
+  });
+
+  const toggleSubject = (s: string) => {
+    setSubjects(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={open => !open && onClose()}>
+      <DialogContent className="max-w-lg rounded-2xl border border-[#E5E5E0] dark:border-[#22221F]">
+        <DialogHeader>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-xl bg-black dark:bg-white flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-white dark:text-black" />
+            </div>
+            <div>
+              <DialogTitle className="text-lg font-bold">Welcome to TheHighGrader™</DialogTitle>
+              <DialogDescription>Set up your teacher profile to get started</DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+        <div className="space-y-5 pt-1">
+          <div className="space-y-1.5">
+            <Label>School Name <span className="text-[#999990] text-xs">(optional)</span></Label>
+            <Input
+              data-testid="input-school"
+              placeholder="e.g. Lincoln High School"
+              value={school}
+              onChange={e => setSchool(e.target.value)}
+              className="rounded-xl border-[#E5E5E0] dark:border-[#22221F]"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Grade Level <span className="text-[#999990] text-xs">(optional)</span></Label>
+            <Select value={grade} onValueChange={setGrade}>
+              <SelectTrigger className="rounded-xl border-[#E5E5E0] dark:border-[#22221F]" data-testid="select-grade-level">
+                <SelectValue placeholder="Select grade level…" />
+              </SelectTrigger>
+              <SelectContent>
+                {GRADE_LEVELS.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Subjects <span className="text-[#999990] text-xs">(select all that apply)</span></Label>
+            <div className="flex flex-wrap gap-2">
+              {SUBJECTS.map(s => (
+                <button
+                  key={s}
+                  onClick={() => toggleSubject(s)}
+                  data-testid={`subject-tag-${s.replace(/\s+/g, "-").toLowerCase()}`}
+                  className={`text-[12px] font-medium px-3 py-1.5 rounded-full border transition-all ${
+                    subjects.includes(s)
+                      ? "bg-black dark:bg-white text-white dark:text-black border-black dark:border-white"
+                      : "border-[#E5E5E0] dark:border-[#22221F] text-[#666660] hover:border-[#999990]"
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="outline"
+              className="flex-1 rounded-xl border-[#E5E5E0] dark:border-[#22221F]"
+              onClick={onClose}
+            >
+              Skip for now
+            </Button>
+            <Button
+              className="flex-1 rounded-xl bg-black dark:bg-white text-white dark:text-black"
+              onClick={() => saveMutation.mutate()}
+              disabled={saveMutation.isPending}
+              data-testid="button-save-teacher-profile"
+            >
+              {saveMutation.isPending
+                ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving…</>
+                : "Save Profile"
+              }
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 /* ─── Sidebar ────────────────────────────────────────────────── */
@@ -75,7 +203,8 @@ function Sidebar({
   open,
   setOpen,
   isCollapsed,
-  setIsCollapsed
+  setIsCollapsed,
+  teacherProfile,
 }: {
   active: string;
   setActive: (s: string) => void;
@@ -85,6 +214,7 @@ function Sidebar({
   setOpen: (v: boolean) => void;
   isCollapsed: boolean;
   setIsCollapsed: (v: boolean) => void;
+  teacherProfile?: { school?: string | null } | null;
 }) {
   const sidebarRef = useRef<HTMLDivElement>(null);
 
@@ -206,8 +336,21 @@ function Sidebar({
             </Avatar>
             {!isCollapsed && (
               <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-semibold text-[#111110] dark:text-[#F9F9F8] truncate leading-tight">{user.displayName}</p>
-                <p className="text-[11px] text-[#999990] truncate">{user.email}</p>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <p className="text-[13px] font-semibold text-[#111110] dark:text-[#F9F9F8] truncate leading-tight">{user.displayName}</p>
+                  {user.role === "teacher" && (
+                    <Badge className="text-[9px] font-bold px-1.5 py-0.5 bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 border-0 leading-none shrink-0">
+                      Teacher
+                    </Badge>
+                  )}
+                </div>
+                {user.role === "teacher" && teacherProfile?.school ? (
+                  <p className="text-[11px] text-[#999990] truncate flex items-center gap-1">
+                    <School className="w-2.5 h-2.5 shrink-0" />{teacherProfile.school}
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-[#999990] truncate">{user.email}</p>
+                )}
               </div>
             )}
             {!isCollapsed && (
@@ -258,9 +401,29 @@ function Header({
 /* ─── Dashboard ──────────────────────────────────────────────── */
 export default function Dashboard() {
   const { user, isLoading, logout } = useAuth(true);
-  const [active, setActive]         = useState("overview");
+  const [active, setActive]           = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const hasCheckedProfile = useRef(false);
+
+  const { data: teacherProfile, isLoading: profileLoading } = useQuery<{ school?: string | null } | null>({
+    queryKey: ["/api/teacher/profile"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/teacher/profile");
+      return res.json();
+    },
+    enabled: !isLoading && user?.role === "teacher",
+  });
+
+  useEffect(() => {
+    if (!profileLoading && user?.role === "teacher" && !hasCheckedProfile.current) {
+      hasCheckedProfile.current = true;
+      if (!teacherProfile) {
+        setShowOnboarding(true);
+      }
+    }
+  }, [profileLoading, teacherProfile, user]);
 
   if (isLoading) {
     return (
@@ -294,33 +457,43 @@ export default function Dashboard() {
         setOpen={setSidebarOpen}
         isCollapsed={isCollapsed}
         setIsCollapsed={setIsCollapsed}
+        teacherProfile={teacherProfile}
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-        <Header 
-          activeLabel={activeLabel} 
-          onMenuClick={() => setSidebarOpen(true)} 
+        <Header
+          activeLabel={activeLabel}
+          onMenuClick={() => setSidebarOpen(true)}
         />
 
         <main className="flex-1 overflow-y-auto bg-[#FFFFFF] dark:bg-[#0A0A0A]">
-          <div className={`max-w-screen-xl mx-auto h-full ${active === 'solver' ? '' : 'p-6 lg:p-8'}`}>
-            {active === "overview"  && <OverviewContent user={user} onNavigate={setActive} />}
-            {active === "courses"   && <CoursesContent />}
-            {active === "solver"    && <SolverContent />}
-            {active === "research"  && <ResearchContent />}
-            {active === "notes"     && <NotesContent />}
-            {active === "quiz"      && <QuizContent />}
-            {active === "essay"     && <EssayContent />}
+          <div className={`max-w-screen-xl mx-auto h-full ${active === "solver" ? "" : "p-6 lg:p-8"}`}>
+            {active === "overview"    && user.role === "teacher"  && <TeacherHomeContent user={user} onNavigate={setActive} />}
+            {active === "overview"    && user.role !== "teacher"  && <OverviewContent user={user} onNavigate={setActive} />}
+            {active === "courses"     && <CoursesContent />}
+            {active === "solver"      && <SolverContent />}
+            {active === "research"    && <ResearchContent />}
+            {active === "notes"       && <NotesContent />}
+            {active === "quiz"        && <QuizContent />}
+            {active === "essay"       && <EssayContent />}
             {active === "evaluate"    && user.role === "teacher" && <EvaluateContent />}
             {active === "assignments" && user.role === "teacher" && <AssignmentsContent />}
             {active === "classgrader" && user.role === "teacher" && <ClassGraderContent />}
             {active === "gradebook"   && user.role === "teacher" && <GradebookContent />}
             {active === "reportcard"  && user.role === "teacher" && <ReportCardContent />}
-            {active === "help"      && <HelpContent />}
-            {active === "settings"  && <SettingsContent user={user} />}
+            {active === "myclasses"   && user.role === "teacher" && <TeacherClassesContent />}
+            {active === "help"        && <HelpContent />}
+            {active === "settings"    && <SettingsContent user={user} />}
           </div>
         </main>
       </div>
+
+      {user.role === "teacher" && (
+        <TeacherOnboardingModal
+          open={showOnboarding}
+          onClose={() => setShowOnboarding(false)}
+        />
+      )}
     </div>
   );
 }

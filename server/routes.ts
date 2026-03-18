@@ -1738,6 +1738,138 @@ RULES:
     }
   });
 
+  /* ── Teacher Profile ────────────────────────────────────────── */
+  app.get("/api/teacher/profile", requireTeacher, async (req, res) => {
+    try {
+      const profile = await storage.getTeacherProfile(req.session.userId!);
+      res.json(profile || null);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch profile" });
+    }
+  });
+
+  app.post("/api/teacher/profile", requireTeacher, async (req, res) => {
+    try {
+      const { school, subjects, gradeLevel, bio } = req.body;
+      const existing = await storage.getTeacherProfile(req.session.userId!);
+      if (existing) {
+        const updated = await storage.updateTeacherProfile(req.session.userId!, { school, subjects, gradeLevel, bio });
+        return res.json(updated);
+      }
+      const profile = await storage.createTeacherProfile({
+        userId: req.session.userId!,
+        school: school || null,
+        subjects: subjects || [],
+        gradeLevel: gradeLevel || null,
+        bio: bio || null,
+      });
+      res.status(201).json(profile);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to save profile" });
+    }
+  });
+
+  /* ── Classes ─────────────────────────────────────────────────── */
+  app.get("/api/teacher/classes", requireTeacher, async (req, res) => {
+    try {
+      const classlist = await storage.getClassesByTeacher(req.session.userId!);
+      // Add student count for each class
+      const withCounts = await Promise.all(classlist.map(async (cls) => {
+        const members = await storage.getMembershipsByClass(cls.id);
+        return { ...cls, studentCount: members.length };
+      }));
+      res.json(withCounts);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch classes" });
+    }
+  });
+
+  app.post("/api/teacher/classes", requireTeacher, async (req, res) => {
+    try {
+      const { name, subject, gradeLevel } = req.body;
+      if (!name?.trim()) return res.status(400).json({ error: "Class name is required" });
+      // Generate unique 6-char uppercase class code
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      let classCode = "";
+      let attempts = 0;
+      do {
+        classCode = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+        const existing = await storage.getClassByCode(classCode);
+        if (!existing) break;
+        attempts++;
+      } while (attempts < 10);
+
+      const cls = await storage.createClass({
+        teacherId: req.session.userId!,
+        name: name.trim(),
+        subject: subject || "General",
+        gradeLevel: gradeLevel || null,
+        classCode,
+      });
+      res.status(201).json({ ...cls, studentCount: 0 });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to create class" });
+    }
+  });
+
+  app.delete("/api/teacher/classes/:id", requireTeacher, async (req, res) => {
+    try {
+      await storage.deleteClass(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to delete class" });
+    }
+  });
+
+  app.get("/api/teacher/classes/:id/students", requireTeacher, async (req, res) => {
+    try {
+      const members = await storage.getMembershipsByClass(req.params.id);
+      // Fetch user details for each member
+      const students = await Promise.all(
+        members.map(async (m) => {
+          const user = await storage.getUser(m.studentId);
+          return {
+            id: m.studentId,
+            displayName: user?.displayName || "Unknown Student",
+            email: user?.email || "",
+            joinedAt: m.joinedAt,
+          };
+        })
+      );
+      res.json(students);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch students" });
+    }
+  });
+
+  /* ── Class Join (student) ───────────────────────────────────── */
+  app.post("/api/classes/join", requireAuth, async (req, res) => {
+    try {
+      const { classCode } = req.body;
+      if (!classCode?.trim()) return res.status(400).json({ error: "Class code is required" });
+      const cls = await storage.getClassByCode(classCode.trim().toUpperCase());
+      if (!cls) return res.status(404).json({ error: "Class not found. Check the code and try again." });
+      // Check if already a member
+      const memberships = await storage.getMembershipsByStudent(req.session.userId!);
+      if (memberships.some(m => m.classId === cls.id)) {
+        return res.status(409).json({ error: "You are already in this class.", class: cls });
+      }
+      await storage.joinClass({ classId: cls.id, studentId: req.session.userId! });
+      res.status(201).json({ success: true, class: cls });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to join class" });
+    }
+  });
+
+  app.get("/api/student/classes", requireAuth, async (req, res) => {
+    try {
+      const studentClasses = await storage.getClassesForStudent(req.session.userId!);
+      res.json(studentClasses);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch classes" });
+    }
+  });
+
   /* ── Tutor Sessions ─────────────────────────────────────────── */
   app.get("/api/tutor-sessions", requireAuth, async (req, res) => {
     try {

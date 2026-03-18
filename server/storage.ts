@@ -25,6 +25,12 @@ import {
   type InsertLessonProgress,
   type TutorSession,
   type InsertTutorSession,
+  type TeacherProfile,
+  type InsertTeacherProfile,
+  type Class,
+  type InsertClass,
+  type ClassMembership,
+  type InsertClassMembership,
   users,
   submissions,
   evaluations,
@@ -37,6 +43,9 @@ import {
   lessonContents,
   lessonProgress,
   tutorSessions,
+  teacherProfiles,
+  classes,
+  classMemberships,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, inArray, gte, lt } from "drizzle-orm";
@@ -104,6 +113,25 @@ export interface IStorage {
   getTutorSessionsByUser(userId: string): Promise<TutorSession[]>;
   updateTutorSession(id: string, data: { messages?: any[]; title?: string; updatedAt?: Date }): Promise<TutorSession | undefined>;
   deleteTutorSession(id: string): Promise<void>;
+
+  // Teacher profile operations
+  getTeacherProfile(userId: string): Promise<TeacherProfile | undefined>;
+  createTeacherProfile(data: InsertTeacherProfile): Promise<TeacherProfile>;
+  updateTeacherProfile(userId: string, data: Partial<Omit<InsertTeacherProfile, 'userId'>>): Promise<TeacherProfile | undefined>;
+
+  // Class operations
+  createClass(data: InsertClass): Promise<Class>;
+  getClass(id: string): Promise<Class | undefined>;
+  getClassByCode(classCode: string): Promise<Class | undefined>;
+  getClassesByTeacher(teacherId: string): Promise<Class[]>;
+  deleteClass(id: string): Promise<void>;
+
+  // Class membership operations
+  joinClass(data: InsertClassMembership): Promise<ClassMembership>;
+  getMembershipsByClass(classId: string): Promise<ClassMembership[]>;
+  getMembershipsByStudent(studentId: string): Promise<ClassMembership[]>;
+  getClassesForStudent(studentId: string): Promise<Class[]>;
+  removeMembership(classId: string, studentId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -513,6 +541,74 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTutorSession(id: string): Promise<void> {
     await db.delete(tutorSessions).where(eq(tutorSessions.id, id));
+  }
+
+  /* ── Teacher Profiles ────────────────────────────────────── */
+  async getTeacherProfile(userId: string): Promise<TeacherProfile | undefined> {
+    const [profile] = await db.select().from(teacherProfiles).where(eq(teacherProfiles.userId, userId));
+    return profile;
+  }
+
+  async createTeacherProfile(data: InsertTeacherProfile): Promise<TeacherProfile> {
+    const [profile] = await db.insert(teacherProfiles).values(data).returning();
+    return profile;
+  }
+
+  async updateTeacherProfile(userId: string, data: Partial<Omit<InsertTeacherProfile, 'userId'>>): Promise<TeacherProfile | undefined> {
+    const updateData: any = { ...data, updatedAt: new Date() };
+    const [profile] = await db.update(teacherProfiles).set(updateData).where(eq(teacherProfiles.userId, userId)).returning();
+    return profile;
+  }
+
+  /* ── Classes ─────────────────────────────────────────────── */
+  async createClass(data: InsertClass): Promise<Class> {
+    const [cls] = await db.insert(classes).values(data).returning();
+    return cls;
+  }
+
+  async getClass(id: string): Promise<Class | undefined> {
+    const [cls] = await db.select().from(classes).where(eq(classes.id, id));
+    return cls;
+  }
+
+  async getClassByCode(classCode: string): Promise<Class | undefined> {
+    const [cls] = await db.select().from(classes).where(eq(classes.classCode, classCode.toUpperCase()));
+    return cls;
+  }
+
+  async getClassesByTeacher(teacherId: string): Promise<Class[]> {
+    return await db.select().from(classes).where(eq(classes.teacherId, teacherId)).orderBy(desc(classes.createdAt));
+  }
+
+  async deleteClass(id: string): Promise<void> {
+    await db.delete(classMemberships).where(eq(classMemberships.classId, id));
+    await db.delete(classes).where(eq(classes.id, id));
+  }
+
+  /* ── Class Memberships ───────────────────────────────────── */
+  async joinClass(data: InsertClassMembership): Promise<ClassMembership> {
+    const [membership] = await db.insert(classMemberships).values(data).returning();
+    return membership;
+  }
+
+  async getMembershipsByClass(classId: string): Promise<ClassMembership[]> {
+    return await db.select().from(classMemberships).where(eq(classMemberships.classId, classId)).orderBy(classMemberships.joinedAt);
+  }
+
+  async getMembershipsByStudent(studentId: string): Promise<ClassMembership[]> {
+    return await db.select().from(classMemberships).where(eq(classMemberships.studentId, studentId));
+  }
+
+  async getClassesForStudent(studentId: string): Promise<Class[]> {
+    const memberships = await this.getMembershipsByStudent(studentId);
+    if (memberships.length === 0) return [];
+    const classIds = memberships.map(m => m.classId);
+    return await db.select().from(classes).where(inArray(classes.id, classIds));
+  }
+
+  async removeMembership(classId: string, studentId: string): Promise<void> {
+    await db.delete(classMemberships)
+      .where(and(eq(classMemberships.classId, classId), eq(classMemberships.studentId, studentId)));
   }
 }
 
