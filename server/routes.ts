@@ -1869,7 +1869,7 @@ RULES:
       if (rubricList.length > 0) {
         // Get all evaluations for all rubrics in this class
         const allEvals: number[] = [];
-        for (const r of rubricList.slice(0, 5)) {
+        for (const r of rubricList) {
           const evals = await storage.getRubricEvaluationsByRubric(r.id);
           for (const ev of evals) {
             const pct = (ev.overallScore / r.totalPoints) * 100;
@@ -3392,7 +3392,7 @@ RULES: Each score MUST be 0 to maxPoints. Evaluate strictly. Output ONLY JSON.`
 
   app.post("/api/quick-evaluate", requireAuth, async (req, res) => {
     try {
-      const { criteria, studentName, content } = req.body;
+      const { criteria, studentName, content, classId } = req.body;
 
       if (!criteria || !Array.isArray(criteria) || criteria.length === 0) {
         return res.status(400).json({ error: "Please add at least one criterion" });
@@ -3468,6 +3468,7 @@ Respond with ONLY valid JSON (no markdown):
         suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
         studentName: studentName || "Student",
         evaluatedAt: new Date().toISOString(),
+        classId: classId || null,
       });
     } catch (error: any) {
       console.error("Quick evaluate error:", error);
@@ -3566,7 +3567,7 @@ ${additionalInstructions ? `Additional Requirements: ${additionalInstructions}` 
   /* ── Report Card Generator ─────────────────────────────────────── */
   app.post("/api/generate-report-card", requireAuth, async (req, res) => {
     try {
-      const { studentName, subject, grade, tone = "encouraging", notes = "" } = req.body;
+      const { studentName, subject, grade, tone = "encouraging", notes = "", classId } = req.body;
       if (!studentName || !subject || !grade) {
         return res.status(400).json({ error: "Student name, subject, and grade are required" });
       }
@@ -3614,7 +3615,7 @@ ${notes ? `Teacher notes: ${notes}` : ""}`
       });
 
       const comment = response.choices[0]?.message?.content?.trim() || "";
-      res.json({ comment, tone, studentName, subject, grade });
+      res.json({ comment, tone, studentName, subject, grade, classId: classId || null });
     } catch (error: any) {
       console.error("Report card error:", error);
       res.status(500).json({ error: "Failed to generate report card comment" });

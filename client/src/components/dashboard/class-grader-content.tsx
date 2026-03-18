@@ -93,9 +93,11 @@ export default function ClassGraderContent() {
   const [step, setStep]           = useState<"setup" | "results">("setup");
 
   const { data: rubrics = [] } = useQuery<Rubric[]>({
-    queryKey: ["/api/rubrics", selectedClassId || undefined],
+    queryKey: ["/api/rubrics", selectedClassId || null],
     queryFn: async () => {
-      const url = selectedClassId ? `/api/rubrics?classId=${selectedClassId}` : "/api/rubrics";
+      const url = selectedClassId && selectedClassId !== "all"
+        ? `/api/rubrics?classId=${selectedClassId}`
+        : "/api/rubrics";
       const res = await apiRequest("GET", url);
       return res.json();
     },
