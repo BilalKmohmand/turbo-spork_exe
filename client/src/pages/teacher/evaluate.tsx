@@ -17,6 +17,13 @@ import { apiRequest } from "@/lib/queryClient";
 import { ArrowLeft, User, Calendar, Send, Loader2, CheckCircle } from "lucide-react";
 import type { Submission } from "@shared/schema";
 
+type SubmissionExtended = Submission & {
+  teacherScore?: number | null;
+  teacherFeedback?: string | null;
+  aiScore?: number | null;
+  reviewedAt?: Date | string | null;
+};
+
 const evaluationFormSchema = z.object({
   teacherScore: z.number().min(0).max(100),
   teacherFeedback: z.string().min(10, "Please provide detailed feedback (at least 10 characters)"),
@@ -30,7 +37,7 @@ export default function EvaluateSubmission() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: submission, isLoading } = useQuery<Submission>({
+  const { data: submission, isLoading } = useQuery<SubmissionExtended>({
     queryKey: ["/api/submissions", id],
   });
 
@@ -98,7 +105,7 @@ export default function EvaluateSubmission() {
       <div className="p-6 text-center">
         <p className="text-muted-foreground">Submission not found</p>
         <Link href="/teacher/queue">
-          <Button variant="link">Back to queue</Button>
+          <Button variant="ghost">Back to queue</Button>
         </Link>
       </div>
     );
@@ -127,7 +134,7 @@ export default function EvaluateSubmission() {
               </span>
               <span className="flex items-center gap-1">
                 <Calendar className="w-3 h-3" />
-                {new Date(submission.submittedAt).toLocaleDateString()}
+                {submission.submittedAt ? new Date(submission.submittedAt).toLocaleDateString() : "N/A"}
               </span>
             </div>
           </div>

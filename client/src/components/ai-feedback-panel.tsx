@@ -3,8 +3,16 @@ import { Progress } from "@/components/ui/progress";
 import { Sparkles, Target, CheckCircle, Lightbulb } from "lucide-react";
 import type { Submission } from "@shared/schema";
 
+type SubmissionWithAI = Submission & {
+  aiScore?: number | null;
+  aiAccuracy?: number | null;
+  aiCompleteness?: number | null;
+  aiCreativity?: number | null;
+  aiFeedback?: string | null;
+};
+
 interface AIFeedbackPanelProps {
-  submission: Submission;
+  submission: SubmissionWithAI;
 }
 
 export function AIFeedbackPanel({ submission }: AIFeedbackPanelProps) {

@@ -15,12 +15,14 @@ import {
 } from "lucide-react";
 import type { Submission, DashboardStats } from "@shared/schema";
 
+type SubmissionExtended = Submission & { aiScore?: number | null };
+
 export default function TeacherDashboard() {
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
     queryKey: ["/api/teacher/stats"],
   });
 
-  const { data: pendingQueue, isLoading: queueLoading } = useQuery<Submission[]>({
+  const { data: pendingQueue, isLoading: queueLoading } = useQuery<SubmissionExtended[]>({
     queryKey: ["/api/teacher/queue"],
   });
 
@@ -51,19 +53,19 @@ export default function TeacherDashboard() {
           <>
             <StatCard
               title="Pending Review"
-              value={stats?.pendingSubmissions || 0}
+              value={stats?.pendingReview || 0}
               icon={ClipboardList}
               description="Awaiting your evaluation"
             />
             <StatCard
               title="Completed Reviews"
-              value={stats?.completedSubmissions || 0}
+              value={stats?.teacherReviewed || 0}
               icon={CheckCircle}
               description="Fully evaluated"
             />
             <StatCard
               title="Total Submissions"
-              value={stats?.totalAssignments || 0}
+              value={stats?.totalSubmissions || 0}
               icon={Users}
               description="All student work"
             />
@@ -122,7 +124,7 @@ export default function TeacherDashboard() {
                   <div className="flex-1 min-w-0">
                     <p className="font-medium">{submission.studentName}</p>
                     <p className="text-sm text-muted-foreground">
-                      Submitted {new Date(submission.submittedAt).toLocaleDateString()}
+                      Submitted {submission.submittedAt ? new Date(submission.submittedAt).toLocaleDateString() : "N/A"}
                     </p>
                   </div>
                   <StatusBadge status={submission.status} />

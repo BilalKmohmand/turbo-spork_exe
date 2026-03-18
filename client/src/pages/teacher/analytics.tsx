@@ -18,7 +18,7 @@ export default function TeacherAnalytics() {
     queryKey: ["/api/teacher/stats"],
   });
 
-  const { data: submissions, isLoading: submissionsLoading } = useQuery<Submission[]>({
+  const { data: submissions, isLoading: submissionsLoading } = useQuery<(Submission & { aiScore?: number })[]>({
     queryKey: ["/api/teacher/all-submissions"],
   });
 
@@ -159,11 +159,11 @@ export default function TeacherAnalytics() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center p-4 bg-muted/30 rounded-lg">
                     <p className="text-sm text-muted-foreground mb-1">Pending</p>
-                    <p className="text-2xl font-bold">{stats?.pendingSubmissions || 0}</p>
+                    <p className="text-2xl font-bold">{stats?.pendingReview || 0}</p>
                   </div>
                   <div className="text-center p-4 bg-muted/30 rounded-lg">
                     <p className="text-sm text-muted-foreground mb-1">Reviewed</p>
-                    <p className="text-2xl font-bold text-chart-2">{stats?.completedSubmissions || 0}</p>
+                    <p className="text-2xl font-bold text-chart-2">{stats?.teacherReviewed || 0}</p>
                   </div>
                 </div>
 

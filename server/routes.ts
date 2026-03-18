@@ -2300,7 +2300,7 @@ Rules: 3-6 subtopics, 5 possible questions as examples of what can be tested, qu
         batchCounts.push(i < batches - 1 ? batchSize : count - batchSize * (batches - 1));
       }
 
-      async function generateBatch(batchCount: number, batchIndex: number): Promise<any> {
+      const generateBatch = async (batchCount: number, batchIndex: number): Promise<any> => {
         const resp = await openai.chat.completions.create({
           model: "gpt-4o-mini",
           max_completion_tokens: Math.min(4000, batchCount * 300 + 300),

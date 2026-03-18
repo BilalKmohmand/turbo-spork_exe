@@ -16,8 +16,13 @@ import {
 import { FileText, Eye, ClipboardList } from "lucide-react";
 import type { Submission } from "@shared/schema";
 
+type SubmissionExtended = Submission & {
+  aiScore?: number | null;
+  teacherScore?: number | null;
+};
+
 export default function ReviewQueue() {
-  const { data: submissions, isLoading } = useQuery<Submission[]>({
+  const { data: submissions, isLoading } = useQuery<SubmissionExtended[]>({
     queryKey: ["/api/teacher/all-submissions"],
   });
 
@@ -25,7 +30,7 @@ export default function ReviewQueue() {
   const pending = submissions?.filter(s => s.status === "pending") || [];
   const reviewed = submissions?.filter(s => s.status === "teacher_reviewed") || [];
 
-  const SubmissionsTable = ({ items }: { items: Submission[] }) => {
+  const SubmissionsTable = ({ items }: { items: SubmissionExtended[] }) => {
     if (items.length === 0) {
       return (
         <div className="text-center py-12">
@@ -59,7 +64,7 @@ export default function ReviewQueue() {
                 </div>
               </TableCell>
               <TableCell className="text-muted-foreground">
-                {new Date(submission.submittedAt).toLocaleDateString()}
+                {submission.submittedAt ? new Date(submission.submittedAt).toLocaleDateString() : "N/A"}
               </TableCell>
               <TableCell>
                 <StatusBadge status={submission.status} />

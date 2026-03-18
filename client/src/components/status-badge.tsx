@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 type StatusType = "pending" | "ai_graded" | "teacher_reviewed";
 
 interface StatusBadgeProps {
-  status: StatusType;
+  status: string;
 }
 
 const statusConfig: Record<StatusType, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -13,10 +13,10 @@ const statusConfig: Record<StatusType, { label: string; variant: "default" | "se
 };
 
 export function StatusBadge({ status }: StatusBadgeProps) {
-  const config = statusConfig[status];
-  
+  const config = statusConfig[status as StatusType] ?? { label: status, variant: "secondary" as const };
+
   return (
-    <Badge 
+    <Badge
       variant={config.variant}
       data-testid={`badge-status-${status}`}
     >

@@ -14,7 +14,13 @@ import { FileDropzone } from "@/components/file-dropzone";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Loader2, Send, Sparkles } from "lucide-react";
-import type { Assignment, Submission } from "@shared/schema";
+import type { Submission } from "@shared/schema";
+
+interface Assignment {
+  id: string;
+  title: string;
+  subject: string;
+}
 
 const submitFormSchema = z.object({
   assignmentId: z.string().min(1, "Please select an assignment"),

@@ -16,12 +16,14 @@ import {
 } from "lucide-react";
 import type { Submission, DashboardStats } from "@shared/schema";
 
+type SubmissionExtended = Submission & { aiScore?: number | null };
+
 export default function StudentDashboard() {
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
     queryKey: ["/api/student/stats"],
   });
 
-  const { data: recentSubmissions, isLoading: submissionsLoading } = useQuery<Submission[]>({
+  const { data: recentSubmissions, isLoading: submissionsLoading } = useQuery<SubmissionExtended[]>({
     queryKey: ["/api/student/submissions"],
   });
 
@@ -60,19 +62,19 @@ export default function StudentDashboard() {
           <>
             <StatCard
               title="Total Assignments"
-              value={stats?.totalAssignments || 0}
+              value={stats?.totalSubmissions || 0}
               icon={FileText}
               description="Available to submit"
             />
             <StatCard
               title="Pending Review"
-              value={stats?.pendingSubmissions || 0}
+              value={stats?.pendingReview || 0}
               icon={Clock}
               description="Awaiting evaluation"
             />
             <StatCard
               title="Completed"
-              value={stats?.completedSubmissions || 0}
+              value={stats?.teacherReviewed || 0}
               icon={CheckCircle}
               description="Fully reviewed"
             />
@@ -118,7 +120,7 @@ export default function StudentDashboard() {
                 <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
                 <p className="text-muted-foreground">No submissions yet</p>
                 <Link href="/student/submit">
-                  <Button variant="link" className="mt-2">
+                  <Button variant="ghost" className="mt-2">
                     Submit your first assignment
                   </Button>
                 </Link>
@@ -137,7 +139,7 @@ export default function StudentDashboard() {
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{submission.content.substring(0, 40)}...</p>
                       <p className="text-sm text-muted-foreground">
-                        {new Date(submission.submittedAt).toLocaleDateString()}
+                        {submission.submittedAt ? new Date(submission.submittedAt).toLocaleDateString() : "N/A"}
                       </p>
                     </div>
                     <StatusBadge status={submission.status} />

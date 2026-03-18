@@ -31,6 +31,8 @@ import {
   type InsertClass,
   type ClassMembership,
   type InsertClassMembership,
+  type QuizAttempt,
+  type InsertQuizAttempt,
   users,
   submissions,
   evaluations,
@@ -309,8 +311,8 @@ export class DatabaseStorage implements IStorage {
     
     let scores: number[] = [];
     if (reviewedIds.length > 0) {
-      const evals = await db.select().from(evaluations);
-      scores = evals
+      const allEvals = await db.select().from(evaluations);
+      scores = allEvals
         .filter(e => e.submissionId && reviewedIds.includes(e.submissionId))
         .map(e => e.score)
         .filter((s): s is number => s !== null && s !== undefined);
@@ -334,8 +336,8 @@ export class DatabaseStorage implements IStorage {
         return 0; // Default if no evaluation
       });
 
-    const evaluations = studentId ? await this.getEvaluationsByStudent(studentId) : [];
-    const evaluationScores = evaluations.map(e => e.score).filter((s): s is number => s !== null);
+    const studentEvals = studentId ? await this.getEvaluationsByStudent(studentId) : [];
+    const evaluationScores = studentEvals.map(e => e.score).filter((s): s is number => s !== null);
     
     const quizScores = allQuizzes.map(q => q.score);
     const combinedScores = [...evaluationScores, ...quizScores];
@@ -397,6 +399,12 @@ export class DatabaseStorage implements IStorage {
       aiGraded: allSubmissions.filter(s => s.status === "ai_graded").length,
       teacherReviewed: reviewed.length,
       averageScore: scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0,
+      quizzesSolvedToday: 0,
+      quizzesSolvedYesterday: 0,
+      totalQuizzesSolved: 0,
+      points: 0,
+      level: 1,
+      nextLevelPoints: 1000,
     };
   }
 

@@ -113,38 +113,40 @@ const mdComponents: Components = {
   ),
 };
 
+const RM = ReactMarkdown as any;
+
 export function renderMathText(text: string): JSX.Element {
   if (!text) return <span />;
   return (
-    <ReactMarkdown
+    <RM
       className="math-content leading-relaxed"
       remarkPlugins={[remarkGfm, remarkMath]}
       rehypePlugins={[rehypeKatex]}
       components={mdComponents}
     >
       {text}
-    </ReactMarkdown>
+    </RM>
   );
 }
 
 function renderInlineText(text: string): JSX.Element {
   if (!text) return <span />;
   return (
-    <ReactMarkdown
+    <RM
       className="inline"
       remarkPlugins={[remarkGfm, remarkMath]}
       rehypePlugins={[rehypeKatex]}
       components={{
-        p: ({ children }) => <span>{children}</span>,
-        strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
-        em: ({ children }) => <em className="italic">{children}</em>,
-        code: ({ children }) => (
+        p: ({ children }: any) => <span>{children}</span>,
+        strong: ({ children }: any) => <strong className="font-semibold">{children}</strong>,
+        em: ({ children }: any) => <em className="italic">{children}</em>,
+        code: ({ children }: any) => (
           <code className="inline-block px-1 py-0.5 bg-muted/70 rounded text-[0.85em] font-mono">{children}</code>
         ),
       }}
     >
       {text}
-    </ReactMarkdown>
+    </RM>
   );
 }
 

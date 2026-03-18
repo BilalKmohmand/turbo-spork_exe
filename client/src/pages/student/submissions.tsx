@@ -42,14 +42,11 @@ export default function StudentSubmissions() {
                       <h3 className="font-medium">{submission.studentName}</h3>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Calendar className="w-3 h-3" />
-                        {new Date(submission.submittedAt).toLocaleDateString()}
+                        {submission.submittedAt ? new Date(submission.submittedAt).toLocaleDateString() : "N/A"}
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <StatusBadge status={submission.status} />
-                      {submission.aiScore !== undefined && (
-                        <span className="text-lg font-bold text-primary">{submission.aiScore}%</span>
-                      )}
                     </div>
                   </div>
                   <p className="text-sm text-muted-foreground line-clamp-2 mb-3">

@@ -321,9 +321,9 @@ function Sidebar({
                       >
                         <item.icon className={`w-4 h-4 shrink-0 ${isActive ? "text-black dark:text-white" : ""}`} />
                         {!isCollapsed && <span className="flex-1 text-left">{item.label}</span>}
-                        {!isCollapsed && "badge" in item && item.badge && (
+                        {!isCollapsed && "badge" in item && (item as { badge?: string }).badge && (
                           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/5 dark:bg-white/5 text-[#666660]">
-                            {item.badge}
+                            {(item as { badge?: string }).badge}
                           </span>
                         )}
                       </button>

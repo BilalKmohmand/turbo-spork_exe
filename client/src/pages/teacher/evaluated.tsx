@@ -15,8 +15,14 @@ import {
 import { FileText, Eye, CheckCircle } from "lucide-react";
 import type { Submission } from "@shared/schema";
 
+type SubmissionExtended = Submission & {
+  aiScore?: number | null;
+  teacherScore?: number | null;
+  reviewedAt?: Date | string | null;
+};
+
 export default function EvaluatedSubmissions() {
-  const { data: submissions, isLoading } = useQuery<Submission[]>({
+  const { data: submissions, isLoading } = useQuery<SubmissionExtended[]>({
     queryKey: ["/api/teacher/all-submissions"],
   });
 
@@ -79,7 +85,7 @@ export default function EvaluatedSubmissions() {
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {new Date(submission.submittedAt).toLocaleDateString()}
+                      {submission.submittedAt ? new Date(submission.submittedAt).toLocaleDateString() : "N/A"}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {submission.reviewedAt 

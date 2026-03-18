@@ -8,10 +8,16 @@ import { AIFeedbackPanel } from "@/components/ai-feedback-panel";
 import { ArrowLeft, Calendar, User, MessageSquare } from "lucide-react";
 import type { Submission } from "@shared/schema";
 
+type SubmissionExtended = Submission & {
+  teacherScore?: number | null;
+  teacherFeedback?: string | null;
+  reviewedAt?: Date | string | null;
+};
+
 export default function SubmissionDetail() {
   const { id } = useParams<{ id: string }>();
 
-  const { data: submission, isLoading } = useQuery<Submission>({
+  const { data: submission, isLoading } = useQuery<SubmissionExtended>({
     queryKey: ["/api/submissions", id],
   });
 
@@ -35,7 +41,7 @@ export default function SubmissionDetail() {
       <div className="p-6 text-center">
         <p className="text-muted-foreground">Submission not found</p>
         <Link href="/student/submissions">
-          <Button variant="link">Back to submissions</Button>
+          <Button variant="ghost">Back to submissions</Button>
         </Link>
       </div>
     );
@@ -60,7 +66,7 @@ export default function SubmissionDetail() {
               </span>
               <span className="flex items-center gap-1">
                 <Calendar className="w-3 h-3" />
-                {new Date(submission.submittedAt).toLocaleDateString()}
+                {submission.submittedAt ? new Date(submission.submittedAt).toLocaleDateString() : "N/A"}
               </span>
             </div>
           </div>

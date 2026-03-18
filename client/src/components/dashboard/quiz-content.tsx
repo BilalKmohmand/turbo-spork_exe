@@ -347,8 +347,8 @@ export default function QuizContent() {
     } else if (currentType === "multiple_choice") {
       if (selectedMulti.size === 0) return;
       const correctSet = new Set(currentQuestion.correctAnswers || []);
-      isCorrect = selectedMulti.size === correctSet.size && [...selectedMulti].every(v => correctSet.has(v));
-      answerValue = [...selectedMulti];
+      isCorrect = selectedMulti.size === correctSet.size && Array.from(selectedMulti).every(v => correctSet.has(v));
+      answerValue = Array.from(selectedMulti);
     } else if (currentType === "true_false") {
       if (tfChoice === null) return;
       isCorrect = tfChoice === currentQuestion.correctAnswer;
