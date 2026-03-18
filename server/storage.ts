@@ -81,7 +81,7 @@ export interface IStorage {
   // Rubric operations
   createRubric(data: InsertRubric): Promise<Rubric>;
   getRubric(id: string): Promise<Rubric | undefined>;
-  getRubricsByTeacher(teacherId: string): Promise<Rubric[]>;
+  getRubricsByTeacher(teacherId: string, classId?: string | null): Promise<Rubric[]>;
   deleteRubric(id: string): Promise<void>;
   getCriteriaByRubric(rubricId: string): Promise<RubricCriterion[]>;
   createCriteria(data: InsertRubricCriterion[]): Promise<RubricCriterion[]>;
@@ -405,8 +405,12 @@ export class DatabaseStorage implements IStorage {
     return rubric;
   }
 
-  async getRubricsByTeacher(teacherId: string): Promise<Rubric[]> {
-    return await db.select().from(rubrics).where(eq(rubrics.teacherId, teacherId)).orderBy(desc(rubrics.createdAt));
+  async getRubricsByTeacher(teacherId: string, classId?: string | null): Promise<Rubric[]> {
+    const conditions = [eq(rubrics.teacherId, teacherId)];
+    if (classId !== undefined) {
+      conditions.push(classId ? eq(rubrics.classId, classId) : sql`${rubrics.classId} IS NULL`);
+    }
+    return await db.select().from(rubrics).where(and(...conditions)).orderBy(desc(rubrics.createdAt));
   }
 
   async deleteRubric(id: string): Promise<void> {

@@ -14,6 +14,7 @@ import {
   ClipboardList, Loader2, Trash2, Clock, Copy, Check,
   FileText, GraduationCap, Save, Plus, X, Award, TrendingUp,
 } from "lucide-react";
+import ClassSelector from "./class-selector";
 
 /* ─── Types ──────────────────────────────────────────────────── */
 interface Criterion { name: string; description: string; maxPoints: number; }
@@ -231,6 +232,7 @@ export default function AssignmentsContent() {
   const [gradeLevel, setGradeLevel] = useState("");
   const [assignmentType, setAssignmentType] = useState("");
   const [additionalInstructions, setAdditionalInstructions] = useState("");
+  const [selectedClassId, setSelectedClassId] = useState("");
   const [generated, setGenerated] = useState<GeneratedAssignment | null>(null);
   const [editedCriteria, setEditedCriteria] = useState<Criterion[]>([]);
 
@@ -262,6 +264,7 @@ export default function AssignmentsContent() {
         studentInstructions: generated.studentInstructions,
         estimatedTime: generated.estimatedTime,
         description: topic,
+        classId: selectedClassId && selectedClassId !== "all" ? selectedClassId : null,
       });
       return res.json();
     },
@@ -346,13 +349,24 @@ export default function AssignmentsContent() {
               </Select>
             </div>
           </div>
-          <div className="space-y-2">
-            <Label>Additional Requirements (optional)</Label>
-            <Input
-              data-testid="input-additional-instructions"
-              placeholder="e.g. Must include citations, minimum 500 words, group project…"
-              value={additionalInstructions} onChange={(e) => setAdditionalInstructions(e.target.value)}
-            />
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Additional Requirements (optional)</Label>
+              <Input
+                data-testid="input-additional-instructions"
+                placeholder="e.g. Must include citations, minimum 500 words…"
+                value={additionalInstructions} onChange={(e) => setAdditionalInstructions(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Assign to Class (optional)</Label>
+              <ClassSelector
+                value={selectedClassId}
+                onChange={setSelectedClassId}
+                placeholder="No class — save globally"
+                showAll={false}
+              />
+            </div>
           </div>
           <Button
             data-testid="button-generate-assignment"

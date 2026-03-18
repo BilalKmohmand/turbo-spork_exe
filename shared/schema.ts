@@ -198,6 +198,7 @@ export const evaluateSchema = z.object({
 export const rubrics = pgTable("rubrics", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   teacherId: varchar("teacher_id").references(() => users.id).notNull(),
+  classId: varchar("class_id").references(() => classes.id),
   name: text("name").notNull(),
   subject: text("subject").notNull().default("General"),
   totalPoints: integer("total_points").notNull().default(100),

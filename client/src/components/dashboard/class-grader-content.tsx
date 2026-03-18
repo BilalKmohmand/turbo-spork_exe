@@ -10,10 +10,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import ClassSelector from "./class-selector";
 import {
   Plus, Trash2, Users, Zap, Loader2, CheckCircle2,
-  ChevronDown, ChevronUp, AlertCircle, DownloadIcon,
+  ChevronDown, ChevronUp, AlertCircle, DownloadIcon, RefreshCw,
 } from "lucide-react";
+
+interface ClassStudent {
+  id: string;
+  displayName: string;
+  email: string;
+}
 
 interface StudentEntry {
   id: string;
@@ -78,16 +85,42 @@ function makeId() { return `student-${++idCounter}-${Date.now()}`; }
 export default function ClassGraderContent() {
   const { toast } = useToast();
 
-  const [rubricId, setRubricId] = useState("");
-  const [students, setStudents] = useState<StudentEntry[]>([
-    { id: makeId(), name: "", content: "" },
-  ]);
-  const [results, setResults] = useState<GradeResult[] | null>(null);
+  const [selectedClassId, setSelectedClassId] = useState("");
+  const [rubricId, setRubricId]   = useState("");
+  const [students, setStudents]   = useState<StudentEntry[]>([{ id: makeId(), name: "", content: "" }]);
+  const [results, setResults]     = useState<GradeResult[] | null>(null);
   const [expandedResult, setExpandedResult] = useState<number | null>(null);
-  const [step, setStep] = useState<"setup" | "results">("setup");
+  const [step, setStep]           = useState<"setup" | "results">("setup");
 
-  const { data: rubrics = [] } = useQuery<Rubric[]>({ queryKey: ["/api/rubrics"] });
+  const { data: rubrics = [] } = useQuery<Rubric[]>({
+    queryKey: ["/api/rubrics", selectedClassId || undefined],
+    queryFn: async () => {
+      const url = selectedClassId ? `/api/rubrics?classId=${selectedClassId}` : "/api/rubrics";
+      const res = await apiRequest("GET", url);
+      return res.json();
+    },
+  });
+
+  const { data: classStudents = [], isLoading: studentsLoading } = useQuery<ClassStudent[]>({
+    queryKey: ["/api/teacher/classes", selectedClassId, "students"],
+    queryFn: async () => {
+      if (!selectedClassId) return [];
+      const res = await apiRequest("GET", `/api/teacher/classes/${selectedClassId}/students`);
+      return res.json();
+    },
+    enabled: !!selectedClassId,
+  });
+
   const selectedRubric = rubrics.find(r => r.id === rubricId);
+
+  function loadRosterStudents() {
+    if (!classStudents.length) {
+      toast({ title: "No students in this class yet", variant: "destructive" });
+      return;
+    }
+    setStudents(classStudents.map(s => ({ id: makeId(), name: s.displayName, content: "" })));
+    toast({ title: `Loaded ${classStudents.length} student${classStudents.length !== 1 ? "s" : ""} from class roster` });
+  }
 
   function addStudent() {
     setStudents(prev => [...prev, { id: makeId(), name: "", content: "" }]);
@@ -285,26 +318,37 @@ export default function ClassGraderContent() {
 
       <Card className="border-[#E5E5E0] dark:border-[#22221F] rounded-[24px]">
         <CardContent className="p-6 space-y-5">
-          <div className="space-y-1.5">
-            <Label>Assignment / Rubric</Label>
-            {rubrics.length === 0 ? (
-              <p className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-                No assignments found. Create one in the Assignments tab first.
-              </p>
-            ) : (
-              <Select value={rubricId} onValueChange={setRubricId}>
-                <SelectTrigger data-testid="select-rubric" className="rounded-xl border-[#E5E5E0] dark:border-[#22221F]">
-                  <SelectValue placeholder="Select an assignment…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {rubrics.map(r => (
-                    <SelectItem key={r.id} value={r.id}>
-                      {r.name} — {r.subject} ({r.totalPoints} pts)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Class <span className="text-[#999990] text-xs">(optional — filter assignments)</span></Label>
+              <ClassSelector
+                value={selectedClassId}
+                onChange={(id) => { setSelectedClassId(id); setRubricId(""); }}
+                placeholder="All classes"
+                showAll
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Assignment / Rubric</Label>
+              {rubrics.length === 0 ? (
+                <p className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                  No assignments found. Create one in the Assignments tab first.
+                </p>
+              ) : (
+                <Select value={rubricId} onValueChange={setRubricId}>
+                  <SelectTrigger data-testid="select-rubric" className="rounded-xl border-[#E5E5E0] dark:border-[#22221F]">
+                    <SelectValue placeholder="Select an assignment…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {rubrics.map(r => (
+                      <SelectItem key={r.id} value={r.id}>
+                        {r.name} — {r.subject} ({r.totalPoints} pts)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           </div>
 
           {selectedRubric && (
@@ -322,16 +366,30 @@ export default function ClassGraderContent() {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <Label className="text-base font-semibold">Students ({students.length})</Label>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={addStudent}
-            data-testid="button-add-student"
-            className="rounded-xl border-dashed border-[#C0C0BB]"
-          >
-            <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Student
-          </Button>
-        </div>
+          <div className="flex gap-2">
+            {selectedClassId && selectedClassId !== "all" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={loadRosterStudents}
+                disabled={studentsLoading}
+                data-testid="button-load-roster"
+                className="rounded-xl border-[#E5E5E0] dark:border-[#22221F] text-[13px]"
+              >
+                {studentsLoading ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5 mr-1.5" />}
+                Load from Roster
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={addStudent}
+              data-testid="button-add-student"
+              className="rounded-xl border-dashed border-[#C0C0BB]"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Student
+            </Button>
+          </div>
 
         {students.map((s, i) => (
           <Card key={s.id} className="border-[#E5E5E0] dark:border-[#22221F] rounded-[20px]">

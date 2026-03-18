@@ -1812,8 +1812,21 @@ RULES:
     }
   });
 
+  app.patch("/api/teacher/profile", requireTeacher, async (req, res) => {
+    try {
+      const { school, subjects, gradeLevel, bio } = req.body;
+      const profile = await storage.updateTeacherProfile(req.session.userId!, { school, subjects, gradeLevel, bio });
+      res.json(profile);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to update profile" });
+    }
+  });
+
   app.delete("/api/teacher/classes/:id", requireTeacher, async (req, res) => {
     try {
+      const cls = await storage.getClass(req.params.id);
+      if (!cls) return res.status(404).json({ error: "Class not found" });
+      if (cls.teacherId !== req.session.userId) return res.status(403).json({ error: "Forbidden" });
       await storage.deleteClass(req.params.id);
       res.json({ success: true });
     } catch (error: any) {
@@ -1823,6 +1836,9 @@ RULES:
 
   app.get("/api/teacher/classes/:id/students", requireTeacher, async (req, res) => {
     try {
+      const cls = await storage.getClass(req.params.id);
+      if (!cls) return res.status(404).json({ error: "Class not found" });
+      if (cls.teacherId !== req.session.userId) return res.status(403).json({ error: "Forbidden" });
       const members = await storage.getMembershipsByClass(req.params.id);
       // Fetch user details for each member
       const students = await Promise.all(
@@ -1839,6 +1855,38 @@ RULES:
       res.json(students);
     } catch (error: any) {
       res.status(500).json({ error: "Failed to fetch students" });
+    }
+  });
+
+  app.get("/api/teacher/classes/:id/stats", requireTeacher, async (req, res) => {
+    try {
+      const cls = await storage.getClass(req.params.id);
+      if (!cls) return res.status(404).json({ error: "Class not found" });
+      if (cls.teacherId !== req.session.userId) return res.status(403).json({ error: "Forbidden" });
+      const members = await storage.getMembershipsByClass(req.params.id);
+      const rubricList = await storage.getRubricsByTeacher(req.session.userId!, req.params.id);
+      let avgScore: number | null = null;
+      if (rubricList.length > 0) {
+        // Get all evaluations for all rubrics in this class
+        const allEvals: number[] = [];
+        for (const r of rubricList.slice(0, 5)) {
+          const evals = await storage.getRubricEvaluationsByRubric(r.id);
+          for (const ev of evals) {
+            const pct = (ev.overallScore / r.totalPoints) * 100;
+            allEvals.push(Math.round(pct));
+          }
+        }
+        if (allEvals.length > 0) {
+          avgScore = Math.round(allEvals.reduce((a, b) => a + b, 0) / allEvals.length);
+        }
+      }
+      res.json({
+        studentCount: members.length,
+        assignmentCount: rubricList.length,
+        avgScore,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch stats" });
     }
   });
 
@@ -3037,11 +3085,12 @@ Do NOT use markdown formatting - use plain text with clear structure.`,
       }
 
       const { name, subject, criteria } = parsed.data;
-      const { gradeLevel, assignmentType, studentInstructions, estimatedTime, description } = req.body;
+      const { gradeLevel, assignmentType, studentInstructions, estimatedTime, description, classId } = req.body;
       const totalPoints = criteria.reduce((sum, c) => sum + c.maxPoints, 0);
 
       const rubric = await storage.createRubric({
         teacherId: req.session.userId!,
+        classId: classId || null,
         name,
         subject,
         totalPoints,
@@ -3068,10 +3117,11 @@ Do NOT use markdown formatting - use plain text with clear structure.`,
     }
   });
 
-  // Get all rubrics for teacher
+  // Get all rubrics for teacher, optionally filtered by classId
   app.get("/api/rubrics", requireAuth, requireTeacher, async (req, res) => {
     try {
-      const myRubrics = await storage.getRubricsByTeacher(req.session.userId!);
+      const classId = req.query.classId as string | undefined;
+      const myRubrics = await storage.getRubricsByTeacher(req.session.userId!, classId);
       const result = await Promise.all(myRubrics.map(async (r) => {
         const criteria = await storage.getCriteriaByRubric(r.id);
         return { ...r, criteria };

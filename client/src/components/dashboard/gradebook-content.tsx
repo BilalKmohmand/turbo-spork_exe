@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
+import ClassSelector from "./class-selector";
 import { Loader2, Download, BookOpen, TrendingUp, Users, Award } from "lucide-react";
 
 interface CriteriaScore {
@@ -62,9 +64,19 @@ function letterColor(g: string) {
 }
 
 export default function GradebookContent() {
+  const [selectedClassId, setSelectedClassId] = useState("");
   const [rubricId, setRubricId] = useState("");
 
-  const { data: rubrics = [] } = useQuery<Rubric[]>({ queryKey: ["/api/rubrics"] });
+  const { data: rubrics = [] } = useQuery<Rubric[]>({
+    queryKey: ["/api/rubrics", selectedClassId || undefined],
+    queryFn: async () => {
+      const url = selectedClassId && selectedClassId !== "all"
+        ? `/api/rubrics?classId=${selectedClassId}`
+        : "/api/rubrics";
+      const res = await apiRequest("GET", url);
+      return res.json();
+    },
+  });
 
   const selectedRubric = rubrics.find(r => r.id === rubricId);
 
@@ -138,24 +150,36 @@ export default function GradebookContent() {
         )}
       </div>
 
-      <div className="space-y-1.5">
-        {rubrics.length === 0 ? (
-          <p className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-            No assignments yet. Create one in the Assignments tab, then grade students using Class Grader.
-          </p>
-        ) : (
-          <Select value={rubricId} onValueChange={setRubricId}>
-            <SelectTrigger data-testid="select-gradebook-rubric" className="rounded-xl border-[#E5E5E0] dark:border-[#22221F] max-w-sm">
-              <SelectValue placeholder="Select assignment to view grades…" />
-            </SelectTrigger>
-            <SelectContent>
-              {rubrics.map(r => (
-                <SelectItem key={r.id} value={r.id}>{r.name} — {r.subject}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-      </div>
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <p className="text-sm font-medium text-[#111110] dark:text-[#F9F9F8]">Filter by Class</p>
+          <ClassSelector
+            value={selectedClassId}
+            onChange={(id) => { setSelectedClassId(id); setRubricId(""); }}
+            placeholder="All classes"
+            showAll
+          />
+        </div>
+        <div className="space-y-1.5">
+          <p className="text-sm font-medium text-[#111110] dark:text-[#F9F9F8]">Assignment</p>
+          {rubrics.length === 0 ? (
+              <p className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                No assignments yet. Create one in the Assignments tab, then grade students using Class Grader.
+              </p>
+            ) : (
+              <Select value={rubricId} onValueChange={setRubricId}>
+                <SelectTrigger data-testid="select-gradebook-rubric" className="rounded-xl border-[#E5E5E0] dark:border-[#22221F]">
+                  <SelectValue placeholder="Select assignment to view grades…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {rubrics.map(r => (
+                    <SelectItem key={r.id} value={r.id}>{r.name} — {r.subject}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        </div>
 
       {rubricId && isLoading && (
         <div className="flex items-center justify-center py-20 text-[#999990]">

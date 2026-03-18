@@ -3,7 +3,7 @@ import { apiRequest } from "@/lib/queryClient";
 import {
   ClipboardCheck, BookMarked, Users, BookOpen,
   FileSignature, GraduationCap, ArrowUpRight,
-  School, Plus,
+  School, Plus, TrendingUp,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,10 +19,68 @@ interface ClassItem {
   createdAt: string;
 }
 
+interface ClassStats {
+  studentCount: number;
+  assignmentCount: number;
+  avgScore: number | null;
+}
+
 interface TeacherProfile {
   school?: string | null;
   subjects?: string[];
   gradeLevel?: string | null;
+}
+
+function ClassCard({ cls, onNavigate }: { cls: ClassItem; onNavigate: (s: string) => void }) {
+  const { data: stats } = useQuery<ClassStats>({
+    queryKey: ["/api/teacher/classes", cls.id, "stats"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/teacher/classes/${cls.id}/stats`);
+      return res.json();
+    },
+  });
+
+  function letterGrade(pct: number) {
+    if (pct >= 90) return { letter: "A", color: "text-emerald-600" };
+    if (pct >= 80) return { letter: "B", color: "text-blue-600" };
+    if (pct >= 70) return { letter: "C", color: "text-amber-600" };
+    if (pct >= 60) return { letter: "D", color: "text-orange-600" };
+    return { letter: "F", color: "text-red-600" };
+  }
+
+  return (
+    <Card
+      data-testid={`home-class-card-${cls.id}`}
+      className="border-[#E5E5E0] dark:border-[#22221F] rounded-[20px] cursor-pointer hover:border-[#CCCCCC] dark:hover:border-[#333330] transition-colors"
+      onClick={() => onNavigate("myclasses")}
+    >
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-2 mb-3">
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-[#111110] dark:text-[#F9F9F8] truncate">{cls.name}</p>
+            <p className="text-[12px] text-[#666660] mt-0.5">{cls.subject}</p>
+          </div>
+          <span className="font-mono text-[11px] font-bold bg-[#F0F0ED] dark:bg-[#1A1A17] text-[#666660] px-2 py-1 rounded-lg shrink-0">
+            {cls.classCode}
+          </span>
+        </div>
+        <div className="flex items-center gap-4 text-[12px] text-[#999990]">
+          <span className="flex items-center gap-1">
+            <Users className="w-3.5 h-3.5" />{stats?.studentCount ?? cls.studentCount} student{(stats?.studentCount ?? cls.studentCount) !== 1 ? "s" : ""}
+          </span>
+          <span className="flex items-center gap-1">
+            <BookOpen className="w-3.5 h-3.5" />{stats?.assignmentCount ?? 0} assignment{(stats?.assignmentCount ?? 0) !== 1 ? "s" : ""}
+          </span>
+          {stats?.avgScore != null && (
+            <span className={`flex items-center gap-1 font-semibold ${letterGrade(stats.avgScore).color}`}>
+              <TrendingUp className="w-3.5 h-3.5" />
+              Avg {letterGrade(stats.avgScore).letter} ({stats.avgScore}%)
+            </span>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 const teacherTools = [
@@ -131,34 +189,7 @@ export default function TeacherHomeContent({ user, onNavigate }: TeacherHomeProp
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {classList.map(cls => (
-              <Card
-                key={cls.id}
-                data-testid={`home-class-card-${cls.id}`}
-                className="border-[#E5E5E0] dark:border-[#22221F] rounded-[20px] cursor-pointer hover:border-[#CCCCCC] dark:hover:border-[#333330] transition-colors"
-                onClick={() => onNavigate("myclasses")}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-[#111110] dark:text-[#F9F9F8] truncate">{cls.name}</p>
-                      <p className="text-[12px] text-[#666660] mt-0.5">{cls.subject}</p>
-                    </div>
-                    <span className="font-mono text-[11px] font-bold bg-[#F0F0ED] dark:bg-[#1A1A17] text-[#666660] px-2 py-1 rounded-lg shrink-0">
-                      {cls.classCode}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5 mt-3 text-[12px] text-[#999990]">
-                    <Users className="w-3.5 h-3.5" />
-                    <span>{cls.studentCount} student{cls.studentCount !== 1 ? "s" : ""}</span>
-                    {cls.gradeLevel && (
-                      <>
-                        <span className="text-[#E5E5E0] dark:text-[#333330]">·</span>
-                        <span>{cls.gradeLevel}</span>
-                      </>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+              <ClassCard key={cls.id} cls={cls} onNavigate={onNavigate} />
             ))}
           </div>
         )}
