@@ -585,6 +585,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteClass(id: string): Promise<void> {
+    // Null out rubrics that reference this class (FK constraint)
+    await db.update(rubrics).set({ classId: null }).where(eq(rubrics.classId, id));
     await db.delete(classMemberships).where(eq(classMemberships.classId, id));
     await db.delete(classes).where(eq(classes.id, id));
   }

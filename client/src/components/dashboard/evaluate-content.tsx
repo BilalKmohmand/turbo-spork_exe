@@ -105,7 +105,7 @@ export default function EvaluateContent() {
         criteria: criteria.filter((c) => c.name.trim()),
         studentName: studentName.trim() || "Student",
         content,
-        ...(selectedClassId ? { classId: selectedClassId } : {}),
+        ...(selectedClassId && selectedClassId !== "all" ? { classId: selectedClassId } : {}),
       });
       return res.json();
     },

@@ -3088,6 +3088,14 @@ Do NOT use markdown formatting - use plain text with clear structure.`,
       const { gradeLevel, assignmentType, studentInstructions, estimatedTime, description, classId } = req.body;
       const totalPoints = criteria.reduce((sum, c) => sum + c.maxPoints, 0);
 
+      // Verify class ownership if classId provided
+      if (classId) {
+        const cls = await storage.getClass(classId);
+        if (!cls || cls.teacherId !== req.session.userId) {
+          return res.status(403).json({ error: "Forbidden: class not found or not yours" });
+        }
+      }
+
       const rubric = await storage.createRubric({
         teacherId: req.session.userId!,
         classId: classId || null,

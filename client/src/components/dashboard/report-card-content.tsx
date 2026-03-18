@@ -54,7 +54,7 @@ export default function ReportCardContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ studentName, subject, grade, tone, notes, ...(selectedClassId ? { classId: selectedClassId } : {}) }),
+        body: JSON.stringify({ studentName, subject, grade, tone, notes, ...(selectedClassId && selectedClassId !== "all" ? { classId: selectedClassId } : {}) }),
       });
       if (!res.ok) {
         const err = await res.json();
