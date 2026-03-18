@@ -207,6 +207,8 @@ export const rubrics = pgTable("rubrics", {
   assignmentType: text("assignment_type"),
   studentInstructions: text("student_instructions"),
   estimatedTime: text("estimated_time"),
+  status: text("status").notNull().default("draft"), // draft | published
+  publishedAt: timestamp("published_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -223,10 +225,11 @@ export const rubricSubmissions = pgTable("rubric_submissions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   rubricId: varchar("rubric_id").references(() => rubrics.id).notNull(),
   teacherId: varchar("teacher_id").references(() => users.id).notNull(),
+  studentId: varchar("student_id").references(() => users.id),
   studentName: text("student_name").notNull(),
   title: text("title").notNull(),
   content: text("content").notNull(),
-  status: text("status").notNull().default("pending"), // pending | evaluated
+  status: text("status").notNull().default("submitted"), // submitted | ai_evaluated | pushed
   submittedAt: timestamp("submitted_at").defaultNow(),
 });
 
@@ -239,12 +242,13 @@ export const rubricEvaluations = pgTable("rubric_evaluations", {
   overallFeedback: text("overall_feedback").notNull(),
   criteriaScores: jsonb("criteria_scores").notNull(), // [{criterionId, criterionName, score, maxPoints, feedback}]
   evaluatedAt: timestamp("evaluated_at").defaultNow(),
+  pushedAt: timestamp("pushed_at"),
 });
 
 // Rubric insert schemas
 export const insertRubricSchema = createInsertSchema(rubrics).omit({ id: true, createdAt: true });
 export const insertRubricCriterionSchema = createInsertSchema(rubricCriteria).omit({ id: true });
-export const insertRubricSubmissionSchema = createInsertSchema(rubricSubmissions).omit({ id: true, submittedAt: true, status: true });
+export const insertRubricSubmissionSchema = createInsertSchema(rubricSubmissions).omit({ id: true, submittedAt: true, status: true, teacherId: true });
 export const insertRubricEvaluationSchema = createInsertSchema(rubricEvaluations).omit({ id: true, evaluatedAt: true });
 
 // Rubric types

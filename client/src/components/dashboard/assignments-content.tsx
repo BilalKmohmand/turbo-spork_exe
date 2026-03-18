@@ -12,7 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Sparkles, BookOpen, ChevronDown, ChevronUp, Users,
   ClipboardList, Loader2, Trash2, Clock, Copy, Check,
-  FileText, GraduationCap, Save, Plus, X, Award, TrendingUp,
+  FileText, GraduationCap, Save, Plus, X, Award,
+  Send, RotateCcw, Globe,
 } from "lucide-react";
 import ClassSelector from "./class-selector";
 
@@ -24,11 +25,18 @@ interface Assignment {
   description?: string | null; gradeLevel?: string | null;
   assignmentType?: string | null; studentInstructions?: string | null;
   estimatedTime?: string | null; createdAt: string; criteria: RubricCriterion[];
+  status: string; publishedAt?: string | null; classId?: string | null;
 }
 interface GeneratedAssignment { title: string; studentInstructions: string; estimatedTime: string; criteria: Criterion[]; }
 interface CriterionScore { criterionId: string; criterionName: string; score: number; maxPoints: number; feedback: string; }
 interface EvalResult { submissionId: string; overallScore: number; overallFeedback: string; criteriaScores: CriterionScore[]; studentName?: string; error?: string; }
 interface StudentEntry { name: string; work: string; }
+interface StudentSubmission {
+  id: string; rubricId: string; studentId?: string | null; studentName: string;
+  title: string; content: string; status: string; submittedAt: string;
+  studentDisplayName: string;
+  evaluation: { id: string; overallScore: number; overallFeedback: string; criteriaScores: CriterionScore[]; pushedAt?: string | null; } | null;
+}
 
 /* ─── Constants ───────────────────────────────────────────────── */
 const SUBJECTS = ["Mathematics","English / Literature","Science","History","Geography","Physics","Chemistry","Biology","Computer Science","Art","Music","Physical Education","Economics","Psychology","Other"];
@@ -221,6 +229,136 @@ function GradingPanel({ assignment, onClose }: { assignment: Assignment; onClose
   );
 }
 
+/* ─── Submissions Panel ───────────────────────────────────────── */
+function SubmissionsPanel({ assignment, onClose }: { assignment: Assignment; onClose: () => void }) {
+  const { toast } = useToast();
+  const [reevaluatingId, setReevaluatingId] = useState<string | null>(null);
+
+  const { data: submissions = [], isLoading, refetch } = useQuery<StudentSubmission[]>({
+    queryKey: ["/api/teacher/rubric-submissions", assignment.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/teacher/rubric-submissions?rubricId=${assignment.id}`, { credentials: "include" });
+      return res.json();
+    },
+  });
+
+  const pushMutation = useMutation({
+    mutationFn: async (submissionId: string) => {
+      const res = await apiRequest("PATCH", `/api/teacher/rubric-submissions/${submissionId}/push`);
+      return res.json();
+    },
+    onSuccess: () => {
+      refetch();
+      toast({ title: "Result pushed to student!" });
+    },
+    onError: () => toast({ title: "Failed to push result", variant: "destructive" }),
+  });
+
+  const handleReevaluate = async (submissionId: string) => {
+    setReevaluatingId(submissionId);
+    try {
+      await apiRequest("POST", `/api/teacher/rubric-submissions/${submissionId}/reevaluate`);
+      refetch();
+      toast({ title: "Re-evaluation complete!" });
+    } catch {
+      toast({ title: "Re-evaluation failed", variant: "destructive" });
+    } finally {
+      setReevaluatingId(null);
+    }
+  };
+
+  return (
+    <div className="border-t border-primary/30 mt-4 pt-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h4 className="font-semibold text-sm flex items-center gap-2">
+          <Users className="h-4 w-4 text-primary" />
+          Student Submissions ({submissions.length})
+        </h4>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-6">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      ) : submissions.length === 0 ? (
+        <div className="text-center py-6 text-muted-foreground text-sm">
+          No student submissions yet
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {submissions.map((sub) => {
+            const pct = sub.evaluation && assignment.totalPoints > 0
+              ? Math.round((sub.evaluation.overallScore / assignment.totalPoints) * 100)
+              : null;
+            const grade = pct !== null ? letterGrade(pct) : null;
+            const isPushed = sub.status === "pushed";
+            return (
+              <div key={sub.id} className="bg-muted/40 rounded-lg p-3 space-y-2" data-testid={`submission-row-${sub.id}`}>
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-semibold text-sm">{sub.studentDisplayName}</p>
+                    <p className="text-xs text-muted-foreground">{new Date(sub.submittedAt).toLocaleDateString()}</p>
+                    <Badge variant={isPushed ? "default" : sub.status === "ai_evaluated" ? "secondary" : "outline"} className="text-[10px] mt-1">
+                      {isPushed ? "Pushed to Student" : sub.status === "ai_evaluated" ? "AI Evaluated" : "Submitted"}
+                    </Badge>
+                  </div>
+                  {sub.evaluation && (
+                    <div className="text-right shrink-0">
+                      {grade && <p className={`text-xl font-bold ${grade.color}`}>{grade.letter}</p>}
+                      <p className="text-xs text-muted-foreground">{sub.evaluation.overallScore}/{assignment.totalPoints}</p>
+                    </div>
+                  )}
+                </div>
+                {sub.evaluation && (
+                  <div className="text-xs text-muted-foreground border-t border-border pt-2 space-y-1">
+                    <p className="italic">{sub.evaluation.overallFeedback}</p>
+                    {sub.evaluation.criteriaScores?.map((cs, j) => (
+                      <div key={j} className="flex items-start gap-2">
+                        <span className="font-medium shrink-0">{cs.criterionName}:</span>
+                        <span className="flex-1">{cs.feedback}</span>
+                        <span className="shrink-0 font-medium">{cs.score}/{cs.maxPoints}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2 pt-1">
+                  {sub.evaluation && !isPushed && (
+                    <Button
+                      size="sm"
+                      className="h-7 text-xs gap-1"
+                      onClick={() => pushMutation.mutate(sub.id)}
+                      disabled={pushMutation.isPending}
+                      data-testid={`button-push-${sub.id}`}
+                    >
+                      <Send className="h-3 w-3" /> Push to Student
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs gap-1"
+                    onClick={() => handleReevaluate(sub.id)}
+                    disabled={reevaluatingId === sub.id}
+                    data-testid={`button-reevaluate-${sub.id}`}
+                  >
+                    {reevaluatingId === sub.id
+                      ? <><Loader2 className="h-3 w-3 animate-spin" /> Re-evaluating…</>
+                      : <><RotateCcw className="h-3 w-3" /> Re-evaluate</>
+                    }
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── Main Component ──────────────────────────────────────────── */
 export default function AssignmentsContent() {
   const { toast } = useToast();
@@ -239,6 +377,7 @@ export default function AssignmentsContent() {
   // List state
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [gradingId, setGradingId] = useState<string | null>(null);
+  const [submissionsId, setSubmissionsId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [listClassFilter, setListClassFilter] = useState("");
 
@@ -289,6 +428,18 @@ export default function AssignmentsContent() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => { await apiRequest("DELETE", `/api/rubrics/${id}`); },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/rubrics"] }); toast({ title: "Assignment deleted" }); },
+  });
+
+  const publishMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("PATCH", `/api/rubrics/${id}/publish`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/rubrics"] });
+      toast({ title: "Assignment published!", description: "Students in the class can now see and submit it." });
+    },
+    onError: (err: any) => toast({ title: "Failed to publish", description: err?.message || "Please try again.", variant: "destructive" }),
   });
 
   const handleCopy = (a: Assignment) => {
@@ -494,6 +645,11 @@ export default function AssignmentsContent() {
                       <div className="flex flex-wrap items-center gap-2 mb-1">
                         <h4 className="font-semibold text-foreground">{a.name}</h4>
                         {a.assignmentType && <Badge variant="secondary" className="text-xs">{a.assignmentType}</Badge>}
+                        {a.status === "published" && (
+                          <Badge className="text-xs bg-green-500 text-white border-0 gap-1 flex items-center" data-testid={`badge-published-${a.id}`}>
+                            <Globe className="h-2.5 w-2.5" /> Published
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1"><BookOpen className="h-3 w-3" />{a.subject}</span>
@@ -502,7 +658,37 @@ export default function AssignmentsContent() {
                         <span>{a.totalPoints} pts · {a.criteria.length} criteria</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
+                    <div className="flex items-center gap-1 shrink-0 flex-wrap justify-end">
+                      {/* Publish button — only for class-assigned, unpublished */}
+                      {a.status !== "published" && a.classId && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 gap-1 text-xs border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
+                          onClick={() => publishMutation.mutate(a.id)}
+                          disabled={publishMutation.isPending}
+                          data-testid={`button-publish-${a.id}`}
+                        >
+                          {publishMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Globe className="h-3.5 w-3.5" />}
+                          Publish to Class
+                        </Button>
+                      )}
+                      {/* Submissions button — only if published */}
+                      {a.status === "published" && (
+                        <Button
+                          variant={submissionsId === a.id ? "default" : "outline"}
+                          size="sm"
+                          className="h-8 gap-1 text-xs"
+                          onClick={() => {
+                            setSubmissionsId(submissionsId === a.id ? null : a.id);
+                            setGradingId(null);
+                            setExpandedId(null);
+                          }}
+                          data-testid={`button-submissions-${a.id}`}
+                        >
+                          <Users className="h-3.5 w-3.5" /> Submissions
+                        </Button>
+                      )}
                       {/* Grade Students button */}
                       <Button
                         variant={gradingId === a.id ? "default" : "outline"}
@@ -511,15 +697,16 @@ export default function AssignmentsContent() {
                         onClick={() => {
                           setGradingId(gradingId === a.id ? null : a.id);
                           setExpandedId(null);
+                          setSubmissionsId(null);
                         }}
                         data-testid={`button-grade-students-${a.id}`}
                       >
-                        <Users className="h-3.5 w-3.5" /> Grade Students
+                        <Award className="h-3.5 w-3.5" /> Grade
                       </Button>
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleCopy(a)} title="Copy" data-testid={`button-copy-assignment-${a.id}`}>
                         {copiedId === a.id ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setExpandedId(expandedId === a.id ? null : a.id); setGradingId(null); }} data-testid={`button-expand-assignment-${a.id}`}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setExpandedId(expandedId === a.id ? null : a.id); setGradingId(null); setSubmissionsId(null); }} data-testid={`button-expand-assignment-${a.id}`}>
                         {expandedId === a.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                       </Button>
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => deleteMutation.mutate(a.id)} data-testid={`button-delete-assignment-${a.id}`}>
@@ -558,6 +745,11 @@ export default function AssignmentsContent() {
                         </div>
                       </div>
                     </div>
+                  )}
+
+                  {/* Submissions panel (published assignments) */}
+                  {submissionsId === a.id && (
+                    <SubmissionsPanel assignment={a} onClose={() => setSubmissionsId(null)} />
                   )}
 
                   {/* Grading panel */}

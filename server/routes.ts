@@ -3427,6 +3427,276 @@ RULES: Each score MUST be 0 to maxPoints. Evaluate strictly. Output ONLY JSON.`
     }
   });
 
+  // Publish a rubric/assignment
+  app.patch("/api/rubrics/:id/publish", requireAuth, requireTeacher, async (req, res) => {
+    try {
+      const rubric = await storage.getRubric(req.params.id);
+      if (!rubric) return res.status(404).json({ error: "Rubric not found" });
+      if (rubric.teacherId !== req.session.userId) return res.status(403).json({ error: "Forbidden" });
+      if (!rubric.classId) return res.status(400).json({ error: "Assignment must be assigned to a class before publishing" });
+      const updated = await storage.publishRubric(req.params.id);
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to publish rubric" });
+    }
+  });
+
+  // Get all student submissions for a rubric (teacher view) with evaluation
+  app.get("/api/teacher/rubric-submissions", requireAuth, requireTeacher, async (req, res) => {
+    try {
+      const rubricId = req.query.rubricId as string;
+      if (!rubricId) return res.status(400).json({ error: "rubricId is required" });
+      const rubric = await storage.getRubric(rubricId);
+      if (!rubric) return res.status(404).json({ error: "Rubric not found" });
+      if (rubric.teacherId !== req.session.userId) return res.status(403).json({ error: "Forbidden" });
+      const subs = await storage.getRubricSubmissionsByRubric(rubricId);
+      const result = await Promise.all(subs.map(async (sub) => {
+        const evaluation = await storage.getRubricEvaluationBySubmission(sub.id);
+        let studentUser = null;
+        if (sub.studentId) {
+          studentUser = await storage.getUser(sub.studentId);
+        }
+        return { ...sub, evaluation: evaluation || null, studentDisplayName: studentUser?.displayName || sub.studentName };
+      }));
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch submissions" });
+    }
+  });
+
+  // Push evaluation to student
+  app.patch("/api/teacher/rubric-submissions/:id/push", requireAuth, requireTeacher, async (req, res) => {
+    try {
+      const submission = await storage.getRubricSubmission(req.params.id);
+      if (!submission) return res.status(404).json({ error: "Submission not found" });
+      const rubric = await storage.getRubric(submission.rubricId);
+      if (!rubric || rubric.teacherId !== req.session.userId) return res.status(403).json({ error: "Forbidden" });
+      const evaluation = await storage.getRubricEvaluationBySubmission(submission.id);
+      if (!evaluation) return res.status(400).json({ error: "No evaluation to push" });
+      await storage.pushRubricEvaluation(submission.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to push evaluation" });
+    }
+  });
+
+  // Re-evaluate a submission (teacher)
+  app.post("/api/teacher/rubric-submissions/:id/reevaluate", requireAuth, requireTeacher, async (req, res) => {
+    try {
+      const submission = await storage.getRubricSubmission(req.params.id);
+      if (!submission) return res.status(404).json({ error: "Submission not found" });
+      const rubric = await storage.getRubric(submission.rubricId);
+      if (!rubric) return res.status(404).json({ error: "Rubric not found" });
+      if (rubric.teacherId !== req.session.userId) return res.status(403).json({ error: "Forbidden" });
+      const criteria = await storage.getCriteriaByRubric(rubric.id);
+      if (criteria.length === 0) return res.status(400).json({ error: "Rubric has no criteria" });
+
+      const criteriaPrompt = criteria.map((c, i) =>
+        `${i + 1}. "${c.name}" (max ${c.maxPoints} points): ${c.description}`
+      ).join("\n");
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        max_completion_tokens: 800,
+        messages: [
+          {
+            role: "system",
+            content: `You are a strict academic evaluator. Evaluate ONLY using the rubric criteria. Score each criterion from 0 to its max points.
+
+RUBRIC CRITERIA:
+${criteriaPrompt}
+
+Respond with ONLY valid JSON:
+{"criteriaScores":[{"criterionId":"ID","criterionName":"NAME","score":NUMBER,"maxPoints":NUMBER,"feedback":"Brief feedback"}],"overallFeedback":"Summary"}
+
+RULES: Each score MUST be 0 to maxPoints. Output ONLY JSON.`
+          },
+          { role: "user", content: `Student: ${submission.studentName}\nTitle: ${submission.title}\n\n${submission.content}` }
+        ],
+      });
+
+      let text = response.choices[0]?.message?.content || "";
+      const jm = text.match(/\{[\s\S]*\}/);
+      if (jm) text = jm[0];
+      let parsed: any;
+      try { parsed = JSON.parse(text); } catch {
+        return res.status(500).json({ error: "AI returned invalid response" });
+      }
+
+      const criteriaScores = criteria.map((c) => {
+        const s = parsed.criteriaScores?.find((x: any) => x.criterionName === c.name || x.criterionId === c.id);
+        return { criterionId: c.id, criterionName: c.name, score: Math.min(s?.score ?? 0, c.maxPoints), maxPoints: c.maxPoints, feedback: s?.feedback || "No feedback" };
+      });
+      const overallScore = criteriaScores.reduce((sum, s) => sum + s.score, 0);
+
+      // Update or create evaluation
+      const existing = await storage.getRubricEvaluationBySubmission(submission.id);
+      let evaluation;
+      if (existing) {
+        evaluation = await storage.updateRubricEvaluation(existing.id, {
+          overallScore,
+          overallFeedback: parsed.overallFeedback || "Re-evaluation complete",
+          criteriaScores,
+          clearPushedAt: true,
+        });
+        await storage.updateRubricSubmissionStatus(submission.id, "ai_evaluated");
+      } else {
+        evaluation = await storage.createRubricEvaluation({
+          submissionId: submission.id,
+          rubricId: rubric.id,
+          teacherId: req.session.userId!,
+          overallScore,
+          overallFeedback: parsed.overallFeedback || "Evaluation complete",
+          criteriaScores,
+        });
+      }
+
+      res.json(evaluation);
+    } catch (error: any) {
+      console.error("Re-evaluate error:", error);
+      res.status(500).json({ error: "Failed to re-evaluate submission" });
+    }
+  });
+
+  /* ── Student Assignment Routes ─────────────────────────────────── */
+
+  // Get published assignments for all classes the student has joined
+  app.get("/api/student/assignments", requireAuth, requireStudent, async (req, res) => {
+    try {
+      const studentClasses = await storage.getClassesForStudent(req.session.userId!);
+      const classIds = studentClasses.map(c => c.id);
+      const publishedRubrics = await storage.getPublishedRubricsForClasses(classIds);
+
+      const result = await Promise.all(publishedRubrics.map(async (rubric) => {
+        const criteria = await storage.getCriteriaByRubric(rubric.id);
+        const submission = await storage.getRubricSubmissionByStudentAndRubric(req.session.userId!, rubric.id);
+        let evaluation = null;
+        if (submission) {
+          evaluation = await storage.getRubricEvaluationBySubmission(submission.id);
+        }
+        const cls = studentClasses.find(c => c.id === rubric.classId);
+        return {
+          ...rubric,
+          criteria,
+          className: cls?.name || null,
+          submission: submission || null,
+          evaluation: evaluation && submission?.status === "pushed" ? evaluation : null,
+        };
+      }));
+
+      res.json(result);
+    } catch (error) {
+      console.error("Student assignments error:", error);
+      res.status(500).json({ error: "Failed to fetch assignments" });
+    }
+  });
+
+  // Student submits answer for an assignment
+  app.post("/api/student/assignments/:rubricId/submit", requireAuth, requireStudent, async (req, res) => {
+    try {
+      const { content } = req.body;
+      if (!content?.trim()) return res.status(400).json({ error: "Answer content is required" });
+
+      const rubric = await storage.getRubric(req.params.rubricId);
+      if (!rubric) return res.status(404).json({ error: "Assignment not found" });
+      if (rubric.status !== "published") return res.status(400).json({ error: "Assignment is not published" });
+
+      // Check student is in the class
+      const studentClasses = await storage.getClassesForStudent(req.session.userId!);
+      const classIds = studentClasses.map(c => c.id);
+      if (rubric.classId && !classIds.includes(rubric.classId)) {
+        return res.status(403).json({ error: "You are not in this class" });
+      }
+
+      // Check for existing submission
+      const existing = await storage.getRubricSubmissionByStudentAndRubric(req.session.userId!, rubric.id);
+      if (existing) return res.status(400).json({ error: "You have already submitted this assignment" });
+
+      const studentUser = await storage.getUser(req.session.userId!);
+      const submission = await storage.createRubricSubmission({
+        rubricId: rubric.id,
+        teacherId: rubric.teacherId,
+        studentId: req.session.userId!,
+        studentName: studentUser?.displayName || "Student",
+        title: rubric.name,
+        content: content.trim(),
+      });
+
+      // Auto-evaluate using AI
+      const criteria = await storage.getCriteriaByRubric(rubric.id);
+      if (criteria.length > 0) {
+        try {
+          const criteriaPrompt = criteria.map((c, i) =>
+            `${i + 1}. "${c.name}" (max ${c.maxPoints} points): ${c.description}`
+          ).join("\n");
+
+          const response = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            max_completion_tokens: 800,
+            messages: [
+              {
+                role: "system",
+                content: `You are a strict academic evaluator. Evaluate ONLY using the rubric criteria. Score each criterion from 0 to its max points.
+
+RUBRIC CRITERIA:
+${criteriaPrompt}
+
+Respond with ONLY valid JSON:
+{"criteriaScores":[{"criterionId":"ID","criterionName":"NAME","score":NUMBER,"maxPoints":NUMBER,"feedback":"Brief feedback"}],"overallFeedback":"Summary"}
+
+RULES: Each score MUST be 0 to maxPoints. Output ONLY JSON.`
+              },
+              { role: "user", content: `Student: ${studentUser?.displayName || "Student"}\nTitle: ${rubric.name}\n\n${content.trim()}` }
+            ],
+          });
+
+          let text = response.choices[0]?.message?.content || "";
+          const jm = text.match(/\{[\s\S]*\}/);
+          if (jm) text = jm[0];
+          let parsed: any;
+          try { parsed = JSON.parse(text); } catch { parsed = null; }
+
+          if (parsed) {
+            const criteriaScores = criteria.map((c) => {
+              const s = parsed.criteriaScores?.find((x: any) => x.criterionName === c.name || x.criterionId === c.id);
+              return { criterionId: c.id, criterionName: c.name, score: Math.min(s?.score ?? 0, c.maxPoints), maxPoints: c.maxPoints, feedback: s?.feedback || "No feedback" };
+            });
+            const overallScore = criteriaScores.reduce((sum, s) => sum + s.score, 0);
+
+            await storage.createRubricEvaluation({
+              submissionId: submission.id,
+              rubricId: rubric.id,
+              teacherId: rubric.teacherId,
+              overallScore,
+              overallFeedback: parsed.overallFeedback || "Evaluation complete",
+              criteriaScores,
+            });
+          }
+        } catch (aiErr) {
+          console.error("AI evaluation error after student submit:", aiErr);
+        }
+      }
+
+      res.status(201).json(submission);
+    } catch (error: any) {
+      console.error("Student submit error:", error);
+      res.status(500).json({ error: "Failed to submit assignment" });
+    }
+  });
+
+  // Get student's result for a specific assignment (only if pushed)
+  app.get("/api/student/assignments/:rubricId/result", requireAuth, requireStudent, async (req, res) => {
+    try {
+      const submission = await storage.getRubricSubmissionByStudentAndRubric(req.session.userId!, req.params.rubricId);
+      if (!submission) return res.status(404).json({ error: "No submission found" });
+      if (submission.status !== "pushed") return res.status(400).json({ error: "Result not yet available" });
+      const evaluation = await storage.getRubricEvaluationBySubmission(submission.id);
+      res.json({ submission, evaluation });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch result" });
+    }
+  });
+
   app.post("/api/quick-evaluate", requireAuth, requireTeacher, async (req, res) => {
     try {
       const { criteria, studentName, content, classId } = req.body;

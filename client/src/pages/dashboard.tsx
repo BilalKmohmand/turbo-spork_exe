@@ -20,7 +20,7 @@ import {
   HelpCircle, Crown, ClipboardCheck, GraduationCap,
   Menu, PanelLeftClose, PanelLeftOpen, Globe,
   BookMarked, Users, BookOpen, FileSignature, School,
-  Loader2, Plus,
+  Loader2, Plus, ClipboardList,
 } from "lucide-react";
 
 import SolverContent          from "@/components/dashboard/solver-content";
@@ -39,19 +39,21 @@ import GradebookContent       from "@/components/dashboard/gradebook-content";
 import ReportCardContent      from "@/components/dashboard/report-card-content";
 import TeacherClassesContent  from "@/components/dashboard/teacher-classes-content";
 import TeacherHomeContent     from "@/components/dashboard/teacher-home-content";
+import StudentAssignmentsContent from "@/components/dashboard/student-assignments-content";
 
 /* ─── Nav config ─────────────────────────────────────────────── */
 const NAV = [
   {
     group: "Platform",
     items: [
-      { id: "overview", label: "Overview",        icon: LayoutDashboard },
-      { id: "courses",  label: "My Courses",       icon: GraduationCap, badge: "New" },
-      { id: "solver",   label: "AI Tutor",         icon: MessageSquare },
-      { id: "research", label: "Research",          icon: Globe, badge: "New" },
-      { id: "notes",    label: "Lecture Notes",    icon: Mic },
-      { id: "quiz",     label: "Quiz Generator",   icon: FileText },
-      { id: "essay",    label: "Essay Writer",     icon: FileEdit },
+      { id: "overview",     label: "Overview",        icon: LayoutDashboard },
+      { id: "courses",      label: "My Courses",       icon: GraduationCap, badge: "New" },
+      { id: "my-assignments", label: "Assignments",      icon: ClipboardList },
+      { id: "solver",       label: "AI Tutor",         icon: MessageSquare },
+      { id: "research",     label: "Research",          icon: Globe, badge: "New" },
+      { id: "notes",        label: "Lecture Notes",    icon: Mic },
+      { id: "quiz",         label: "Quiz Generator",   icon: FileText },
+      { id: "essay",        label: "Essay Writer",     icon: FileEdit },
     ],
   },
 ];
@@ -228,8 +230,15 @@ function Sidebar({
     return () => document.removeEventListener("mousedown", handler);
   }, [open, setOpen]);
 
+  const filteredNAV = NAV.map(group => ({
+    ...group,
+    items: group.items.filter(item =>
+      item.id !== "my-assignments" || user.role !== "teacher"
+    ),
+  }));
+
   const allGroups = [
-    ...NAV,
+    ...filteredNAV,
     ...(user.role === "teacher" ? [TEACHER_NAV] : []),
     SUPPORT_NAV,
   ];
@@ -476,9 +485,10 @@ export default function Dashboard() {
             {active === "notes"       && <NotesContent />}
             {active === "quiz"        && <QuizContent />}
             {active === "essay"       && <EssayContent />}
-            {active === "evaluate"    && user.role === "teacher" && <EvaluateContent />}
-            {active === "assignments" && user.role === "teacher" && <AssignmentsContent />}
-            {active === "classgrader" && user.role === "teacher" && <ClassGraderContent />}
+            {active === "evaluate"        && user.role === "teacher" && <EvaluateContent />}
+            {active === "assignments"     && user.role === "teacher" && <AssignmentsContent />}
+            {active === "my-assignments"  && user.role !== "teacher" && <StudentAssignmentsContent />}
+            {active === "classgrader"     && user.role === "teacher" && <ClassGraderContent />}
             {active === "gradebook"   && user.role === "teacher" && <GradebookContent />}
             {active === "reportcard"  && user.role === "teacher" && <ReportCardContent />}
             {active === "myclasses"   && user.role === "teacher" && <TeacherClassesContent />}

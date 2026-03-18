@@ -82,14 +82,20 @@ export interface IStorage {
   createRubric(data: InsertRubric): Promise<Rubric>;
   getRubric(id: string): Promise<Rubric | undefined>;
   getRubricsByTeacher(teacherId: string, classId?: string | null): Promise<Rubric[]>;
+  getPublishedRubricsForClasses(classIds: string[]): Promise<Rubric[]>;
+  publishRubric(id: string): Promise<Rubric | undefined>;
   deleteRubric(id: string): Promise<void>;
   getCriteriaByRubric(rubricId: string): Promise<RubricCriterion[]>;
   createCriteria(data: InsertRubricCriterion[]): Promise<RubricCriterion[]>;
-  createRubricSubmission(data: InsertRubricSubmission): Promise<RubricSubmission>;
+  createRubricSubmission(data: { rubricId: string; teacherId: string; studentId?: string | null; studentName: string; title: string; content: string }): Promise<RubricSubmission>;
   getRubricSubmission(id: string): Promise<RubricSubmission | undefined>;
   getRubricSubmissionsByRubric(rubricId: string): Promise<RubricSubmission[]>;
+  getRubricSubmissionByStudentAndRubric(studentId: string, rubricId: string): Promise<RubricSubmission | undefined>;
   updateRubricSubmissionStatus(id: string, status: string): Promise<void>;
   createRubricEvaluation(data: InsertRubricEvaluation): Promise<RubricEvaluation>;
+  getRubricEvaluationBySubmission(submissionId: string): Promise<RubricEvaluation | undefined>;
+  updateRubricEvaluation(id: string, data: { overallScore?: number; overallFeedback?: string; criteriaScores?: any; clearPushedAt?: boolean }): Promise<RubricEvaluation | undefined>;
+  pushRubricEvaluation(submissionId: string): Promise<void>;
   getRubricEvaluationsByRubric(rubricId: string): Promise<RubricEvaluation[]>;
   getRubricEvaluationsByTeacher(teacherId: string): Promise<RubricEvaluation[]>;
 
@@ -413,6 +419,21 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(rubrics).where(and(...conditions)).orderBy(desc(rubrics.createdAt));
   }
 
+  async getPublishedRubricsForClasses(classIds: string[]): Promise<Rubric[]> {
+    if (classIds.length === 0) return [];
+    return await db.select().from(rubrics)
+      .where(and(eq(rubrics.status, "published"), inArray(rubrics.classId, classIds)))
+      .orderBy(desc(rubrics.publishedAt));
+  }
+
+  async publishRubric(id: string): Promise<Rubric | undefined> {
+    const [rubric] = await db.update(rubrics)
+      .set({ status: "published", publishedAt: new Date() })
+      .where(eq(rubrics.id, id))
+      .returning();
+    return rubric;
+  }
+
   async deleteRubric(id: string): Promise<void> {
     await db.delete(rubricEvaluations).where(eq(rubricEvaluations.rubricId, id));
     await db.delete(rubricSubmissions).where(eq(rubricSubmissions.rubricId, id));
@@ -429,8 +450,16 @@ export class DatabaseStorage implements IStorage {
     return await db.insert(rubricCriteria).values(data).returning();
   }
 
-  async createRubricSubmission(data: InsertRubricSubmission): Promise<RubricSubmission> {
-    const [sub] = await db.insert(rubricSubmissions).values(data).returning();
+  async createRubricSubmission(data: { rubricId: string; teacherId: string; studentId?: string | null; studentName: string; title: string; content: string }): Promise<RubricSubmission> {
+    const [sub] = await db.insert(rubricSubmissions).values({
+      rubricId: data.rubricId,
+      teacherId: data.teacherId,
+      studentId: data.studentId || null,
+      studentName: data.studentName,
+      title: data.title,
+      content: data.content,
+      status: "submitted",
+    }).returning();
     return sub;
   }
 
@@ -443,14 +472,40 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(rubricSubmissions).where(eq(rubricSubmissions.rubricId, rubricId)).orderBy(desc(rubricSubmissions.submittedAt));
   }
 
+  async getRubricSubmissionByStudentAndRubric(studentId: string, rubricId: string): Promise<RubricSubmission | undefined> {
+    const [sub] = await db.select().from(rubricSubmissions)
+      .where(and(eq(rubricSubmissions.studentId, studentId), eq(rubricSubmissions.rubricId, rubricId)));
+    return sub;
+  }
+
   async updateRubricSubmissionStatus(id: string, status: string): Promise<void> {
     await db.update(rubricSubmissions).set({ status }).where(eq(rubricSubmissions.id, id));
   }
 
   async createRubricEvaluation(data: InsertRubricEvaluation): Promise<RubricEvaluation> {
     const [ev] = await db.insert(rubricEvaluations).values(data).returning();
-    await this.updateRubricSubmissionStatus(data.submissionId, "evaluated");
+    await this.updateRubricSubmissionStatus(data.submissionId, "ai_evaluated");
     return ev;
+  }
+
+  async getRubricEvaluationBySubmission(submissionId: string): Promise<RubricEvaluation | undefined> {
+    const [ev] = await db.select().from(rubricEvaluations).where(eq(rubricEvaluations.submissionId, submissionId));
+    return ev;
+  }
+
+  async updateRubricEvaluation(id: string, data: { overallScore?: number; overallFeedback?: string; criteriaScores?: any; clearPushedAt?: boolean }): Promise<RubricEvaluation | undefined> {
+    const updateData: Record<string, any> = {};
+    if (data.overallScore !== undefined) updateData.overallScore = data.overallScore;
+    if (data.overallFeedback !== undefined) updateData.overallFeedback = data.overallFeedback;
+    if (data.criteriaScores !== undefined) updateData.criteriaScores = data.criteriaScores;
+    if (data.clearPushedAt) updateData.pushedAt = null;
+    const [ev] = await db.update(rubricEvaluations).set(updateData).where(eq(rubricEvaluations.id, id)).returning();
+    return ev;
+  }
+
+  async pushRubricEvaluation(submissionId: string): Promise<void> {
+    await db.update(rubricEvaluations).set({ pushedAt: new Date() }).where(eq(rubricEvaluations.submissionId, submissionId));
+    await db.update(rubricSubmissions).set({ status: "pushed" }).where(eq(rubricSubmissions.id, submissionId));
   }
 
   async getRubricEvaluationsByRubric(rubricId: string): Promise<RubricEvaluation[]> {
