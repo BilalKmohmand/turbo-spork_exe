@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Sparkles, Copy, Check, RotateCcw, FileText } from "lucide-react";
+import ClassSelector from "./class-selector";
 
 interface ReportCardResult {
   comment: string;
@@ -38,6 +39,7 @@ const TONES = [
 
 export default function ReportCardContent() {
   const { toast } = useToast();
+  const [selectedClassId, setSelectedClassId] = useState("");
   const [studentName, setStudentName] = useState("");
   const [subject, setSubject] = useState("");
   const [grade, setGrade] = useState("");
@@ -52,7 +54,7 @@ export default function ReportCardContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ studentName, subject, grade, tone, notes }),
+        body: JSON.stringify({ studentName, subject, grade, tone, notes, ...(selectedClassId ? { classId: selectedClassId } : {}) }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -141,6 +143,15 @@ export default function ReportCardContent() {
 
       <Card className="border-[#E5E5E0] dark:border-[#22221F] rounded-[24px]">
         <CardContent className="p-6 space-y-5">
+          <div className="space-y-1.5">
+            <Label>Class (optional)</Label>
+            <ClassSelector
+              selectedClassId={selectedClassId}
+              onClassChange={setSelectedClassId}
+              showAllOption
+              placeholder="Select class (optional)"
+            />
+          </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="rc-name">Student Name</Label>

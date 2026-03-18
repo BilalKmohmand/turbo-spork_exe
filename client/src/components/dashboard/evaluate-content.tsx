@@ -27,6 +27,7 @@ import {
   AlertTriangle,
   Lightbulb,
 } from "lucide-react";
+import ClassSelector from "./class-selector";
 
 interface Criterion {
   name: string;
@@ -60,6 +61,7 @@ export default function EvaluateContent() {
     { name: "", description: "", maxPoints: 20 },
   ]);
   const [studentName, setStudentName] = useState("");
+  const [selectedClassId, setSelectedClassId] = useState("");
   const [content, setContent] = useState("");
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [result, setResult] = useState<EvalResult | null>(null);
@@ -103,6 +105,7 @@ export default function EvaluateContent() {
         criteria: criteria.filter((c) => c.name.trim()),
         studentName: studentName.trim() || "Student",
         content,
+        ...(selectedClassId ? { classId: selectedClassId } : {}),
       });
       return res.json();
     },
@@ -284,6 +287,15 @@ export default function EvaluateContent() {
                   <FileText className="w-4 h-4 text-violet-600 dark:text-violet-400" />
                 </div>
                 <Label className="font-semibold text-sm">Student Work</Label>
+              </div>
+
+              <div className="mb-3">
+                <ClassSelector
+                  selectedClassId={selectedClassId}
+                  onClassChange={setSelectedClassId}
+                  showAllOption
+                  placeholder="Select class (optional)"
+                />
               </div>
 
               <Input

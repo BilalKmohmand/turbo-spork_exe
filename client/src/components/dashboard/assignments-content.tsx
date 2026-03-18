@@ -240,8 +240,18 @@ export default function AssignmentsContent() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [gradingId, setGradingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [listClassFilter, setListClassFilter] = useState("");
 
-  const { data: assignments = [], isLoading } = useQuery<Assignment[]>({ queryKey: ["/api/rubrics"] });
+  const { data: assignments = [], isLoading } = useQuery<Assignment[]>({
+    queryKey: ["/api/rubrics", listClassFilter || null],
+    queryFn: async () => {
+      const url = listClassFilter && listClassFilter !== "all"
+        ? `/api/rubrics?classId=${listClassFilter}`
+        : "/api/rubrics";
+      const res = await fetch(url, { credentials: "include" });
+      return res.json();
+    },
+  });
 
   const generateMutation = useMutation({
     mutationFn: async () => {
@@ -446,10 +456,20 @@ export default function AssignmentsContent() {
 
       {/* ── Saved Assignments ── */}
       <div>
-        <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-          <BookOpen className="h-5 w-5" /> Saved Assignments
-          {assignments.length > 0 && <Badge variant="secondary" className="ml-1">{assignments.length}</Badge>}
-        </h3>
+        <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+          <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+            <BookOpen className="h-5 w-5" /> Saved Assignments
+            {assignments.length > 0 && <Badge variant="secondary" className="ml-1">{assignments.length}</Badge>}
+          </h3>
+          <div className="w-56 shrink-0">
+            <ClassSelector
+              selectedClassId={listClassFilter}
+              onClassChange={setListClassFilter}
+              showAllOption
+              placeholder="Filter by class"
+            />
+          </div>
+        </div>
 
         {isLoading ? (
           <div className="flex items-center justify-center py-10">

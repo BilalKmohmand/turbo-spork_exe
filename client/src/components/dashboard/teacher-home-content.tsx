@@ -3,7 +3,7 @@ import { apiRequest } from "@/lib/queryClient";
 import {
   ClipboardCheck, BookMarked, Users, BookOpen,
   FileSignature, GraduationCap, ArrowUpRight,
-  School, Plus, TrendingUp,
+  School, Plus, TrendingUp, ExternalLink,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -51,8 +51,7 @@ function ClassCard({ cls, onNavigate }: { cls: ClassItem; onNavigate: (s: string
   return (
     <Card
       data-testid={`home-class-card-${cls.id}`}
-      className="border-[#E5E5E0] dark:border-[#22221F] rounded-[20px] cursor-pointer hover:border-[#CCCCCC] dark:hover:border-[#333330] transition-colors"
-      onClick={() => onNavigate("myclasses")}
+      className="border-[#E5E5E0] dark:border-[#22221F] rounded-[20px] transition-colors"
     >
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-2 mb-3">
@@ -64,7 +63,7 @@ function ClassCard({ cls, onNavigate }: { cls: ClassItem; onNavigate: (s: string
             {cls.classCode}
           </span>
         </div>
-        <div className="flex items-center gap-4 text-[12px] text-[#999990]">
+        <div className="flex items-center gap-3 text-[12px] text-[#999990] mb-3 flex-wrap">
           <span className="flex items-center gap-1">
             <Users className="w-3.5 h-3.5" />{stats?.studentCount ?? cls.studentCount} student{(stats?.studentCount ?? cls.studentCount) !== 1 ? "s" : ""}
           </span>
@@ -77,6 +76,22 @@ function ClassCard({ cls, onNavigate }: { cls: ClassItem; onNavigate: (s: string
               Avg {letterGrade(stats.avgScore).letter} ({stats.avgScore}%)
             </span>
           )}
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => onNavigate("gradebook")}
+            data-testid={`btn-gradebook-${cls.id}`}
+            className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+          >
+            <BookOpen className="w-3 h-3" /> Grade Book
+          </button>
+          <button
+            onClick={() => onNavigate("myclasses")}
+            data-testid={`btn-manage-class-${cls.id}`}
+            className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-[#F0F0ED] dark:bg-[#1A1A17] text-[#666660] hover:bg-[#E8E8E5] dark:hover:bg-[#222220] transition-colors"
+          >
+            <ExternalLink className="w-3 h-3" /> Manage
+          </button>
         </div>
       </CardContent>
     </Card>

@@ -1891,7 +1891,7 @@ RULES:
   });
 
   /* ── Class Join (student) ───────────────────────────────────── */
-  app.post("/api/classes/join", requireAuth, async (req, res) => {
+  app.post("/api/classes/join", requireAuth, requireStudent, async (req, res) => {
     try {
       const { classCode } = req.body;
       if (!classCode?.trim()) return res.status(400).json({ error: "Class code is required" });
@@ -1909,7 +1909,7 @@ RULES:
     }
   });
 
-  app.get("/api/student/classes", requireAuth, async (req, res) => {
+  app.get("/api/student/classes", requireAuth, requireStudent, async (req, res) => {
     try {
       const studentClasses = await storage.getClassesForStudent(req.session.userId!);
       res.json(studentClasses);
