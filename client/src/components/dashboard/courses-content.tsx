@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   Plus, BookOpen, Trash2, ChevronRight, ChevronLeft,
   Clock, CheckCircle2, Circle, Loader2, Sparkles,
-  BarChart2, GraduationCap, ArrowLeft,
+  BarChart2, GraduationCap, ArrowLeft, Globe, Users, CheckCheck,
 } from "lucide-react";
 
 /* ─── Types ─────────────────────────────────────────────────────── */
@@ -390,6 +390,140 @@ function CourseDetail({
   );
 }
 
+/* ─── Enroll Section ─────────────────────────────────────────────── */
+interface PublicClass {
+  id: string;
+  name: string;
+  subject: string;
+  gradeLevel?: string | null;
+  description?: string | null;
+  teacherName: string;
+  studentCount: number;
+  isEnrolled: boolean;
+  classCode: string;
+}
+
+function EnrollSection() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: classes = [], isLoading } = useQuery<PublicClass[]>({
+    queryKey: ["/api/classes/available"],
+  });
+
+  const enrollMutation = useMutation({
+    mutationFn: async (classId: string) => {
+      const res = await apiRequest("POST", "/api/classes/join", { classId });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to enroll");
+      }
+      return res.json();
+    },
+    onSuccess: (_, classId) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/classes/available"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/student/classes"] });
+      const cls = classes.find(c => c.id === classId);
+      toast({ title: `Enrolled in ${cls?.name || "class"}!`, description: "Your teacher can now assign you work." });
+    },
+    onError: (e: any) => toast({ title: e.message, variant: "destructive" }),
+  });
+
+  const SUBJECT_COLORS: Record<string, string> = {
+    Mathematics: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-300",
+    Science: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-300",
+    "English / Literature": "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/30 dark:text-violet-300",
+    History: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-300",
+    Physics: "bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-950/30 dark:text-cyan-300",
+    Chemistry: "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/30 dark:text-orange-300",
+    Biology: "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-300",
+  };
+
+  const subjectColor = (s: string) => SUBJECT_COLORS[s] || "bg-[#F0F0ED] text-[#666660] border-[#E5E5E0]";
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-6 h-6 animate-spin text-[#999990]" />
+      </div>
+    );
+  }
+
+  if (classes.length === 0) {
+    return (
+      <div className="text-center py-20">
+        <div className="w-16 h-16 rounded-2xl bg-[#F5F5F3] dark:bg-[#1A1A1A] flex items-center justify-center mx-auto mb-4">
+          <Globe className="w-8 h-8 text-[#999]" />
+        </div>
+        <h3 className="text-lg font-semibold text-[#111110] dark:text-white mb-2">No classes available yet</h3>
+        <p className="text-sm text-[#666] dark:text-[#888] max-w-xs mx-auto">
+          When teachers make their classes public, they'll appear here for you to enroll.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-[#666] dark:text-[#888]">Browse publicly listed classes from teachers and enroll with one click.</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        {classes.map(cls => (
+          <div
+            key={cls.id}
+            data-testid={`card-available-class-${cls.id}`}
+            className="bg-white dark:bg-[#111110] border border-[#E5E5E0] dark:border-[#22221F] rounded-2xl p-5 flex flex-col gap-3"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-[#111110] dark:text-[#F9F9F8] truncate">{cls.name}</h3>
+                <p className="text-xs text-[#999990] mt-0.5">by {cls.teacherName}</p>
+              </div>
+              {cls.isEnrolled && (
+                <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-full px-2 py-0.5 shrink-0">
+                  <CheckCheck className="w-3 h-3" /> Enrolled
+                </span>
+              )}
+            </div>
+
+            {cls.description && (
+              <p className="text-xs text-[#666] dark:text-[#888] line-clamp-2">{cls.description}</p>
+            )}
+
+            <div className="flex flex-wrap gap-1.5">
+              <span className={`text-[11px] px-2 py-0.5 rounded-full border font-medium ${subjectColor(cls.subject)}`}>
+                {cls.subject}
+              </span>
+              {cls.gradeLevel && (
+                <span className="text-[11px] px-2 py-0.5 rounded-full border font-medium bg-[#F0F0ED] text-[#666660] border-[#E5E5E0] dark:bg-[#1A1A17] dark:text-[#999990] dark:border-[#22221F]">
+                  {cls.gradeLevel}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between mt-auto pt-1">
+              <span className="flex items-center gap-1 text-xs text-[#999990]">
+                <Users className="w-3.5 h-3.5" /> {cls.studentCount} enrolled
+              </span>
+              <Button
+                size="sm"
+                onClick={() => enrollMutation.mutate(cls.id)}
+                disabled={cls.isEnrolled || enrollMutation.isPending}
+                className={cls.isEnrolled
+                  ? "rounded-xl text-xs bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-0"
+                  : "rounded-xl text-xs bg-[#111110] dark:bg-white text-white dark:text-black hover:bg-[#333]"
+                }
+                data-testid={`button-enroll-${cls.id}`}
+              >
+                {cls.isEnrolled ? "Enrolled" : enrollMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Enroll"}
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ─── Lesson View ────────────────────────────────────────────────── */
 function LessonView({
   course, chapterIdx, lessonIdx, progress, onBack, onComplete, onNext,
@@ -607,8 +741,11 @@ type View =
   | { type: "course"; courseId: string }
   | { type: "lesson"; courseId: string; ci: number; li: number };
 
+type LibTab = "my-courses" | "enroll";
+
 export default function CoursesContent() {
   const [view, setView] = useState<View>({ type: "library" });
+  const [libTab, setLibTab] = useState<LibTab>("my-courses");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -706,12 +843,44 @@ export default function CoursesContent() {
   }
 
   return (
-    <CourseLibrary
-      courses={courses}
-      onSelect={(c) => setView({ type: "course", courseId: c.id })}
-      onNew={() => setView({ type: "create" })}
-      onDelete={(id) => deleteMutation.mutate(id)}
-      isDeleting={deletingId}
-    />
+    <div>
+      {/* Tab bar */}
+      <div className="flex items-center gap-1 mb-6 bg-[#F5F5F3] dark:bg-[#111110] rounded-xl p-1 w-fit">
+        <button
+          onClick={() => setLibTab("my-courses")}
+          data-testid="tab-my-courses"
+          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+            libTab === "my-courses"
+              ? "bg-white dark:bg-[#1A1A17] text-[#111110] dark:text-[#F9F9F8] shadow-sm"
+              : "text-[#666660] hover:text-[#111110] dark:hover:text-white"
+          }`}
+        >
+          My AI Courses
+        </button>
+        <button
+          onClick={() => setLibTab("enroll")}
+          data-testid="tab-enroll"
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+            libTab === "enroll"
+              ? "bg-white dark:bg-[#1A1A17] text-[#111110] dark:text-[#F9F9F8] shadow-sm"
+              : "text-[#666660] hover:text-[#111110] dark:hover:text-white"
+          }`}
+        >
+          <Globe className="w-3.5 h-3.5" /> Discover & Enroll
+        </button>
+      </div>
+
+      {libTab === "my-courses" ? (
+        <CourseLibrary
+          courses={courses}
+          onSelect={(c) => setView({ type: "course", courseId: c.id })}
+          onNew={() => setView({ type: "create" })}
+          onDelete={(id) => deleteMutation.mutate(id)}
+          isDeleting={deletingId}
+        />
+      ) : (
+        <EnrollSection />
+      )}
+    </div>
   );
 }

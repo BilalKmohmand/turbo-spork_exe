@@ -11,9 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
 import {
   Plus, Trash2, Copy, Check, Users, BookOpen, GraduationCap,
-  Loader2, UserPlus, X,
+  Loader2, UserPlus, Globe, Lock,
 } from "lucide-react";
 
 const SUBJECTS = ["Mathematics","English / Literature","Science","History","Geography",
@@ -28,6 +29,8 @@ interface ClassItem {
   classCode: string;
   studentCount: number;
   createdAt: string;
+  isPublic?: boolean;
+  description?: string | null;
 }
 
 interface StudentItem {
@@ -99,6 +102,18 @@ export default function TeacherClassesContent() {
       toast({ title: "Class deleted" });
     },
     onError: () => toast({ title: "Failed to delete class", variant: "destructive" }),
+  });
+
+  const togglePublicMutation = useMutation({
+    mutationFn: async ({ id, isPublic }: { id: string; isPublic: boolean }) => {
+      const res = await apiRequest("PATCH", `/api/teacher/classes/${id}`, { isPublic });
+      return res.json();
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/teacher/classes"] });
+      toast({ title: vars.isPublic ? "Class is now publicly discoverable" : "Class is now private" });
+    },
+    onError: () => toast({ title: "Failed to update class", variant: "destructive" }),
   });
 
   const copyCode = (code: string) => {
@@ -195,6 +210,24 @@ export default function TeacherClassesContent() {
                       }
                     </button>
                   </div>
+                </div>
+
+                {/* Discoverable toggle */}
+                <div className="flex items-center justify-between bg-[#F9F9F8] dark:bg-[#111110] rounded-xl px-3 py-2.5">
+                  <div className="flex items-center gap-2">
+                    {cls.isPublic
+                      ? <Globe className="w-3.5 h-3.5 text-emerald-500" />
+                      : <Lock className="w-3.5 h-3.5 text-[#999990]" />
+                    }
+                    <span className="text-[12px] font-medium text-[#666660]">
+                      {cls.isPublic ? "Students can discover & enroll" : "Private — code required"}
+                    </span>
+                  </div>
+                  <Switch
+                    checked={!!cls.isPublic}
+                    onCheckedChange={val => togglePublicMutation.mutate({ id: cls.id, isPublic: val })}
+                    data-testid={`switch-public-${cls.id}`}
+                  />
                 </div>
 
                 {/* Stats & Roster */}

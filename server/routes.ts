@@ -1902,22 +1902,69 @@ RULES:
     }
   });
 
+  /* ── Available Public Classes (student browse) ──────────────── */
+  app.get("/api/classes/available", requireAuth, requireStudent, async (req, res) => {
+    try {
+      const publicClasses = await storage.getPublicClasses();
+      const memberships = await storage.getMembershipsByStudent(req.session.userId!);
+      const enrolledIds = new Set(memberships.map(m => m.classId));
+      // Attach enrollment status and teacher info
+      const result = await Promise.all(publicClasses.map(async (cls) => {
+        const teacher = await storage.getUser(cls.teacherId);
+        const classMembers = await storage.getMembershipsByClass(cls.id);
+        return {
+          ...cls,
+          isEnrolled: enrolledIds.has(cls.id),
+          teacherName: teacher?.displayName || teacher?.email || "Teacher",
+          studentCount: classMembers.length,
+        };
+      }));
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch available classes" });
+    }
+  });
+
   /* ── Class Join (student) ───────────────────────────────────── */
   app.post("/api/classes/join", requireAuth, requireStudent, async (req, res) => {
     try {
-      const { classCode } = req.body;
-      if (!classCode?.trim()) return res.status(400).json({ error: "Class code is required" });
-      const cls = await storage.getClassByCode(classCode.trim().toUpperCase());
+      const { classCode, classId } = req.body;
+      let cls;
+      if (classId) {
+        cls = await storage.getClass(classId);
+      } else {
+        if (!classCode?.trim()) return res.status(400).json({ error: "Class code is required" });
+        cls = await storage.getClassByCode(classCode.trim().toUpperCase());
+      }
       if (!cls) return res.status(404).json({ error: "Class not found. Check the code and try again." });
       // Check if already a member
       const memberships = await storage.getMembershipsByStudent(req.session.userId!);
-      if (memberships.some(m => m.classId === cls.id)) {
-        return res.status(409).json({ error: "You are already in this class.", class: cls });
+      if (memberships.some(m => m.classId === cls!.id)) {
+        return res.status(409).json({ error: "You are already enrolled in this class.", class: cls });
       }
       await storage.joinClass({ classId: cls.id, studentId: req.session.userId! });
       res.status(201).json({ success: true, class: cls });
     } catch (error: any) {
       res.status(500).json({ error: "Failed to join class" });
+    }
+  });
+
+  /* ── Toggle class public (teacher) ─────────────────────────── */
+  app.patch("/api/teacher/classes/:id", requireTeacher, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const cls = await storage.getClass(id);
+      if (!cls || cls.teacherId !== req.session.userId) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+      const { isPublic, description } = req.body;
+      const updated = await storage.updateClass(id, {
+        ...(typeof isPublic === "boolean" && { isPublic }),
+        ...(typeof description === "string" && { description }),
+      });
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to update class" });
     }
   });
 

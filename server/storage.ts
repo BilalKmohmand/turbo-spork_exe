@@ -647,6 +647,15 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(classes).where(eq(classes.teacherId, teacherId)).orderBy(desc(classes.createdAt));
   }
 
+  async getPublicClasses(): Promise<Class[]> {
+    return await db.select().from(classes).where(eq(classes.isPublic, true)).orderBy(desc(classes.createdAt));
+  }
+
+  async updateClass(id: string, data: Partial<Pick<Class, "isPublic" | "description" | "name" | "subject" | "gradeLevel">>): Promise<Class | undefined> {
+    const [updated] = await db.update(classes).set(data).where(eq(classes.id, id)).returning();
+    return updated;
+  }
+
   async deleteClass(id: string): Promise<void> {
     // Null out rubrics that reference this class (FK constraint)
     await db.update(rubrics).set({ classId: null }).where(eq(rubrics.classId, id));

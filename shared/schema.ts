@@ -434,6 +434,8 @@ export const classes = pgTable("classes", {
   subject: text("subject").notNull().default("General"),
   gradeLevel: text("grade_level"),
   classCode: varchar("class_code", { length: 8 }).notNull().unique(),
+  description: text("description"),
+  isPublic: boolean("is_public").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
