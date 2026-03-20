@@ -5,10 +5,11 @@ import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
 import {
   Plus, BookOpen, Trash2, ChevronRight, ChevronLeft,
   Clock, CheckCircle2, Circle, Loader2, Sparkles,
-  BarChart2, GraduationCap, ArrowLeft, Globe, Users, CheckCheck,
+  BarChart2, GraduationCap, ArrowLeft, Globe, Users, CheckCheck, KeyRound,
 } from "lucide-react";
 
 /* ─── Types ─────────────────────────────────────────────────────── */
@@ -403,122 +404,215 @@ interface PublicClass {
   classCode: string;
 }
 
+const SUBJECT_COLORS: Record<string, string> = {
+  Mathematics: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-300",
+  Science: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-300",
+  "English / Literature": "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/30 dark:text-violet-300",
+  History: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-300",
+  Physics: "bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-950/30 dark:text-cyan-300",
+  Chemistry: "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/30 dark:text-orange-300",
+  Biology: "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-300",
+};
+const subjectColor = (s: string) => SUBJECT_COLORS[s] || "bg-[#F0F0ED] text-[#666660] border-[#E5E5E0]";
+
+interface EnrolledClass {
+  id: string; name: string; subject: string; gradeLevel?: string | null; classCode: string;
+}
+
+function ClassCard({ cls, onEnroll, enrollingId }: {
+  cls: PublicClass;
+  onEnroll: (id: string) => void;
+  enrollingId: string | null;
+}) {
+  return (
+    <div
+      data-testid={`card-available-class-${cls.id}`}
+      className="bg-white dark:bg-[#111110] border border-[#E5E5E0] dark:border-[#22221F] rounded-2xl p-5 flex flex-col gap-3"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-bold text-[#111110] dark:text-[#F9F9F8] truncate">{cls.name}</h3>
+          <p className="text-xs text-[#999990] mt-0.5">by {cls.teacherName}</p>
+        </div>
+        {cls.isEnrolled && (
+          <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-full px-2 py-0.5 shrink-0">
+            <CheckCheck className="w-3 h-3" /> Enrolled
+          </span>
+        )}
+      </div>
+      {cls.description && (
+        <p className="text-xs text-[#666] dark:text-[#888] line-clamp-2">{cls.description}</p>
+      )}
+      <div className="flex flex-wrap gap-1.5">
+        <span className={`text-[11px] px-2 py-0.5 rounded-full border font-medium ${subjectColor(cls.subject)}`}>
+          {cls.subject}
+        </span>
+        {cls.gradeLevel && (
+          <span className="text-[11px] px-2 py-0.5 rounded-full border font-medium bg-[#F0F0ED] text-[#666660] border-[#E5E5E0] dark:bg-[#1A1A17] dark:text-[#999990] dark:border-[#22221F]">
+            {cls.gradeLevel}
+          </span>
+        )}
+      </div>
+      <div className="flex items-center justify-between mt-auto pt-1">
+        <span className="flex items-center gap-1 text-xs text-[#999990]">
+          <Users className="w-3.5 h-3.5" /> {cls.studentCount} enrolled
+        </span>
+        <Button
+          size="sm"
+          onClick={() => onEnroll(cls.id)}
+          disabled={cls.isEnrolled || enrollingId === cls.id}
+          className={cls.isEnrolled
+            ? "rounded-xl text-xs bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-0"
+            : "rounded-xl text-xs bg-[#111110] dark:bg-white text-white dark:text-black hover:bg-[#333]"
+          }
+          data-testid={`button-enroll-${cls.id}`}
+        >
+          {enrollingId === cls.id
+            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            : cls.isEnrolled ? "Enrolled" : "Enroll"
+          }
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function EnrollSection() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [code, setCode] = useState("");
+  const [enrollingId, setEnrollingId] = useState<string | null>(null);
 
-  const { data: classes = [], isLoading } = useQuery<PublicClass[]>({
+  const { data: publicClasses = [], isLoading } = useQuery<PublicClass[]>({
     queryKey: ["/api/classes/available"],
   });
 
-  const enrollMutation = useMutation({
-    mutationFn: async (classId: string) => {
-      const res = await apiRequest("POST", "/api/classes/join", { classId });
+  const { data: myClasses = [] } = useQuery<EnrolledClass[]>({
+    queryKey: ["/api/student/classes"],
+  });
+
+  const joinMutation = useMutation({
+    mutationFn: async (payload: { classId?: string; classCode?: string }) => {
+      const res = await apiRequest("POST", "/api/classes/join", payload);
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || "Failed to enroll");
       }
       return res.json();
     },
-    onSuccess: (_, classId) => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/classes/available"] });
       queryClient.invalidateQueries({ queryKey: ["/api/student/classes"] });
-      const cls = classes.find(c => c.id === classId);
-      toast({ title: `Enrolled in ${cls?.name || "class"}!`, description: "Your teacher can now assign you work." });
+      setCode("");
+      setEnrollingId(null);
+      toast({ title: `Enrolled in ${data.class?.name || "class"}!`, description: "Your teacher can now assign you work." });
     },
-    onError: (e: any) => toast({ title: e.message, variant: "destructive" }),
+    onError: (e: any) => {
+      setEnrollingId(null);
+      toast({ title: e.message, variant: "destructive" });
+    },
   });
 
-  const SUBJECT_COLORS: Record<string, string> = {
-    Mathematics: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-300",
-    Science: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-300",
-    "English / Literature": "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/30 dark:text-violet-300",
-    History: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-300",
-    Physics: "bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-950/30 dark:text-cyan-300",
-    Chemistry: "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/30 dark:text-orange-300",
-    Biology: "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-300",
+  const handleCodeJoin = () => {
+    if (!code.trim()) return;
+    joinMutation.mutate({ classCode: code.trim().toUpperCase() });
   };
 
-  const subjectColor = (s: string) => SUBJECT_COLORS[s] || "bg-[#F0F0ED] text-[#666660] border-[#E5E5E0]";
+  const handleEnroll = (classId: string) => {
+    setEnrollingId(classId);
+    joinMutation.mutate({ classId });
+  };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-6 h-6 animate-spin text-[#999990]" />
-      </div>
-    );
-  }
-
-  if (classes.length === 0) {
-    return (
-      <div className="text-center py-20">
-        <div className="w-16 h-16 rounded-2xl bg-[#F5F5F3] dark:bg-[#1A1A1A] flex items-center justify-center mx-auto mb-4">
-          <Globe className="w-8 h-8 text-[#999]" />
-        </div>
-        <h3 className="text-lg font-semibold text-[#111110] dark:text-white mb-2">No classes available yet</h3>
-        <p className="text-sm text-[#666] dark:text-[#888] max-w-xs mx-auto">
-          When teachers make their classes public, they'll appear here for you to enroll.
-        </p>
-      </div>
-    );
-  }
+  /* Split classes: not-yet-enrolled public ones */
+  const availableToJoin = publicClasses.filter(c => !c.isEnrolled);
 
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-[#666] dark:text-[#888]">Browse publicly listed classes from teachers and enroll with one click.</p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-        {classes.map(cls => (
-          <div
-            key={cls.id}
-            data-testid={`card-available-class-${cls.id}`}
-            className="bg-white dark:bg-[#111110] border border-[#E5E5E0] dark:border-[#22221F] rounded-2xl p-5 flex flex-col gap-3"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-[#111110] dark:text-[#F9F9F8] truncate">{cls.name}</h3>
-                <p className="text-xs text-[#999990] mt-0.5">by {cls.teacherName}</p>
-              </div>
-              {cls.isEnrolled && (
-                <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-full px-2 py-0.5 shrink-0">
-                  <CheckCheck className="w-3 h-3" /> Enrolled
-                </span>
-              )}
-            </div>
-
-            {cls.description && (
-              <p className="text-xs text-[#666] dark:text-[#888] line-clamp-2">{cls.description}</p>
-            )}
-
-            <div className="flex flex-wrap gap-1.5">
-              <span className={`text-[11px] px-2 py-0.5 rounded-full border font-medium ${subjectColor(cls.subject)}`}>
-                {cls.subject}
-              </span>
-              {cls.gradeLevel && (
-                <span className="text-[11px] px-2 py-0.5 rounded-full border font-medium bg-[#F0F0ED] text-[#666660] border-[#E5E5E0] dark:bg-[#1A1A17] dark:text-[#999990] dark:border-[#22221F]">
-                  {cls.gradeLevel}
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center justify-between mt-auto pt-1">
-              <span className="flex items-center gap-1 text-xs text-[#999990]">
-                <Users className="w-3.5 h-3.5" /> {cls.studentCount} enrolled
-              </span>
-              <Button
-                size="sm"
-                onClick={() => enrollMutation.mutate(cls.id)}
-                disabled={cls.isEnrolled || enrollMutation.isPending}
-                className={cls.isEnrolled
-                  ? "rounded-xl text-xs bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-0"
-                  : "rounded-xl text-xs bg-[#111110] dark:bg-white text-white dark:text-black hover:bg-[#333]"
-                }
-                data-testid={`button-enroll-${cls.id}`}
-              >
-                {cls.isEnrolled ? "Enrolled" : enrollMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Enroll"}
-              </Button>
-            </div>
+    <div className="space-y-8">
+      {/* ── Join by Code ── */}
+      <div className="bg-[#F9F9F8] dark:bg-[#111110] border border-[#E5E5E0] dark:border-[#22221F] rounded-2xl p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-8 h-8 rounded-xl bg-[#111110] dark:bg-white flex items-center justify-center shrink-0">
+            <KeyRound className="w-4 h-4 text-white dark:text-black" />
           </div>
-        ))}
+          <div>
+            <p className="font-semibold text-[#111110] dark:text-[#F9F9F8] text-sm">Have a class code?</p>
+            <p className="text-xs text-[#999990]">Enter the code your teacher shared with you</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Input
+            data-testid="input-class-code"
+            placeholder="e.g. ABC123"
+            value={code}
+            onChange={e => setCode(e.target.value.toUpperCase())}
+            onKeyDown={e => e.key === "Enter" && handleCodeJoin()}
+            maxLength={8}
+            className="rounded-xl border-[#E5E5E0] dark:border-[#22221F] font-mono uppercase tracking-widest text-center text-lg font-bold max-w-[180px]"
+          />
+          <Button
+            onClick={handleCodeJoin}
+            disabled={!code.trim() || joinMutation.isPending}
+            className="rounded-xl bg-[#111110] dark:bg-white text-white dark:text-black hover:bg-[#333]"
+            data-testid="button-join-by-code"
+          >
+            {joinMutation.isPending && !enrollingId ? <Loader2 className="w-4 h-4 animate-spin" /> : "Join"}
+          </Button>
+        </div>
+      </div>
+
+      {/* ── My Enrolled Classes ── */}
+      {myClasses.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="font-semibold text-[#111110] dark:text-[#F9F9F8]">My Enrolled Classes</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+            {myClasses.map(cls => (
+              <div
+                key={cls.id}
+                data-testid={`card-my-class-${cls.id}`}
+                className="bg-white dark:bg-[#111110] border border-[#E5E5E0] dark:border-[#22221F] rounded-2xl p-4 flex items-start gap-3"
+              >
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center shrink-0">
+                  <CheckCheck className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-[#111110] dark:text-[#F9F9F8] text-sm truncate">{cls.name}</p>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium ${subjectColor(cls.subject)}`}>
+                      {cls.subject}
+                    </span>
+                    {cls.gradeLevel && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full border font-medium bg-[#F0F0ED] text-[#666660] border-[#E5E5E0]">
+                        {cls.gradeLevel}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Public Classes Browser ── */}
+      <div className="space-y-3">
+        <h3 className="font-semibold text-[#111110] dark:text-[#F9F9F8]">Available Classes</h3>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-6 h-6 animate-spin text-[#999990]" />
+          </div>
+        ) : availableToJoin.length === 0 ? (
+          <div className="text-center py-12 border border-dashed border-[#E5E5E0] dark:border-[#22221F] rounded-2xl">
+            <Globe className="w-8 h-8 mx-auto text-[#CCCCCC] dark:text-[#444] mb-3" />
+            <p className="text-sm font-medium text-[#666660]">No public classes available right now</p>
+            <p className="text-xs text-[#999990] mt-1">Ask your teacher for a class code and use the field above to join</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            {availableToJoin.map(cls => (
+              <ClassCard key={cls.id} cls={cls} onEnroll={handleEnroll} enrollingId={enrollingId} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
