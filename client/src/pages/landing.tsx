@@ -1994,17 +1994,17 @@ export default function Landing() {
               </p>
               <ul className="space-y-3">
                 {[
-                  "Privacy Policy",
-                  "Terms of Service",
-                  "Cookie Policy",
-                  "GDPR",
-                ].map((item) => (
-                  <li key={item}>
+                  ["Privacy Policy", "/privacy"],
+                  ["Terms of Service", "/terms"],
+                  ["Cookie Policy", "/privacy#8.-cookies"],
+                  ["GDPR", "/privacy#7.-your-rights"],
+                ].map(([label, href]) => (
+                  <li key={label}>
                     <a
-                      href="#"
+                      href={href}
                       className="text-[13px] text-white/40 hover:text-white/80 transition-colors"
                     >
-                      {item}
+                      {label}
                     </a>
                   </li>
                 ))}
@@ -2019,19 +2019,19 @@ export default function Landing() {
             </p>
             <div className="flex items-center gap-6">
               <a
-                href="#"
+                href="/privacy"
                 className="text-[12px] text-white/20 hover:text-white/50 transition-colors"
               >
                 Privacy Policy
               </a>
               <a
-                href="#"
+                href="/terms"
                 className="text-[12px] text-white/20 hover:text-white/50 transition-colors"
               >
                 Terms of Service
               </a>
               <a
-                href="#"
+                href="/privacy#8.-cookies"
                 className="text-[12px] text-white/20 hover:text-white/50 transition-colors"
               >
                 Cookie Policy

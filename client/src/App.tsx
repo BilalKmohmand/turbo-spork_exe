@@ -13,6 +13,8 @@ import Demo from "@/pages/demo";
 import Dashboard from "@/pages/dashboard";
 import TeacherDashboard from "@/pages/teacher-dashboard";
 import Knowledge from "@/pages/knowledge";
+import Privacy from "@/pages/privacy";
+import Terms from "@/pages/terms";
 
 function Router() {
   return (
@@ -30,6 +32,8 @@ function Router() {
       <Route path="/notes" component={Dashboard} />
       <Route path="/teacher" component={Dashboard} />
       <Route path="/knowledge" component={Knowledge} />
+      <Route path="/privacy" component={Privacy} />
+      <Route path="/terms" component={Terms} />
       <Route>
         <div className="flex items-center justify-center h-screen">
           <div className="text-center">
