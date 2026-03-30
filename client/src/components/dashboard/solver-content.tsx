@@ -322,6 +322,8 @@ export default function SolverContent() {
   const [subMenuPopup, setSubMenuPopup] = useState<QuickPrompt | null>(null);
   const [activeMode, setActiveMode]     = useState<AIMode | null>(null);
   const [copiedIdx, setCopiedIdx]       = useState<number | null>(null);
+  const [editingIdx, setEditingIdx]     = useState<number | null>(null);
+  const [editText, setEditText]         = useState("");
 
   /* Session history state */
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
@@ -792,6 +794,42 @@ export default function SolverContent() {
     setTimeout(() => setCopiedIdx(null), 2000);
   };
 
+  /* Edit message ---------------------------------------------------- */
+  const startEdit = (idx: number) => {
+    if (chatHistory[idx]?.role === "user") {
+      setEditingIdx(idx);
+      setEditText(chatHistory[idx].content);
+    }
+  };
+
+  const saveEdit = async () => {
+    if (editingIdx === null || !chatHistory[editingIdx]) return;
+    if (!editText.trim()) {
+      setEditingIdx(null);
+      return;
+    }
+
+    const updated = [...chatHistory];
+    updated[editingIdx].content = editText.trim();
+    setChatHistory(updated);
+    setEditingIdx(null);
+    setEditText("");
+    
+    // Save to session if exists
+    if (currentSessionId) {
+      const serialised = updated.map(msg => ({
+        ...msg,
+        imagePreviews: msg.imagePreviews || []
+      }));
+      updateSessionMutation.mutate({ id: currentSessionId, messages: serialised });
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingIdx(null);
+    setEditText("");
+  };
+
   /* Clear conversation / new chat --------------------------------- */
   const clearChat = () => {
     setChatHistory([]);
@@ -1126,15 +1164,54 @@ export default function SolverContent() {
                         {msg.imagePreview && !msg.imagePreviews && (
                           <img src={msg.imagePreview} alt="attachment" className="max-w-[240px] rounded-xl mb-2 border border-[#E5E5E0] dark:border-[#2A2A28]" />
                         )}
-                        <div className="bg-[#F0F0EE] dark:bg-[#1E1E1C] px-4 py-3 rounded-2xl text-[15px] text-[#111110] dark:text-[#E5E5E0] leading-[1.65]">
-                          {msg.content}
-                        </div>
-                        {msg.content && (
-                          <div className="flex justify-end mt-1.5">
+                        {editingIdx === idx ? (
+                          <div className="bg-[#F0F0EE] dark:bg-[#1E1E1C] px-3 py-2 rounded-2xl flex flex-col gap-2">
+                            <textarea
+                              value={editText}
+                              onChange={(e) => setEditText(e.target.value)}
+                              className="w-full px-3 py-2 rounded-lg border border-[#E5E5E0] dark:border-[#2A2A28] bg-white dark:bg-[#111110] text-[#111110] dark:text-[#E5E5E0] text-[14px] leading-[1.65] focus:outline-none focus:ring-2 focus:ring-violet-400 resize-none"
+                              rows={3}
+                              autoFocus
+                              data-testid="textarea-edit-message"
+                            />
+                            <div className="flex justify-end gap-2">
+                              <button
+                                onClick={cancelEdit}
+                                className="text-[11px] px-3 py-1.5 rounded-lg text-[#999990] hover:text-[#444440] dark:hover:text-[#BBBBBB] hover:bg-[#E5E5E0] dark:hover:bg-[#2A2A28] transition-colors"
+                                data-testid="button-cancel-edit"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={saveEdit}
+                                className="text-[11px] px-3 py-1.5 rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-colors font-medium"
+                                data-testid="button-save-edit"
+                              >
+                                Save
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="bg-[#F0F0EE] dark:bg-[#1E1E1C] px-4 py-3 rounded-2xl text-[15px] text-[#111110] dark:text-[#E5E5E0] leading-[1.65]">
+                            {msg.content}
+                          </div>
+                        )}
+                        {msg.content && editingIdx !== idx && (
+                          <div className="flex justify-end mt-1.5 gap-2">
+                            <button
+                              onClick={() => startEdit(idx)}
+                              className="opacity-0 group-hover/msg:opacity-100 transition-opacity flex items-center gap-1 text-[11px] text-[#999990] hover:text-[#444440] dark:hover:text-[#BBBBBB] py-0.5 px-2 rounded"
+                              title="Edit message"
+                              data-testid={`button-edit-message-${idx}`}
+                            >
+                              <PenLine className="w-3 h-3" />
+                              Edit
+                            </button>
                             <button
                               onClick={() => copyMessage(msg.content, idx)}
                               className="opacity-0 group-hover/msg:opacity-100 transition-opacity flex items-center gap-1 text-[11px] text-[#999990] hover:text-[#444440] dark:hover:text-[#BBBBBB] py-0.5 px-2 rounded"
                               title="Copy message"
+                              data-testid={`button-copy-message-${idx}`}
                             >
                               {copiedIdx === idx
                                 ? <><Check className="w-3 h-3 text-emerald-500" /><span className="text-emerald-500">Copied</span></>
