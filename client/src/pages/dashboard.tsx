@@ -410,7 +410,10 @@ function Header({
 /* ─── Dashboard ──────────────────────────────────────────────── */
 export default function Dashboard() {
   const { user, isLoading, logout } = useAuth(true);
-  const [active, setActive]           = useState("overview");
+  const [active, setActive] = useState(() => {
+    const hash = window.location.hash.slice(1);
+    return hash || "overview";
+  });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -424,6 +427,19 @@ export default function Dashboard() {
     },
     enabled: !isLoading && user?.role === "teacher",
   });
+
+  useEffect(() => {
+    window.history.replaceState(null, "", `#${active}`);
+  }, [active]);
+
+  useEffect(() => {
+    const onHashChange = () => {
+      const hash = window.location.hash.slice(1);
+      if (hash) setActive(hash);
+    };
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
 
   useEffect(() => {
     if (!profileLoading && user?.role === "teacher" && !hasCheckedProfile.current) {

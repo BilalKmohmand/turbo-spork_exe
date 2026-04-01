@@ -178,7 +178,10 @@ export const loginSchema = z.object({
 export const registerSchema = z.object({
   email: z.string().email("Valid email required"),
   displayName: z.string().min(2, "Name must be at least 2 characters"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string()
+    .min(6, "Password must be at least 6 characters")
+    .refine(v => v.trim().length > 0, "Password cannot be only spaces")
+    .refine(v => /[a-zA-Z]/.test(v), "Password must contain at least one letter"),
   role: z.enum(["student", "teacher"]),
 });
 

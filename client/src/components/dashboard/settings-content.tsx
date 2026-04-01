@@ -42,9 +42,14 @@ function JoinClassSection() {
 
   const joinMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/classes/join", { classCode: code.trim().toUpperCase() });
+      const res = await fetch("/api/classes/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ classCode: code.trim().toUpperCase() }),
+        credentials: "include",
+      });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to join");
+      if (!res.ok) throw new Error(data.error || "Failed to join class");
       return data;
     },
     onSuccess: (data) => {
@@ -52,7 +57,7 @@ function JoinClassSection() {
       setCode("");
       toast({ title: `Joined "${data.class.name}"!` });
     },
-    onError: (e: any) => toast({ title: e.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: e.message, variant: "destructive", duration: 5000 }),
   });
 
   return (

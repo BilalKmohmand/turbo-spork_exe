@@ -137,7 +137,7 @@ function CreateCourseForm({ onBack, onCreated }: { onBack: () => void; onCreated
 
       <div className="space-y-5">
         <div>
-          <label className="block text-sm font-medium text-[#111110] dark:text-white mb-1.5">What do you want to learn? *</label>
+          <label className="block text-sm font-medium text-[#111110] dark:text-white mb-1.5">What do you want to learn? <span className="text-red-500">*</span></label>
           <input
             value={topic}
             onChange={e => setTopic(e.target.value)}
@@ -925,6 +925,7 @@ export default function CoursesContent({ userRole }: { userRole?: string }) {
     const { ci, li } = view;
     return (
       <LessonView
+        key={`lesson-${activeCourse.id}-${ci}-${li}`}
         course={activeCourse}
         chapterIdx={ci}
         lessonIdx={li}

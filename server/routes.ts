@@ -3389,6 +3389,7 @@ RULES:
               const response = await openai.chat.completions.create({
                 model: "gpt-4o-mini",
                 max_completion_tokens: 800,
+                temperature: 0,
                 messages: [
                   {
                     role: "system",

@@ -10,6 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Sparkles, BookOpen, ChevronDown, ChevronUp, Users,
   ClipboardList, Loader2, Trash2, Clock, Copy, Check,
   FileText, GraduationCap, Save, Plus, X, Award,
@@ -379,6 +383,7 @@ export default function AssignmentsContent() {
   const [selectedClassId, setSelectedClassId] = useState("");
   const [generated, setGenerated] = useState<GeneratedAssignment | null>(null);
   const [editedCriteria, setEditedCriteria] = useState<Criterion[]>([]);
+  const [generatedMeta, setGeneratedMeta] = useState<{ topic: string; subject: string; gradeLevel: string; assignmentType: string; additionalInstructions: string; selectedClassId: string } | null>(null);
 
   // List state
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -386,6 +391,7 @@ export default function AssignmentsContent() {
   const [submissionsId, setSubmissionsId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [listClassFilter, setListClassFilter] = useState("");
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const { data: assignments = [], isLoading } = useQuery<Assignment[]>({
     queryKey: ["/api/rubrics", listClassFilter || null],
@@ -400,33 +406,40 @@ export default function AssignmentsContent() {
 
   const generateMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/generate-assignment", { topic, subject, gradeLevel, assignmentType, additionalInstructions });
+      const trimmedTopic = topic.trim();
+      if (!trimmedTopic) throw new Error("Please enter an assignment topic");
+      if (!/[a-zA-Z]/.test(trimmedTopic)) throw new Error("Topic must contain at least one letter");
+      const res = await apiRequest("POST", "/api/generate-assignment", { topic: trimmedTopic, subject, gradeLevel, assignmentType, additionalInstructions });
       return res.json();
     },
     onSuccess: (data: GeneratedAssignment) => {
       setGenerated(data);
       setEditedCriteria(data.criteria);
+      setGeneratedMeta({ topic: topic.trim(), subject, gradeLevel, assignmentType, additionalInstructions, selectedClassId });
     },
-    onError: () => toast({ title: "Generation failed", description: "Please try again.", variant: "destructive" }),
+    onError: (e: any) => toast({ title: e.message || "Generation failed", description: e.message ? undefined : "Please try again.", variant: "destructive" }),
   });
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (!generated) return;
+      if (!generated || !generatedMeta) return;
       const res = await apiRequest("POST", "/api/rubrics", {
-        name: generated.title, subject, criteria: editedCriteria,
-        gradeLevel, assignmentType,
+        name: generated.title,
+        subject: generatedMeta.subject,
+        criteria: editedCriteria,
+        gradeLevel: generatedMeta.gradeLevel,
+        assignmentType: generatedMeta.assignmentType,
         studentInstructions: generated.studentInstructions,
         estimatedTime: generated.estimatedTime,
-        description: topic,
-        classId: selectedClassId && selectedClassId !== "all" ? selectedClassId : null,
+        description: generatedMeta.topic,
+        classId: generatedMeta.selectedClassId && generatedMeta.selectedClassId !== "all" ? generatedMeta.selectedClassId : null,
       });
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rubrics"] });
       toast({ title: "Assignment saved!", description: "It now appears in your saved list below." });
-      setGenerated(null); setTopic(""); setSubject(""); setGradeLevel(""); setAssignmentType(""); setAdditionalInstructions(""); setEditedCriteria([]);
+      setGenerated(null); setGeneratedMeta(null); setTopic(""); setSubject(""); setGradeLevel(""); setAssignmentType(""); setAdditionalInstructions(""); setEditedCriteria([]);
     },
     onError: () => toast({ title: "Save failed", description: "Please try again.", variant: "destructive" }),
   });
@@ -538,7 +551,7 @@ export default function AssignmentsContent() {
           <Button
             data-testid="button-generate-assignment"
             onClick={() => generateMutation.mutate()}
-            disabled={!topic || !subject || !gradeLevel || !assignmentType || generateMutation.isPending}
+            disabled={!topic.trim() || !subject || !gradeLevel || !assignmentType || generateMutation.isPending}
             className="w-full"
           >
             {generateMutation.isPending
@@ -556,9 +569,9 @@ export default function AssignmentsContent() {
               <div>
                 <CardTitle className="text-xl">{generated.title}</CardTitle>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  <Badge variant="secondary">{subject}</Badge>
-                  <Badge variant="outline">{gradeLevel}</Badge>
-                  <Badge variant="outline">{assignmentType}</Badge>
+                  <Badge variant="secondary">{generatedMeta?.subject ?? subject}</Badge>
+                  <Badge variant="outline">{generatedMeta?.gradeLevel ?? gradeLevel}</Badge>
+                  <Badge variant="outline">{generatedMeta?.assignmentType ?? assignmentType}</Badge>
                   {generated.estimatedTime && (
                     <Badge variant="outline" className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />{generated.estimatedTime}
@@ -715,7 +728,7 @@ export default function AssignmentsContent() {
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setExpandedId(expandedId === a.id ? null : a.id); setGradingId(null); setSubmissionsId(null); }} data-testid={`button-expand-assignment-${a.id}`}>
                         {expandedId === a.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => deleteMutation.mutate(a.id)} data-testid={`button-delete-assignment-${a.id}`}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setConfirmDeleteId(a.id)} data-testid={`button-delete-assignment-${a.id}`}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -768,6 +781,29 @@ export default function AssignmentsContent() {
           </div>
         )}
       </div>
+
+      <AlertDialog open={!!confirmDeleteId} onOpenChange={(open) => !open && setConfirmDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Assignment</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this assignment? This will permanently remove it along with all submissions and evaluations. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (confirmDeleteId) deleteMutation.mutate(confirmDeleteId);
+                setConfirmDeleteId(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
