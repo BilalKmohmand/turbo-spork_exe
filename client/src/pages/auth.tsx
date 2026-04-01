@@ -35,15 +35,19 @@ export default function AuthPage() {
   const [role, setRole] = useState<"student" | "teacher">("student");
   const [loginError, setLoginError] = useState<string | null>(null);
   const [registerError, setRegisterError] = useState<string | null>(null);
+  const [showForgotMsg, setShowForgotMsg] = useState(false);
 
   const loginMutation = useMutation({
     mutationFn: async (data: { email: string; password: string }) => {
-      const res = await apiRequest("POST", "/api/auth/login", data);
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Invalid credentials");
-      }
-      return res.json();
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || "Invalid email or password.");
+      return json;
     },
     onSuccess: (data) => {
       localStorage.setItem("user", JSON.stringify(data.user));
@@ -54,12 +58,15 @@ export default function AuthPage() {
 
   const registerMutation = useMutation({
     mutationFn: async (data: { email: string; password: string; displayName: string; role: string }) => {
-      const res = await apiRequest("POST", "/api/auth/register", data);
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Registration failed");
-      }
-      return res.json();
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || "Registration failed");
+      return json;
     },
     onSuccess: (data) => {
       localStorage.setItem("user", JSON.stringify(data.user));
@@ -208,6 +215,22 @@ export default function AuthPage() {
                       data-testid="button-login-submit">
                       {loginMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Sign In <ArrowRight className="w-4 h-4" /></>}
                     </button>
+                    <div className="text-center">
+                      <button
+                        type="button"
+                        onClick={() => setShowForgotMsg(!showForgotMsg)}
+                        className="text-[12px] text-white/35 hover:text-white/60 transition-colors underline underline-offset-2"
+                        data-testid="button-forgot-password"
+                      >
+                        Forgot password?
+                      </button>
+                    </div>
+                    {showForgotMsg && (
+                      <div className="flex items-start gap-2 p-3 rounded-xl bg-violet-500/10 text-violet-300 text-[12px] border border-violet-500/20">
+                        <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                        <span>Password reset is coming soon. For now, please contact your school admin or email us at <span className="font-semibold">support@thehighgrader.com</span> for account recovery help.</span>
+                      </div>
+                    )}
                   </form>
                 </TabsContent>
 

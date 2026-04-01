@@ -2452,9 +2452,13 @@ ${formatPrompt}`
         return res.status(400).json({ error: "Please provide an essay topic" });
       }
 
+      const targetWords = parseInt(wordCount) || 500;
+      const maxWords = targetWords + 20;
+      const tokenLimit = Math.max(900, Math.round(targetWords * 1.8));
+
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
-        max_completion_tokens: 600,
+        max_completion_tokens: tokenLimit,
         messages: [
           {
             role: "system",
@@ -2465,11 +2469,11 @@ Respond with ONLY a JSON object:
   "title": "Essay title",
   "outline": ["Introduction point", "Body paragraph 1 topic", "Body paragraph 2 topic", "Conclusion point"],
   "essay": "The full essay text with proper paragraphs",
-  "wordCount": 500
+  "wordCount": ${targetWords}
 }
 
 Essay type: ${essayType || "argumentative"}
-Target word count: approximately ${wordCount || 500} words
+STRICT word count requirement: Write EXACTLY ${targetWords} words. The essay MUST NOT exceed ${maxWords} words. Count carefully before finishing.
 
 Write a well-structured, coherent essay with:
 - Clear introduction with thesis statement
@@ -3851,7 +3855,7 @@ Respond with ONLY valid JSON (no markdown):
         "Research Paper": "Write the specific research question or topic the student must investigate. Include: thesis guidance, required number of sources, citation style (APA/MLA), section structure, and minimum page count.",
         "Lab Report": "Write the full experiment setup: hypothesis to test, materials list, step-by-step procedure, data table templates the student must fill in, and what to include in their analysis and conclusion.",
         "Short Answer": "Write 6-10 actual short-answer questions the student must answer. Number each question. Make them specific, thought-provoking, and directly tied to the topic. Each question should require 2-5 sentences to answer.",
-        "Multiple Choice Quiz": "Write 10 actual multiple choice questions, each with 4 options (A, B, C, D). Clearly mark the correct answer in parentheses after each question. Cover different aspects of the topic.",
+        "Multiple Choice Quiz": "Write 10 actual multiple choice questions for STUDENTS, each with 4 options labeled A, B, C, D. Do NOT reveal or mark the correct answer in the student instructions — students must figure out the answer themselves. The correct answers should only appear in the grading criteria, not in the questions.",
         "Creative Writing": "Write the specific creative writing prompt including: the scenario or starting line, genre requirements, required length, any character or setting constraints, and what elements must be included.",
         "Math Problem Set": "Write 8-12 actual numbered math problems the student must solve. Start with simpler problems and increase in difficulty. Show the exact equations, numbers, and what to calculate. Do NOT describe problems — write the actual math.",
         "Presentation": "Write the specific presentation topic and requirements: number of slides, time limit, required sections (intro, main points, conclusion), visual requirements, and the specific argument or information to cover.",

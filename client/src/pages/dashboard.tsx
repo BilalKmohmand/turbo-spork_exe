@@ -479,7 +479,7 @@ export default function Dashboard() {
           <div className={`max-w-screen-xl mx-auto h-full ${active === "solver" ? "" : "p-6 lg:p-8"}`}>
             {active === "overview"    && user.role === "teacher"  && <TeacherHomeContent user={user} onNavigate={setActive} />}
             {active === "overview"    && user.role !== "teacher"  && <OverviewContent user={user} onNavigate={setActive} />}
-            {active === "courses"     && <CoursesContent />}
+            {active === "courses"     && <CoursesContent userRole={user.role} />}
             {active === "solver"      && <SolverContent />}
             {active === "research"    && <ResearchContent />}
             {active === "notes"       && <NotesContent />}

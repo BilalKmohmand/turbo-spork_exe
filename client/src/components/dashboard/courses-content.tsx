@@ -493,12 +493,15 @@ function EnrollSection() {
 
   const joinMutation = useMutation({
     mutationFn: async (payload: { classId?: string; classCode?: string }) => {
-      const res = await apiRequest("POST", "/api/classes/join", payload);
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to enroll");
-      }
-      return res.json();
+      const res = await fetch("/api/classes/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to enroll");
+      return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/classes/available"] });
@@ -509,7 +512,7 @@ function EnrollSection() {
     },
     onError: (e: any) => {
       setEnrollingId(null);
-      toast({ title: e.message, variant: "destructive" });
+      toast({ title: e.message, variant: "destructive", duration: 5000 });
     },
   });
 
@@ -837,7 +840,7 @@ type View =
 
 type LibTab = "my-courses" | "enroll";
 
-export default function CoursesContent() {
+export default function CoursesContent({ userRole }: { userRole?: string }) {
   const [view, setView] = useState<View>({ type: "library" });
   const [libTab, setLibTab] = useState<LibTab>("my-courses");
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -951,17 +954,19 @@ export default function CoursesContent() {
         >
           My AI Courses
         </button>
-        <button
-          onClick={() => setLibTab("enroll")}
-          data-testid="tab-enroll"
-          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-            libTab === "enroll"
-              ? "bg-white dark:bg-[#1A1A17] text-[#111110] dark:text-[#F9F9F8] shadow-sm"
-              : "text-[#666660] hover:text-[#111110] dark:hover:text-white"
-          }`}
-        >
-          <Globe className="w-3.5 h-3.5" /> Discover & Enroll
-        </button>
+        {userRole !== "teacher" && (
+          <button
+            onClick={() => setLibTab("enroll")}
+            data-testid="tab-enroll"
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              libTab === "enroll"
+                ? "bg-white dark:bg-[#1A1A17] text-[#111110] dark:text-[#F9F9F8] shadow-sm"
+                : "text-[#666660] hover:text-[#111110] dark:hover:text-white"
+            }`}
+          >
+            <Globe className="w-3.5 h-3.5" /> Discover & Enroll
+          </button>
+        )}
       </div>
 
       {libTab === "my-courses" ? (

@@ -122,9 +122,17 @@ export default function SettingsContent({ user }: { user: UserType }) {
       return res.json();
     },
     onSuccess: () => {
+      const stored = localStorage.getItem("user");
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          localStorage.setItem("user", JSON.stringify({ ...parsed, displayName }));
+        } catch {}
+      }
       qc.invalidateQueries({ queryKey: ["/api/auth/me"] });
       toast({ title: "Settings saved" });
     },
+    onError: () => toast({ title: "Failed to save settings", variant: "destructive", duration: 5000 }),
   });
 
   return (

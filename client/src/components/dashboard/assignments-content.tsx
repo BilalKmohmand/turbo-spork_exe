@@ -304,6 +304,12 @@ function SubmissionsPanel({ assignment, onClose }: { assignment: Assignment; onC
                     <Badge variant={isPushed ? "default" : sub.status === "ai_evaluated" ? "secondary" : "outline"} className="text-[10px] mt-1">
                       {isPushed ? "Pushed to Student" : sub.status === "ai_evaluated" ? "AI Evaluated" : "Submitted"}
                     </Badge>
+                    {sub.content && (
+                      <div className="mt-2 p-2 bg-background rounded border border-border">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">Student Response</p>
+                        <p className="text-xs whitespace-pre-wrap text-foreground/80 line-clamp-4">{sub.content}</p>
+                      </div>
+                    )}
                   </div>
                   {sub.evaluation && (
                     <div className="text-right shrink-0">

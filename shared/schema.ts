@@ -172,7 +172,7 @@ export interface QuestionObject {
 // Validation schemas for API
 export const loginSchema = z.object({
   email: z.string().email("Valid email required"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string().min(1, "Password is required"),
 });
 
 export const registerSchema = z.object({
