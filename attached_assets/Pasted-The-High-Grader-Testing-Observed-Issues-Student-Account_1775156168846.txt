@@ -1,0 +1,39 @@
+The High Grader Testing – Observed Issues
+Student Account
+1. Course Progress Synchronization Issue:
+The course progress is not being properly synced between the Course Detail View and
+the My Courses Listing Page. The progress shown on one page does not reflect on the
+other, leading to inconsistencies.
+https://jam.dev/c/e6906d02-28cc-4ff0-9e44-fa344413fc48
+https://jam.dev/c/16a61889-b722-4ebc-aeee-1ac165d6ac9e
+2. Research Page Quiz Generation Issue:
+On the Research Page, when attempting to generate a &quot;Research Quiz&quot;, the quiz is not
+appearing on the UI. Although the quiz is present in the API response, it fails to render on
+the interface.
+https://jam.dev/c/028a3b1f-77b0-4815-928b-bc915a359795
+3. Assessment Generation After Quiz Creation:
+After generating the quiz, when the user selects a different option, an assessment for the
+previously selected topic is generated. This behavior is unexpected, as no assessment
+should be triggered unless explicitly created.
+https://jam.dev/c/69f10a24-5cf3-4c7c-82ff-ac04d8c864b5
+4. Quiz Attempt Display Issue:
+On the Quiz Generated Page, not all attempted quizzes are being listed. Out of 8
+attempted quizzes, only 5 are shown, leading to incomplete display of user activity.
+https://jam.dev/c/91b500f2-8bf3-48c3-946e-fcaaf1b5b4d7
+5. Success Message Display:
+Suggestion: The success message should be positioned at the top right of the page, with a
+green or similarly positive color, to clearly indicate a successful operation.
+https://jam.dev/c/2c3eadcf-3c7c-4fd8-ae21-f2bb8ceeb3d9
+6. Page Blinking on Navigation to &#39;New Chat&#39;:
+Upon navigating to the &#39;New Chat&#39; section, there is a noticeable blinking effect. A
+smoother transition is needed to improve the user experience.
+https://jam.dev/c/b81578b5-17a1-417d-bfc6-c7938b80d84c
+7. Chat Bar Layout Issue with Large Text:
+
+In the chat bar, when users enter a large amount of text and scroll, the icons (such as
+attachments) overlap with the text, which affects the usability and appearance.
+https://jam.dev/c/aa6a5130-8e01-4766-9c3f-7cb6d4fcb748
+8. Character Limit Issue in Chat:
+Despite the character limit being set to 2000 in the chat, users are able to enter more than
+2000 characters and submit the response, bypassing the intended restriction.
+https://jam.dev/c/aef1b147-85c6-4e7b-b330-be295114aeb9

@@ -253,7 +253,7 @@ function SubmissionsPanel({ assignment, onClose }: { assignment: Assignment; onC
     },
     onSuccess: () => {
       refetch();
-      toast({ title: "Result pushed to student!" });
+      toast({ title: "Result pushed to student!", variant: "success" });
     },
     onError: () => toast({ title: "Failed to push result", variant: "destructive" }),
   });
@@ -263,7 +263,7 @@ function SubmissionsPanel({ assignment, onClose }: { assignment: Assignment; onC
     try {
       await apiRequest("POST", `/api/teacher/rubric-submissions/${submissionId}/reevaluate`);
       refetch();
-      toast({ title: "Re-evaluation complete!" });
+      toast({ title: "Re-evaluation complete!", variant: "success" });
     } catch {
       toast({ title: "Re-evaluation failed", variant: "destructive" });
     } finally {
@@ -438,7 +438,7 @@ export default function AssignmentsContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rubrics"] });
-      toast({ title: "Assignment saved!", description: "It now appears in your saved list below." });
+      toast({ title: "Assignment saved!", description: "It now appears in your saved list below.", variant: "success" });
       setGenerated(null); setGeneratedMeta(null); setTopic(""); setSubject(""); setGradeLevel(""); setAssignmentType(""); setAdditionalInstructions(""); setEditedCriteria([]);
     },
     onError: () => toast({ title: "Save failed", description: "Please try again.", variant: "destructive" }),
@@ -456,7 +456,7 @@ export default function AssignmentsContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rubrics"] });
-      toast({ title: "Assignment published!", description: "Students in the class can now see and submit it." });
+      toast({ title: "Assignment published!", description: "Students in the class can now see and submit it.", variant: "success" });
     },
     onError: (err: any) => toast({ title: "Failed to publish", description: err?.message || "Please try again.", variant: "destructive" }),
   });

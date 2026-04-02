@@ -1018,9 +1018,17 @@ export default function SolverContent() {
       {/* Scrollable chat area */}
       <div ref={chatContainerRef} className="flex-1 overflow-y-auto no-scrollbar pt-4 pb-6">
         <div className="max-w-3xl mx-auto px-6 w-full">
+          <AnimatePresence mode="wait">
           {chatHistory.length === 0 ? (
             /* ── Empty state ── */
-            <div className="py-20 flex flex-col items-center">
+            <motion.div
+              key="empty"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              className="py-20 flex flex-col items-center"
+            >
               <div className="w-12 h-12 rounded-2xl bg-[#111110] dark:bg-white flex items-center justify-center mb-6">
                 <Sparkles className="w-6 h-6 text-white dark:text-black" />
               </div>
@@ -1069,10 +1077,17 @@ export default function SolverContent() {
               <p className="mt-8 text-[12px] text-[#BBBBBB] dark:text-[#444440] text-center">
                 Tip: Click the mic icon to speak your question hands-free
               </p>
-            </div>
+            </motion.div>
           ) : (
             /* ── Chat messages ── */
-            <div className="space-y-6 py-4">
+            <motion.div
+              key="chat"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              className="space-y-6 py-4"
+            >
               {chatHistory.map((msg, idx) => {
                 const isLastAssistant = msg.role === "assistant" && idx === chatHistory.length - 1;
                 const showCursor = isLastAssistant && (isStreaming || isUploadingSolving) && msg.content.length > 0;
@@ -1254,8 +1269,9 @@ export default function SolverContent() {
                   </div>
                 </motion.div>
               )}
-            </div>
+            </motion.div>
           )}
+          </AnimatePresence>
         </div>
       </div>
 
@@ -1352,58 +1368,60 @@ export default function SolverContent() {
               <Textarea
                 value={textProblem}
                 onChange={(e) => {
+                  const val = e.target.value;
+                  if (val.length > 2000) return;
                   /* If user manually edits while listening, update base so voice appends correctly */
                   if (listeningRef.current) {
-                    baseTextRef.current  = e.target.value;
+                    baseTextRef.current  = val;
                     finalizedRef.current = "";
                     interimRef.current   = "";
                   }
-                  setTextProblem(e.target.value);
+                  setTextProblem(val);
                 }}
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSubmit())}
                 placeholder={isListening ? "Speak now — I'm listening…" : "Ask anything, or drag & drop files here…"}
-                className={`w-full min-h-[60px] max-h-48 p-4 pt-5 pb-12 bg-transparent border-none focus-visible:ring-0 text-[15px] resize-none no-scrollbar ${
+                className={`w-full min-h-[60px] max-h-48 p-4 pt-5 pb-3 bg-transparent border-none focus-visible:ring-0 text-[15px] resize-none no-scrollbar ${
                   isListening ? "placeholder:text-red-400" : "placeholder:text-[#999990]"
                 }`}
               />
 
-              {/* Bottom toolbar */}
-              <div className="absolute bottom-3 left-4 flex items-center gap-1">
-                {/* Paperclip — open file picker */}
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  title="Attach image, PDF, Word, Excel or TXT"
-                  disabled={isListening}
-                  className="p-2 rounded-lg text-[#666660] hover:bg-[#F0F0F0] dark:hover:bg-[#1A1A1A] hover:text-[#111110] dark:hover:text-white transition-colors disabled:opacity-40"
-                  data-testid="button-attach-file"
-                >
-                  <Paperclip className="w-4 h-4" />
-                </button>
+              {/* Bottom toolbar — flex row so it never overlaps textarea text */}
+              <div className="flex items-center justify-between px-3 pb-3 pt-0">
+                <div className="flex items-center gap-1">
+                  {/* Paperclip — open file picker */}
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    title="Attach image, PDF, Word, Excel or TXT"
+                    disabled={isListening}
+                    className="p-2 rounded-lg text-[#666660] hover:bg-[#F0F0F0] dark:hover:bg-[#1A1A1A] hover:text-[#111110] dark:hover:text-white transition-colors disabled:opacity-40"
+                    data-testid="button-attach-file"
+                  >
+                    <Paperclip className="w-4 h-4" />
+                  </button>
 
-                {/* Mic — voice to text */}
-                <button
-                  onClick={toggleVoice}
-                  title={isListening ? "Stop listening (tap to finish)" : "Start voice input"}
-                  className={`p-2 rounded-lg transition-all ${
-                    isListening
-                      ? "text-red-500 bg-red-50 dark:bg-red-950/30 ring-2 ring-red-200 dark:ring-red-800"
-                      : "text-[#666660] hover:bg-[#F0F0F0] dark:hover:bg-[#1A1A1A] hover:text-[#111110] dark:hover:text-white"
-                  }`}
-                  data-testid="button-voice-input"
-                >
-                  {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                </button>
+                  {/* Mic — voice to text */}
+                  <button
+                    onClick={toggleVoice}
+                    title={isListening ? "Stop listening (tap to finish)" : "Start voice input"}
+                    className={`p-2 rounded-lg transition-all ${
+                      isListening
+                        ? "text-red-500 bg-red-50 dark:bg-red-950/30 ring-2 ring-red-200 dark:ring-red-800"
+                        : "text-[#666660] hover:bg-[#F0F0F0] dark:hover:bg-[#1A1A1A] hover:text-[#111110] dark:hover:text-white"
+                    }`}
+                    data-testid="button-voice-input"
+                  >
+                    {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                  </button>
 
-                {/* Char counter when getting long */}
-                {textProblem.length > 200 && (
-                  <span className={`text-[11px] ml-1 font-mono ${textProblem.length > 1800 ? "text-red-500" : "text-[#BBBBBB]"}`}>
-                    {textProblem.length}/2000
-                  </span>
-                )}
-              </div>
+                  {/* Char counter when getting long */}
+                  {textProblem.length > 200 && (
+                    <span className={`text-[11px] ml-1 font-mono ${textProblem.length > 1800 ? "text-red-500" : "text-[#BBBBBB]"}`}>
+                      {textProblem.length}/2000
+                    </span>
+                  )}
+                </div>
 
-              {/* Send button */}
-              <div className="absolute bottom-3 right-4">
+                {/* Send button */}
                 <button
                   onClick={handleSubmit}
                   disabled={!canSend}

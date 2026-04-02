@@ -78,7 +78,7 @@ function AssignmentCard({ assignment }: { assignment: StudentAssignment }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/student/assignments"] });
-      toast({ title: "Assignment submitted!", description: "Your teacher will review and push your result." });
+      toast({ title: "Assignment submitted!", description: "Your teacher will review and push your result.", variant: "success" });
       setAnswer("");
       setExpanded(false);
     },

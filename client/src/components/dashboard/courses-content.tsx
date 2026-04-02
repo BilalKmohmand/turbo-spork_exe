@@ -113,7 +113,7 @@ function CreateCourseForm({ onBack, onCreated }: { onBack: () => void; onCreated
     mutationFn: () => apiRequest("POST", "/api/courses/generate", { topic, difficulty, audience: audience || "general learners" }),
     onSuccess: async (res) => {
       const course = await res.json();
-      toast({ title: "Course created!", description: `"${course.title}" is ready to study.` });
+      toast({ title: "Course created!", description: `"${course.title}" is ready to study.`, variant: "success" });
       onCreated(course);
     },
     onError: async (err: any) => {
@@ -508,7 +508,7 @@ function EnrollSection() {
       queryClient.invalidateQueries({ queryKey: ["/api/student/classes"] });
       setCode("");
       setEnrollingId(null);
-      toast({ title: `Enrolled in ${data.class?.name || "class"}!`, description: "Your teacher can now assign you work." });
+      toast({ title: `Enrolled in ${data.class?.name || "class"}!`, description: "Your teacher can now assign you work.", variant: "success" });
     },
     onError: (e: any) => {
       setEnrollingId(null);
@@ -660,7 +660,7 @@ function LessonView({
     mutationFn: (score: number) => apiRequest("POST", `/api/courses/${course.id}/lesson/${key}/complete`, { score }),
     onSuccess: (_, score) => {
       onComplete(score);
-      toast({ title: "Progress saved!", description: `Lesson marked as complete.` });
+      toast({ title: "Progress saved!", description: `Lesson marked as complete.`, variant: "success" });
     },
   });
 
@@ -885,7 +885,7 @@ export default function CoursesContent({ userRole }: { userRole?: string }) {
       setView({ type: "lesson", courseId: course.id, ci: ci + 1, li: 0 });
     } else {
       setView({ type: "course", courseId: course.id });
-      toast({ title: "🎉 Course complete!", description: "You've finished all lessons." });
+      toast({ title: "🎉 Course complete!", description: "You've finished all lessons.", variant: "success" });
     }
   };
 

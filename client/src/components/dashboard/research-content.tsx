@@ -205,6 +205,7 @@ function QuizResult({
 export default function ResearchContent() {
   const { toast }                     = useToast();
   const [activeType, setActiveType]   = useState<AssessmentType>("topic");
+  const [resultType, setResultType]   = useState<AssessmentType | null>(null);
   const [topic, setTopic]             = useState("");
   const [text, setText]               = useState("");
   const [files, setFiles]             = useState<AttachedFile[]>([]);
@@ -244,14 +245,15 @@ export default function ResearchContent() {
 
   async function handleSubmit() {
     if (!topic.trim() && !files.length) return;
-    setLoading(true); setResult(null); setQuizQuestions([]); setError(null);
+    const submittedType = activeType;
+    setLoading(true); setResult(null); setResultType(null); setQuizQuestions([]); setError(null);
 
     try {
       /* Step 1 — research (all types use this) */
-      setLoadingStep(activeType === "quiz" ? "Searching the web for content…" : "Searching the web and analysing…");
+      setLoadingStep(submittedType === "quiz" ? "Searching the web for content…" : "Searching the web and analysing…");
 
       let res: Response;
-      const assessType = activeType === "quiz" ? "topic" : activeType;
+      const assessType = submittedType === "quiz" ? "topic" : submittedType;
 
       if (files.length > 0) {
         const fd = new FormData();
@@ -270,8 +272,9 @@ export default function ResearchContent() {
       const json = await res.json();
       if (!res.ok || json.error) throw new Error(json.error || "Assessment failed");
 
-      if (activeType !== "quiz") {
+      if (submittedType !== "quiz") {
         setResult(json);
+        setResultType(submittedType);
         return;
       }
 
@@ -285,6 +288,7 @@ export default function ResearchContent() {
       if (!qRes.ok || qJson.error) throw new Error(qJson.error || "Quiz generation failed");
 
       setResult(json);
+      setResultType("quiz");
       setQuizQuestions((qJson.questions || []).slice(0, 5));
 
     } catch (e: any) {
@@ -296,13 +300,13 @@ export default function ResearchContent() {
   }
 
   function reset() {
-    setResult(null); setQuizQuestions([]); setError(null); setTopic(""); setText("");
+    setResult(null); setResultType(null); setQuizQuestions([]); setError(null); setTopic(""); setText("");
     files.forEach(f => { if (f.preview) URL.revokeObjectURL(f.preview); });
     setFiles([]);
   }
 
   /* ── Render quiz result ─────────────────────────────────────────── */
-  if (result && activeType === "quiz" && quizQuestions.length > 0) {
+  if (result && resultType === "quiz" && quizQuestions.length > 0) {
     return (
       <div className="max-w-4xl mx-auto">
         <div className="mb-8 flex items-center gap-3">
@@ -320,7 +324,7 @@ export default function ResearchContent() {
   }
 
   /* ── Render standard assessment result ──────────────────────────── */
-  if (result && activeType !== "quiz") {
+  if (result && resultType !== "quiz") {
     return (
       <div className="max-w-4xl mx-auto">
         <div className="mb-8 flex items-center gap-3">

@@ -4074,7 +4074,13 @@ Requirements:
   app.get("/api/courses", requireAuth, async (req, res) => {
     try {
       const userCourses = await storage.getCoursesByUser(req.session.userId!);
-      res.json(userCourses);
+      const coursesWithProgress = await Promise.all(
+        userCourses.map(async (course) => {
+          const progress = await storage.getLessonProgress(req.session.userId!, course.id);
+          return { ...course, progress };
+        })
+      );
+      res.json(coursesWithProgress);
     } catch (error: any) {
       res.status(500).json({ error: "Failed to fetch courses" });
     }

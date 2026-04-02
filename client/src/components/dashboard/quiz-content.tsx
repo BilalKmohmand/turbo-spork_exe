@@ -130,7 +130,7 @@ function StatsPanel({ attempts }: { attempts: QuizAttempt[] }) {
 function RecentAttempts({ attempts, onRetry }: { attempts: QuizAttempt[]; onRetry: (a: QuizAttempt) => void }) {
   if (attempts.length === 0) return null;
 
-  const recent = attempts.slice(0, 5);
+  const recent = attempts;
 
   return (
     <div className="mb-10">

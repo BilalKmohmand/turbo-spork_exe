@@ -55,7 +55,7 @@ function JoinClassSection() {
     onSuccess: (data) => {
       qclient.invalidateQueries({ queryKey: ["/api/student/classes"] });
       setCode("");
-      toast({ title: `Joined "${data.class.name}"!` });
+      toast({ title: `Joined "${data.class.name}"!`, variant: "success" });
     },
     onError: (e: any) => toast({ title: e.message, variant: "destructive", duration: 5000 }),
   });
@@ -135,7 +135,7 @@ export default function SettingsContent({ user }: { user: UserType }) {
         } catch {}
       }
       qc.invalidateQueries({ queryKey: ["/api/auth/me"] });
-      toast({ title: "Settings saved" });
+      toast({ title: "Settings saved", variant: "success" });
     },
     onError: () => toast({ title: "Failed to save settings", variant: "destructive", duration: 5000 }),
   });

@@ -88,7 +88,7 @@ export default function TeacherClassesContent() {
       queryClient.invalidateQueries({ queryKey: ["/api/teacher/classes"] });
       setShowCreate(false);
       setNewName(""); setNewSubject(""); setNewGrade("");
-      toast({ title: "Class created!" });
+      toast({ title: "Class created!", variant: "success" });
     },
     onError: (e: any) => toast({ title: "Failed to create class", description: e.message, variant: "destructive" }),
   });
