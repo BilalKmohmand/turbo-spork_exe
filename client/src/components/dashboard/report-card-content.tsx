@@ -85,7 +85,7 @@ export default function ReportCardContent() {
           </div>
           <Button
             variant="ghost"
-            onClick={() => { setResult(null); }}
+            onClick={() => { setResult(null); setStudentName(""); setSubject(""); setGrade(""); setTone("encouraging"); setNotes(""); }}
             data-testid="button-new-report"
             className="rounded-full h-10 px-4 hover:bg-[#F0F0ED]"
           >

@@ -1,0 +1,49 @@
+The High Grader Testing – Observed Issues
+Student Account
+1. After generating an essay, when the user clicks on “Start New”, they are redirected to
+the essay page with previously filled data.
+➤ The form should be reset to a blank state.
+https://jam.dev/c/74545552-096d-4a2e-a5e9-43718a4471f2
+Teacher Account
+2. After a student submits an assignment, when the teacher re-evaluates it, the score changes
+inconsistently.
+➤ Example: Initially graded 70/200 (Grade F), but after re-evaluation it becomes
+100/200 (Grade F).
+➤ The grading should be consistent across evaluations.
+https://jam.dev/c/3864dc78-9e88-4a2e-8635-e83e0c16b270
+3. The student’s submitted response is visible, but the teacher is unable to scroll through
+the full response.
+➤ Scrolling should be enabled to review the complete submission.
+https://prnt.sc/OfI2JSAE_dZU
+4. Teachers can grade students from two places:
+o Assignment Page
+o Class Grader Page
+However, grading the same response produces different scores:
+o Assignment Page: 100/100 (Grade A)
+o Class Grader Page: 90/100 (Grade A)
+➤ Grading should be consistent across both interfaces.
+https://jam.dev/c/d8f12729-b2a5-40d9-8f47-4fc2be11ced8
+5. After grading a class, when the teacher clicks “Grade Another Class”, they are
+redirected to the grading page with previously selected data pre-filled.
+➤ The form should be reset.
+https://jam.dev/c/ba136d3c-4a93-4f04-978f-c277ba782f96
+
+6. While grading multiple students:
+o The teacher can click “Grade All Students” even if responses are entered for
+only some students.
+➤ The button should remain disabled until all required student responses are
+filled, as this is a mandatory field.
+https://jam.dev/c/c4fff6e0-2c87-4764-8a4c-c2b31ae084f6
+7. On the Report Card page, after generating a comment, clicking “New Comment”
+redirects to the form with previous student details pre-filled.
+➤ The form should be cleared/reset.
+
+8. When exporting grades as a CSV file, the assignment title is inconsistent depending on
+whether it was created from:
+o Assignments Page
+o Class Grader Page
+➤ The assignment title should be consistent in the exported file.
+https://prnt.sc/f5W_Q4_Ghyn4
+9. After changing the application theme (Light → Dark), refreshing the page resets the
+theme back.
+➤ The selected theme should be persisted after refresh.

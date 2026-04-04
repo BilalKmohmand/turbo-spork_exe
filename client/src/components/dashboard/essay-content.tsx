@@ -143,7 +143,7 @@ export default function EssayContent() {
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="flex items-center justify-between">
             <h3 className="text-2xl font-bold">{result.title}</h3>
-            <Button variant="ghost" onClick={() => setResult(null)} className="rounded-full h-10 px-4 text-[#111110] dark:text-[#E5E5E0] hover:bg-[#F0F0F0] dark:hover:bg-[#1A1A1A] hover:text-[#111110] dark:hover:text-white">
+            <Button variant="ghost" onClick={() => { setResult(null); setTopic(""); setEssayType("argumentative"); setWordCount("500"); setAdditionalNotes(""); }} className="rounded-full h-10 px-4 text-[#111110] dark:text-[#E5E5E0] hover:bg-[#F0F0F0] dark:hover:bg-[#1A1A1A] hover:text-[#111110] dark:hover:text-white">
               <RotateCcw className="w-4 h-4 mr-2" /> Start New
             </Button>
           </div>

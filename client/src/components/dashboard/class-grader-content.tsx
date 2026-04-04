@@ -172,6 +172,7 @@ export default function ClassGraderContent() {
 
   function exportCSV() {
     if (!results || !selectedRubric) return;
+    const titleRow = `"Assignment: ${selectedRubric.name}"`;
     const header = ["Student", "Score", "Total", "%", "Grade", "Feedback",
       ...(results[0]?.criteriaScores?.map(c => c.criterionName) ?? [])].join(",");
     const rows = results.map(r => {
@@ -183,7 +184,7 @@ export default function ClassGraderContent() {
         `"${(r.overallFeedback ?? "").split('"').join("'")}"`, ...criteriaVals,
       ].join(",");
     });
-    const csv = [header, ...rows].join("\n");
+    const csv = [titleRow, header, ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -217,7 +218,7 @@ export default function ClassGraderContent() {
               <DownloadIcon className="w-4 h-4 mr-2" /> Export CSV
             </Button>
             <Button
-              onClick={() => { setStep("setup"); setResults(null); setStudents([{ id: makeId(), name: "", content: "" }]); }}
+              onClick={() => { setStep("setup"); setResults(null); setStudents([{ id: makeId(), name: "", content: "" }]); setRubricId(""); setSelectedClassId(""); }}
               data-testid="button-grade-again"
               className="rounded-xl bg-black dark:bg-white text-white dark:text-black"
             >
@@ -432,7 +433,7 @@ export default function ClassGraderContent() {
 
       <Button
         onClick={() => gradeMutation.mutate()}
-        disabled={gradeMutation.isPending || !rubricId || students.every(s => !s.name.trim() || !s.content.trim())}
+        disabled={gradeMutation.isPending || !rubricId || students.every(s => !s.name.trim() || !s.content.trim()) || students.some(s => s.name.trim() && !s.content.trim())}
         data-testid="button-grade-all"
         className="w-full h-12 rounded-xl bg-black dark:bg-white text-white dark:text-black text-base font-semibold"
       >

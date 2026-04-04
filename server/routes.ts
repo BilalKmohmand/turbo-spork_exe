@@ -3285,6 +3285,7 @@ Do NOT use markdown formatting - use plain text with clear structure.`,
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         max_completion_tokens: 800,
+        temperature: 0,
         messages: [
           {
             role: "system",
@@ -3550,6 +3551,7 @@ RULES: Each score MUST be 0 to maxPoints. Evaluate strictly. Output ONLY JSON.`
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         max_completion_tokens: 800,
+        temperature: 0,
         messages: [
           {
             role: "system",

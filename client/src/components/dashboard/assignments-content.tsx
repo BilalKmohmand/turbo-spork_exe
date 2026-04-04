@@ -311,7 +311,7 @@ function SubmissionsPanel({ assignment, onClose }: { assignment: Assignment; onC
                     {sub.content && (
                       <div className="mt-2 p-2 bg-background rounded border border-border">
                         <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">Student Response</p>
-                        <p className="text-xs whitespace-pre-wrap text-foreground/80 line-clamp-4">{sub.content}</p>
+                        <p className="text-xs whitespace-pre-wrap text-foreground/80 max-h-32 overflow-y-auto">{sub.content}</p>
                       </div>
                     )}
                   </div>
