@@ -1,0 +1,48 @@
+name: Build Windows EXE
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - "welcome-hub-main/**"
+      - ".github/workflows/build-windows-exe.yml"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "welcome-hub-main/**"
+      - ".github/workflows/build-windows-exe.yml"
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: welcome-hub-main/package-lock.json
+
+      - name: Install dependencies
+        working-directory: welcome-hub-main
+        run: npm ci
+
+      - name: Build Windows installer (NSIS)
+        working-directory: welcome-hub-main
+        run: npm run desktop:dist:win
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: TheHighGrader-windows
+          path: |
+            welcome-hub-main/release/**/*.exe
+            welcome-hub-main/release/**/*.msi
+            welcome-hub-main/release/**/*.zip
+            welcome-hub-main/release/builder-debug.yml
+            welcome-hub-main/release/builder-effective-config.yaml

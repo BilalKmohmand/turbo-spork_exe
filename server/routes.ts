@@ -12,6 +12,7 @@ import { retrieveRelevantChunks, formatContextForAI, getKnowledgeStats } from ".
 import { db } from "./db";
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 // Dynamic import for pdf-parse to avoid ESM/CJS bundling issues
 let PDFParse: any = null;
 async function getPDFParse() {
@@ -48,6 +49,12 @@ function requireTeacher(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+function getDesktopUserId(req: Request) {
+  const header = req.headers["x-desktop-user"];
+  if (typeof header === "string" && header.trim()) return header.trim();
+  return "desktop";
+}
+
 function requireStudent(req: Request, res: Response, next: NextFunction) {
   if (!req.session.userId) {
     return res.status(401).json({ error: "Authentication required" });
@@ -67,6 +74,88 @@ const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
+
+// Ollama Local LLM Support
+const OLLAMA_ENABLED = process.env.OLLAMA_ENABLED === "true";
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "llama3.2";
+
+async function ollamaChat(messages: Array<{role: string, content: string}>, options?: {max_tokens?: number, temperature?: number}): Promise<string> {
+  const response = await fetch(`${OLLAMA_BASE_URL}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: OLLAMA_MODEL,
+      messages,
+      stream: false,
+      options: {
+        temperature: options?.temperature ?? 0.7,
+        num_predict: options?.max_tokens ?? 600,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Ollama error: ${error}`);
+  }
+
+  const data = await response.json();
+  return data.message?.content || "";
+}
+
+async function ollamaGenerate(prompt: string, options?: {max_tokens?: number, temperature?: number}): Promise<string> {
+  const response = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: OLLAMA_MODEL,
+      prompt,
+      stream: false,
+      options: {
+        temperature: options?.temperature ?? 0.7,
+        num_predict: options?.max_tokens ?? 600,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Ollama error: ${error}`);
+  }
+
+  const data = await response.json();
+  return data.response || "";
+}
+
+// Wrapper to use Ollama if enabled, otherwise fall back to OpenAI
+async function generateChatCompletion(messages: Array<{role: string, content: string}>, options?: {max_tokens?: number, temperature?: number, model?: string}): Promise<string> {
+  // Try Ollama first if enabled
+  if (OLLAMA_ENABLED) {
+    try {
+      console.log("Using Ollama for chat completion...");
+      return await ollamaChat(messages, options);
+    } catch (err) {
+      console.warn("Ollama failed:", err);
+    }
+  }
+
+  // Fall back to OpenAI
+  try {
+    const response = await openai.chat.completions.create({
+      model: options?.model || "gpt-4o-mini",
+      messages: messages as any,
+      max_completion_tokens: options?.max_tokens || 600,
+      temperature: options?.temperature ?? 0.7,
+    });
+    return response.choices[0]?.message?.content || "";
+  } catch (err: any) {
+    console.warn("OpenAI failed:", err?.message || err);
+  }
+
+  // Both failed - return helpful message
+  return "AI features are currently unavailable. To enable AI:\n\n1. Install Ollama: curl -fsSL https://ollama.com/install.sh | sh\n2. Run: ollama pull llama3.2\n3. Run: ollama serve\n\nOr add OpenAI API credits at platform.openai.com";
+}
 
 function ensureString(value: unknown): string {
   if (typeof value === "string") return value;
@@ -3068,7 +3157,7 @@ Output ONLY valid JSON.`;
       console.log("Transcribing audio, size:", req.file.size, "type:", mimeType);
 
       // Use Blob for Node.js compatibility (File may not be available)
-      const audioBlob = new Blob([req.file.buffer], { type: mimeType });
+      const audioBlob = new Blob([new Uint8Array(req.file.buffer)], { type: mimeType });
       
       // Create a File-like object that OpenAI SDK accepts
       const audioFile = Object.assign(audioBlob, {
@@ -4001,6 +4090,31 @@ ${notes ? `Teacher notes: ${notes}` : ""}`
 
   /* ── Course API ────────────────────────────────────────────────── */
 
+  // Create a basic course (non-AI). Used by the desktop app.
+  app.post("/api/courses", requireAuth, async (req, res) => {
+    try {
+      const { title, subject } = req.body as { title?: string; subject?: string };
+      if (!title?.trim()) return res.status(400).json({ error: "Title is required" });
+
+      const course = await storage.createCourse({
+        userId: req.session.userId!,
+        title: title.trim(),
+        topic: title.trim(),
+        difficulty: "beginner",
+        audience: "general",
+        description: "",
+        coverEmoji: "📚",
+        chapters: [],
+        totalLessons: 0,
+      });
+
+      res.status(201).json(course);
+    } catch (error: any) {
+      console.error("Course create error:", error);
+      res.status(500).json({ error: "Failed to create course" });
+    }
+  });
+
   // Generate a new AI course
   app.post("/api/courses/generate", requireAuth, async (req, res) => {
     try {
@@ -4373,6 +4487,783 @@ The quiz JSON array must contain exactly 4 questions. Each correctIndex is 0-3.`
     } catch (err: any) {
       console.error("Research assess error:", err);
       res.status(500).json({ error: err.message || "Assessment failed" });
+    }
+  });
+
+  /* ── Desktop App Compatibility Routes ───────────────────────── */
+  
+  // Tutor sessions (compatibility - desktop uses /api/tutor/sessions)
+  app.get("/api/tutor/sessions", requireAuth, async (req, res) => {
+    try {
+      const sessions = await storage.getTutorSessionsByUser(req.session.userId!);
+      res.json({ sessions: sessions.map(s => ({ id: s.id, title: s.title, createdAt: s.createdAt })) });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch sessions" });
+    }
+  });
+
+  app.post("/api/tutor/chat", requireAuth, async (req, res) => {
+    try {
+      const { message, subject, history } = req.body;
+      if (!message?.trim()) return res.status(400).json({ error: "Message is required" });
+
+      // Simple AI tutor response using OpenAI
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are a helpful AI tutor for students. ${subject ? `Focus on ${subject}. ` : ""}Provide clear, educational explanations. Be encouraging and help students learn.`,
+          },
+          ...(history || []).map((h: any) => ({ role: h.role, content: h.content })),
+          { role: "user", content: message },
+        ],
+        max_completion_tokens: 1000,
+      });
+
+      const response = completion.choices[0]?.message?.content || "I'm sorry, I couldn't process that.";
+      res.json({ response });
+    } catch (error: any) {
+      console.error("Tutor chat error:", error);
+      res.status(500).json({ error: "Failed to get response" });
+    }
+  });
+
+  // Desktop data persistence using JSON files
+  const DATA_DIR = process.env.DATA_DIR || "/tmp/academia-data";
+
+  function ensureDataDir() {
+    try {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    } catch {}
+  }
+
+  function loadJson<T>(filename: string, defaultValue: T): T {
+    ensureDataDir();
+    const filepath = `${DATA_DIR}/${filename}`;
+    if (!fs.existsSync(filepath)) return defaultValue;
+    try {
+      return JSON.parse(fs.readFileSync(filepath, "utf-8")) as T;
+    } catch {
+      return defaultValue;
+    }
+  }
+
+  function saveJson(filename: string, data: unknown) {
+    ensureDataDir();
+    const filepath = `${DATA_DIR}/${filename}`;
+    try {
+      fs.writeFileSync(filepath, JSON.stringify(data, null, 2), "utf-8");
+    } catch {}
+  }
+
+  // Initialize Maps with persisted data
+  const desktopCoursesData = loadJson<Record<string, any[]>>("courses.json", {});
+  const desktopTutorSessionsData = loadJson<Record<string, any[]>>("tutor-sessions.json", {});
+  const desktopQuizzesData = loadJson<Record<string, any[]>>("quizzes.json", {});
+  const desktopNotesData = loadJson<Record<string, any[]>>("notes.json", {});
+  const desktopEssaysData = loadJson<Record<string, any[]>>("essays.json", {});
+  const desktopUsersByEmailData = loadJson<Record<string, any>>("users-by-email.json", {});
+  const desktopUsersByIdData = loadJson<Record<string, any>>("users-by-id.json", {});
+
+  const desktopCourses = new Map<string, any[]>(Object.entries(desktopCoursesData));
+  const desktopTutorSessions = new Map<string, any[]>(Object.entries(desktopTutorSessionsData));
+  const desktopQuizzes = new Map<string, any[]>(Object.entries(desktopQuizzesData));
+  const desktopNotes = new Map<string, any[]>(Object.entries(desktopNotesData));
+  const desktopEssays = new Map<string, any[]>(Object.entries(desktopEssaysData));
+  const desktopUsersByEmail = new Map<string, any>(Object.entries(desktopUsersByEmailData));
+  const desktopUsersById = new Map<string, any>(Object.entries(desktopUsersByIdData));
+
+  // Persist functions
+  function persistCourses() { saveJson("courses.json", Object.fromEntries(desktopCourses)); }
+  function persistTutorSessions() { saveJson("tutor-sessions.json", Object.fromEntries(desktopTutorSessions)); }
+  function persistQuizzes() { saveJson("quizzes.json", Object.fromEntries(desktopQuizzes)); }
+  function persistNotes() { saveJson("notes.json", Object.fromEntries(desktopNotes)); }
+  function persistEssays() { saveJson("essays.json", Object.fromEntries(desktopEssays)); }
+  function persistUsers() {
+    saveJson("users-by-email.json", Object.fromEntries(desktopUsersByEmail));
+    saveJson("users-by-id.json", Object.fromEntries(desktopUsersById));
+  }
+
+  app.get("/desktop/api/auth/me", async (req, res) => {
+    try {
+      const userId = getDesktopUserId(req);
+      const user = desktopUsersById.get(userId);
+      if (!user) return res.status(401).json({ error: "Authentication required" });
+      const { password: _pw, ...safeUser } = user;
+      res.json({ user: safeUser });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch user" });
+    }
+  });
+
+  app.post("/desktop/api/auth/register", async (req, res) => {
+    try {
+      const { email, password, displayName, role } = req.body as any;
+      if (!email?.trim() || !password?.trim()) return res.status(400).json({ error: "Email and password are required" });
+
+      const existing = desktopUsersByEmail.get(String(email).toLowerCase());
+      if (existing) return res.status(400).json({ error: "Email already registered" });
+
+      const user = {
+        id: crypto.randomUUID(),
+        email: String(email).toLowerCase(),
+        displayName: (displayName && String(displayName).trim()) || "User",
+        role: role === "teacher" ? "teacher" : "student",
+        password: await bcrypt.hash(String(password), 10),
+      };
+
+      desktopUsersByEmail.set(user.email, user);
+      desktopUsersById.set(user.id, user);
+      persistUsers();
+
+      const { password: _pw, ...safeUser } = user;
+      res.status(201).json({ user: safeUser });
+    } catch (error: any) {
+      console.error("Desktop register error:", error);
+      res.status(500).json({ error: "Failed to create account" });
+    }
+  });
+
+  app.post("/desktop/api/auth/login", async (req, res) => {
+    try {
+      const { email, password } = req.body as any;
+      if (!email?.trim() || !password?.trim()) return res.status(400).json({ error: "Email and password are required" });
+
+      const user = desktopUsersByEmail.get(String(email).toLowerCase());
+      if (!user) return res.status(400).json({ error: "Invalid email or password" });
+
+      const ok = await bcrypt.compare(String(password), String(user.password));
+      if (!ok) return res.status(400).json({ error: "Invalid email or password" });
+
+      const { password: _pw, ...safeUser } = user;
+      res.json({ user: safeUser });
+    } catch (error: any) {
+      console.error("Desktop login error:", error);
+      res.status(500).json({ error: "Failed to login" });
+    }
+  });
+
+  app.post("/desktop/api/auth/logout", async (_req, res) => {
+    res.json({ success: true });
+  });
+
+  app.get("/desktop/api/tutor/sessions", async (req, res) => {
+    try {
+      const userId = getDesktopUserId(req);
+      const sessions = desktopTutorSessions.get(userId) || [];
+      res.json({ sessions });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch tutor sessions" });
+    }
+  });
+
+  app.post("/desktop/api/tutor/sessions", async (req, res) => {
+    try {
+      const userId = getDesktopUserId(req);
+      const { subject = "General", title } = req.body || {};
+      const session = {
+        id: crypto.randomUUID(),
+        title: title || `Tutor: ${subject}`,
+        subject,
+        createdAt: new Date().toISOString(),
+      };
+      const list = desktopTutorSessions.get(userId) || [];
+      list.unshift(session);
+      desktopTutorSessions.set(userId, list);
+      persistTutorSessions();
+      res.status(201).json({ session });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to create tutor session" });
+    }
+  });
+
+  app.post("/desktop/api/tutor/chat", async (req, res) => {
+    try {
+      const { message, subject = "General" } = req.body as { message?: string; subject?: string };
+      if (!message?.trim()) return res.status(400).json({ error: "Message is required" });
+
+      const prompt = `You are a helpful tutor. Subject: ${subject}. Answer clearly and step-by-step when needed.\n\nStudent message: ${message}`;
+      const reply = await generateChatCompletion(
+        [{ role: "user", content: prompt }],
+        { max_tokens: 800 }
+      );
+
+      const trimmed = reply.trim();
+      res.json({ reply: trimmed, response: trimmed });
+    } catch (error: any) {
+      console.error("Desktop tutor chat error:", error);
+      res.status(500).json({ error: "Failed to generate response" });
+    }
+  });
+
+  app.get("/desktop/api/courses", async (req, res) => {
+    try {
+      const userId = getDesktopUserId(req);
+      const courses = desktopCourses.get(userId) || [];
+      res.json({ courses });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch courses" });
+    }
+  });
+
+  app.post("/desktop/api/courses", async (req, res) => {
+    try {
+      const userId = getDesktopUserId(req);
+      const { title, subject } = req.body as { title?: string; subject?: string };
+      if (!title?.trim()) return res.status(400).json({ error: "Title is required" });
+
+      const course = {
+        id: crypto.randomUUID(),
+        title: title.trim(),
+        subject: subject || "Other",
+        totalLessons: 0,
+        progress: [],
+        createdAt: new Date().toISOString(),
+      };
+
+      const list = desktopCourses.get(userId) || [];
+      list.unshift(course);
+      desktopCourses.set(userId, list);
+      persistCourses();
+      res.status(201).json({ course });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to create course" });
+    }
+  });
+
+  app.get("/desktop/api/quizzes", async (req, res) => {
+    try {
+      const userId = getDesktopUserId(req);
+      const quizzes = desktopQuizzes.get(userId) || [];
+      res.json({ quizzes });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch quizzes" });
+    }
+  });
+
+  app.post("/desktop/api/quizzes", async (req, res) => {
+    try {
+      const userId = getDesktopUserId(req);
+      const { title, subject, topic, difficulty, questionCount } = req.body;
+
+      const quiz = {
+        id: crypto.randomUUID(),
+        title: title || "Untitled Quiz",
+        subject: subject || "General",
+        topic: topic || "",
+        difficulty: difficulty || "medium",
+        questionCount: questionCount || 5,
+        createdAt: new Date().toISOString(),
+        attempts: 0,
+        status: "draft",
+      };
+
+      const list = desktopQuizzes.get(userId) || [];
+      list.unshift(quiz);
+      desktopQuizzes.set(userId, list);
+      persistQuizzes();
+
+      res.status(201).json({ quiz });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to create quiz" });
+    }
+  });
+
+  app.post("/desktop/api/quizzes/generate", async (req, res) => {
+    try {
+      const userId = getDesktopUserId(req);
+      const { title, subject, topic, difficulty, questionCount } = req.body;
+
+      const prompt = `Create ${questionCount || 5} ${difficulty || "medium"} difficulty multiple choice questions about: ${topic}
+Subject: ${subject}
+
+You MUST output ONLY valid JSON (no markdown, no code fences, no extra text).
+Output format is a JSON array exactly like:
+[{"question":"Question text?","options":["Option A","Option B","Option C","Option D"],"correctIndex":0,"explanation":"Why this is correct"}]
+
+Rules:
+- options must have exactly 4 strings
+- correctIndex must be 0,1,2, or 3
+- keep questions clear and educational`;
+
+      const parseQuestionsFromAi = async (raw: unknown): Promise<any[]> => {
+        const cleaned = String(raw ?? "")
+          .replace(/```json/gi, "")
+          .replace(/```/g, "")
+          .trim();
+
+        const match = cleaned.match(/\[[\s\S]*\]/);
+        const jsonCandidate = match ? match[0] : cleaned;
+        const parsed = JSON.parse(jsonCandidate);
+
+        if (Array.isArray(parsed)) return parsed;
+        if (parsed && typeof parsed === "object" && Array.isArray((parsed as any).questions)) {
+          return (parsed as any).questions;
+        }
+        return [];
+      };
+
+      let text = await generateChatCompletion(
+        [{ role: "user", content: prompt }],
+        { max_tokens: 2000 }
+      );
+
+      let questions: any[] = [];
+      try {
+        questions = await parseQuestionsFromAi(text);
+      } catch {
+        questions = [];
+      }
+
+      if (!Array.isArray(questions) || questions.length === 0) {
+        // One retry with stricter formatting instruction
+        const retryPrompt = `${prompt}\n\nYour previous response was not valid JSON. Return ONLY the JSON now.`;
+        text = await generateChatCompletion(
+          [{ role: "user", content: retryPrompt }],
+          { max_tokens: 2000 }
+        );
+
+        try {
+          questions = await parseQuestionsFromAi(text);
+        } catch {
+          questions = [];
+        }
+      }
+
+      if (!Array.isArray(questions) || questions.length === 0) {
+        return res.status(500).json({ error: "Quiz generation failed: AI did not return valid questions JSON" });
+      }
+
+      const quiz = {
+        id: crypto.randomUUID(),
+        title: title || `Quiz: ${String(topic || "").slice(0, 30)}...`,
+        subject: subject || "General",
+        topic: topic || "",
+        difficulty: difficulty || "medium",
+        questionCount: questions.length || (questionCount || 5),
+        questions,
+        createdAt: new Date().toISOString(),
+        attempts: 0,
+        status: "generated",
+      };
+
+      const list = desktopQuizzes.get(userId) || [];
+      list.unshift(quiz);
+      desktopQuizzes.set(userId, list);
+      persistQuizzes();
+
+      res.status(201).json({ quiz });
+    } catch (error: any) {
+      console.error("Desktop quiz generation error:", error);
+      res.status(500).json({ error: "Failed to generate quiz" });
+    }
+  });
+
+  app.delete("/desktop/api/quizzes/:id", async (req, res) => {
+    try {
+      const userId = getDesktopUserId(req);
+      const quizzes = desktopQuizzes.get(userId) || [];
+      const filtered = quizzes.filter((q: any) => q.id !== req.params.id);
+      desktopQuizzes.set(userId, filtered);
+      persistQuizzes();
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to delete quiz" });
+    }
+  });
+
+  app.get("/desktop/api/notes", async (req, res) => {
+    try {
+      const userId = getDesktopUserId(req);
+      const notes = desktopNotes.get(userId) || [];
+      res.json({ notes });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch notes" });
+    }
+  });
+
+  app.post("/desktop/api/notes", async (req, res) => {
+    try {
+      const userId = getDesktopUserId(req);
+      const { title, content, audioUrl, duration, tags } = req.body;
+
+      let finalContent = typeof content === "string" ? content : "";
+      const safeTitle = typeof title === "string" && title.trim() ? title.trim() : "Untitled Note";
+
+      // If no content is provided, generate helpful lecture notes so the user doesn't see an empty note.
+      if (!finalContent.trim()) {
+        const genPrompt = `You are an expert note-taker.
+
+Create well-structured lecture notes for a lecture titled: "${safeTitle}".
+
+Requirements:
+- Use short headings and bullet points
+- Include key definitions and formulas if relevant
+- Add 5 quick review questions at the end
+
+Return plain text only.`;
+
+        finalContent = await generateChatCompletion(
+          [{ role: "user", content: genPrompt }],
+          { max_tokens: 900 }
+        );
+      }
+
+      const note = {
+        id: crypto.randomUUID(),
+        title: safeTitle,
+        content: finalContent || "",
+        audioUrl: audioUrl || null,
+        duration: duration || null,
+        tags: tags || [],
+        hasTranscript: Boolean(audioUrl),
+        createdAt: new Date().toISOString(),
+      };
+
+      const list = desktopNotes.get(userId) || [];
+      list.unshift(note);
+      desktopNotes.set(userId, list);
+      persistNotes();
+
+      res.status(201).json({ note });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to create note" });
+    }
+  });
+
+  app.delete("/desktop/api/notes/:id", async (req, res) => {
+    try {
+      const userId = getDesktopUserId(req);
+      const notes = desktopNotes.get(userId) || [];
+      const filtered = notes.filter((n: any) => n.id !== req.params.id);
+      desktopNotes.set(userId, filtered);
+      persistNotes();
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to delete note" });
+    }
+  });
+
+  app.get("/desktop/api/essays", async (req, res) => {
+    try {
+      const userId = getDesktopUserId(req);
+      const essays = desktopEssays.get(userId) || [];
+      res.json({ essays });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch essays" });
+    }
+  });
+
+  app.post("/desktop/api/essays", async (req, res) => {
+    try {
+      const userId = getDesktopUserId(req);
+      const { title, topic, subject, type, wordCount } = req.body;
+
+      const essay = {
+        id: crypto.randomUUID(),
+        title: title || "Untitled Essay",
+        topic: topic || "",
+        subject: subject || "General",
+        type: type || "argumentative",
+        wordCount: wordCount || 500,
+        content: null,
+        status: "draft",
+        createdAt: new Date().toISOString(),
+      };
+
+      const list = desktopEssays.get(userId) || [];
+      list.unshift(essay);
+      desktopEssays.set(userId, list);
+      persistEssays();
+
+      res.status(201).json({ essay });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to create essay" });
+    }
+  });
+
+  app.post("/desktop/api/essays/:id/generate", async (req, res) => {
+    try {
+      const userId = getDesktopUserId(req);
+      const essays = desktopEssays.get(userId) || [];
+      const essayIndex = essays.findIndex((e: any) => e.id === req.params.id);
+      if (essayIndex === -1) return res.status(404).json({ error: "Essay not found" });
+
+      const essay = essays[essayIndex];
+
+      const prompt = `Write a ${essay.wordCount || 500}-word ${essay.type} essay about: ${essay.topic}\nSubject: ${essay.subject}\n\nWrite a well-structured essay with introduction, body paragraphs, and conclusion. Use academic tone.`;
+
+      const content = await generateChatCompletion(
+        [{ role: "user", content: prompt }],
+        { max_tokens: 2000 }
+      );
+      essay.content = content;
+      essay.status = "generated";
+      essays[essayIndex] = essay;
+      desktopEssays.set(userId, essays);
+      persistEssays();
+
+      res.json({ essay, content });
+    } catch (error: any) {
+      console.error("Desktop essay generation error:", error);
+      res.status(500).json({ error: "Failed to generate essay" });
+    }
+  });
+
+  app.delete("/desktop/api/essays/:id", async (req, res) => {
+    try {
+      const userId = getDesktopUserId(req);
+      const essays = desktopEssays.get(userId) || [];
+      const filtered = essays.filter((e: any) => e.id !== req.params.id);
+      desktopEssays.set(userId, filtered);
+      persistEssays();
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to delete essay" });
+    }
+  });
+
+  // In-memory storage for desktop app features (quizzes, notes, essays)
+  const desktopQuizzesWeb = new Map<string, any[]>();
+  const desktopNotesWeb = new Map<string, any[]>();
+  const desktopEssaysWeb = new Map<string, any[]>();
+
+  // Quizzes API
+  app.get("/api/quizzes", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const quizzes = desktopQuizzesWeb.get(userId) || [];
+      res.json({ quizzes });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch quizzes" });
+    }
+  });
+
+  app.post("/api/quizzes", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const { title, subject, topic, difficulty, questionCount } = req.body;
+      
+      const quiz = {
+        id: crypto.randomUUID(),
+        title: title || "Untitled Quiz",
+        subject: subject || "General",
+        topic: topic || "",
+        difficulty: difficulty || "medium",
+        questionCount: questionCount || 5,
+        createdAt: new Date().toISOString(),
+        attempts: 0,
+        status: "draft",
+      };
+
+      const userQuizzes = desktopQuizzesWeb.get(userId) || [];
+      userQuizzes.unshift(quiz);
+      desktopQuizzesWeb.set(userId, userQuizzes);
+
+      res.status(201).json({ quiz });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to create quiz" });
+    }
+  });
+
+  app.post("/api/quizzes/generate", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const { title, subject, topic, difficulty, questionCount } = req.body;
+      
+      // Generate quiz questions using AI
+      const prompt = `Create ${questionCount || 5} ${difficulty || "medium"} difficulty multiple choice questions about: ${topic}
+Subject: ${subject}
+
+Return ONLY a JSON array in this format:
+[{"question":"Question text?","options":["Option A","Option B","Option C","Option D"],"correctIndex":0,"explanation":"Why this is correct"}]
+
+Make questions educational and clear.`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        max_completion_tokens: 2000,
+      });
+
+      let questions = [];
+      try {
+        const text = completion.choices[0]?.message?.content || "[]";
+        const match = text.match(/\[[\s\S]*\]/);
+        if (match) questions = JSON.parse(match[0]);
+      } catch {
+        questions = [];
+      }
+
+      const quiz = {
+        id: crypto.randomUUID(),
+        title: title || `Quiz: ${topic.slice(0, 30)}...`,
+        subject: subject || "General",
+        topic: topic || "",
+        difficulty: difficulty || "medium",
+        questionCount: questions.length || (questionCount || 5),
+        questions,
+        createdAt: new Date().toISOString(),
+        attempts: 0,
+        status: "generated",
+      };
+
+      const userQuizzes = desktopQuizzes.get(userId) || [];
+      userQuizzes.unshift(quiz);
+      desktopQuizzes.set(userId, userQuizzes);
+
+      res.status(201).json({ quiz });
+    } catch (error: any) {
+      console.error("Quiz generation error:", error);
+      res.status(500).json({ error: "Failed to generate quiz" });
+    }
+  });
+
+  app.delete("/api/quizzes/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const quizzes = desktopQuizzesWeb.get(userId) || [];
+      const filtered = quizzes.filter((q: any) => q.id !== req.params.id);
+      desktopQuizzesWeb.set(userId, filtered);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to delete quiz" });
+    }
+  });
+
+  // Notes API
+  app.get("/api/notes", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const notes = desktopNotesWeb.get(userId) || [];
+      res.json({ notes });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch notes" });
+    }
+  });
+
+  app.post("/api/notes", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const { title, content, audioUrl, duration, tags } = req.body;
+      
+      const note = {
+        id: crypto.randomUUID(),
+        title: title || "Untitled Note",
+        content: content || "",
+        audioUrl: audioUrl || null,
+        duration: duration || null,
+        tags: tags || [],
+        hasTranscript: false,
+        createdAt: new Date().toISOString(),
+      };
+
+      const userNotes = desktopNotesWeb.get(userId) || [];
+      userNotes.unshift(note);
+      desktopNotesWeb.set(userId, userNotes);
+
+      res.status(201).json({ note });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to create note" });
+    }
+  });
+
+  app.delete("/api/notes/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const notes = desktopNotesWeb.get(userId) || [];
+      const filtered = notes.filter((n: any) => n.id !== req.params.id);
+      desktopNotesWeb.set(userId, filtered);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to delete note" });
+    }
+  });
+
+  // Essays API
+  app.get("/api/essays", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const essays = desktopEssaysWeb.get(userId) || [];
+      res.json({ essays });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch essays" });
+    }
+  });
+
+  app.post("/api/essays", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const { title, topic, subject, type, wordCount } = req.body;
+      
+      const essay = {
+        id: crypto.randomUUID(),
+        title: title || "Untitled Essay",
+        topic: topic || "",
+        subject: subject || "General",
+        type: type || "argumentative",
+        wordCount: wordCount || 500,
+        content: null,
+        status: "draft",
+        createdAt: new Date().toISOString(),
+      };
+
+      const userEssays = desktopEssaysWeb.get(userId) || [];
+      userEssays.unshift(essay);
+      desktopEssaysWeb.set(userId, userEssays);
+
+      res.status(201).json({ essay });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to create essay" });
+    }
+  });
+
+  app.post("/api/essays/:id/generate", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const essays = desktopEssaysWeb.get(userId) || [];
+      const essayIndex = essays.findIndex((e: any) => e.id === req.params.id);
+      
+      if (essayIndex === -1) return res.status(404).json({ error: "Essay not found" });
+      
+      const essay = essays[essayIndex];
+      
+      // Generate essay content using AI
+      const prompt = `Write a ${essay.wordCount || 500}-word ${essay.type} essay about: ${essay.topic}
+Subject: ${essay.subject}
+
+Write a well-structured essay with introduction, body paragraphs, and conclusion. Use academic tone.`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        max_completion_tokens: 2000,
+      });
+
+      const content = completion.choices[0]?.message?.content || "";
+      
+      essay.content = content;
+      essay.status = "generated";
+      essays[essayIndex] = essay;
+      desktopEssaysWeb.set(userId, essays);
+
+      res.json({ essay, content });
+    } catch (error: any) {
+      console.error("Essay generation error:", error);
+      res.status(500).json({ error: "Failed to generate essay" });
+    }
+  });
+
+  app.delete("/api/essays/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const essays = desktopEssaysWeb.get(userId) || [];
+      const filtered = essays.filter((e: any) => e.id !== req.params.id);
+      desktopEssaysWeb.set(userId, filtered);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to delete essay" });
     }
   });
 

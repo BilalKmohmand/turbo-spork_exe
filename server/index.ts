@@ -8,12 +8,21 @@ import { pool } from "./db";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import compression from "compression";
+import cors from "cors";
 
 const app = express();
 const IS_PROD = process.env.NODE_ENV === "production";
 
 /* ── Trust proxy (Replit) ────────────────────────────────────────── */
 app.set("trust proxy", 1);
+
+/* ── CORS for Electron desktop app ───────────────────────────────── */
+app.use(cors({
+  origin: true,
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "x-desktop-user"],
+}));
 
 /* ── Compression ─────────────────────────────────────────────────── */
 app.use(compression({
@@ -39,6 +48,7 @@ app.use(helmet({
       workerSrc: ["'self'", "blob:"],
     },
   } : false,
+  frameguard: IS_PROD ? { action: "sameorigin" } : false,
   crossOriginEmbedderPolicy: false,
   crossOriginResourcePolicy: { policy: "cross-origin" },
 }));
@@ -105,12 +115,14 @@ const httpServer = createServer(app);
 
 app.use(
   session({
-    store: new PgSession({
-      pool,
-      tableName: "user_sessions",
-      createTableIfMissing: true,
-      pruneSessionInterval: 60 * 60, // prune expired sessions every hour
-    }),
+    store: IS_PROD
+      ? new PgSession({
+          pool,
+          tableName: "user_sessions",
+          createTableIfMissing: true,
+          pruneSessionInterval: 60 * 60, // prune expired sessions every hour
+        })
+      : new session.MemoryStore(),
     secret: process.env.SESSION_SECRET || "dev-fallback-secret-change-in-prod",
     resave: false,
     saveUninitialized: false,
@@ -186,7 +198,7 @@ app.use((req, res, next) => {
   }
 
   const port = parseInt(process.env.PORT || "5000", 10);
-  httpServer.listen({ port, host: "0.0.0.0", reusePort: true }, () => {
+  httpServer.listen({ port, host: "0.0.0.0" }, () => {
     log(`serving on port ${port} (${IS_PROD ? "production" : "development"})`);
   });
 
