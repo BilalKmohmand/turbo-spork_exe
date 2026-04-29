@@ -4,6 +4,7 @@ const fs = require("fs");
 
 const rootDir = path.resolve(__dirname, "..", "..");
 const outDir = path.resolve(__dirname, "..", "backend");
+const nodeModulesDir = path.resolve(__dirname, "..", "node_modules");
 
 fs.mkdirSync(outDir, { recursive: true });
 
@@ -13,6 +14,7 @@ build({
   bundle: true,
   format: "cjs",
   target: "node18",
+  nodePaths: [nodeModulesDir],
   outfile: path.join(outDir, "desktop-server.cjs"),
   sourcemap: false,
   minify: true,
