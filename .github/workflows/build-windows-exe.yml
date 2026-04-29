@@ -32,6 +32,10 @@ jobs:
         working-directory: welcome-hub-main
         run: npm ci
 
+      - name: Build bundled backend
+        working-directory: welcome-hub-main
+        run: npm run backend:build
+
       - name: Build Windows installer (NSIS)
         working-directory: welcome-hub-main
         run: npm run desktop:dist:win

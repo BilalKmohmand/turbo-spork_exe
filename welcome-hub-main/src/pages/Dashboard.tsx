@@ -7,7 +7,6 @@ import {
   GraduationCap,
   LogOut,
   NotebookPen,
-  WifiOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -46,22 +45,10 @@ const Dashboard = () => {
   const user = useMemo(() => getStoredUser(), []);
 
   const [active, setActive] = useState<NavItem["id"]>("ai-tutor");
-  const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
 
   useEffect(() => {
     if (!user) navigate("/");
   }, [navigate, user]);
-
-  useEffect(() => {
-    const onOnline = () => setIsOnline(true);
-    const onOffline = () => setIsOnline(false);
-    window.addEventListener("online", onOnline);
-    window.addEventListener("offline", onOffline);
-    return () => {
-      window.removeEventListener("online", onOnline);
-      window.removeEventListener("offline", onOffline);
-    };
-  }, []);
 
   const handleLogout = () => {
     apiFetch<{ success: true }>("/api/auth/logout", { method: "POST" })
@@ -145,23 +132,9 @@ const Dashboard = () => {
           </header>
 
           <div className="flex-1 p-6 min-w-0">
-            {!isOnline ? (
-              <div className="h-full flex items-center justify-center">
-                <div className="max-w-md w-full rounded-2xl border border-border bg-card p-8 text-center">
-                  <div className="mx-auto w-14 h-14 rounded-2xl bg-destructive/10 flex items-center justify-center mb-4">
-                    <WifiOff className="w-6 h-6 text-destructive" />
-                  </div>
-                  <h2 className="text-xl font-bold">You’re offline</h2>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Check your internet connection to load TheHighGrader dashboard.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="h-full min-h-[calc(100vh-7rem)] rounded-2xl border border-border bg-card overflow-hidden">
-                <ActivePage />
-              </div>
-            )}
+            <div className="h-full min-h-[calc(100vh-7rem)] rounded-2xl border border-border bg-card overflow-hidden">
+              <ActivePage />
+            </div>
           </div>
         </main>
       </div>

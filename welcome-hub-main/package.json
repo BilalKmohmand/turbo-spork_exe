@@ -9,8 +9,9 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "desktop:dev": "concurrently -k \"vite\" \"wait-on http://localhost:8080 && electron .\"",
-    "desktop:dist:mac": "npm run build && electron-builder --mac dmg",
-    "desktop:dist:win": "npm run build && electron-builder --win nsis",
+    "backend:build": "node ./scripts/build-backend.cjs",
+    "desktop:dist:mac": "npm run build && npm run backend:build && electron-builder --mac dmg",
+    "desktop:dist:win": "npm run build && npm run backend:build && electron-builder --win nsis",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
@@ -101,9 +102,13 @@
     "directories": {
       "output": "release"
     },
+    "asarUnpack": [
+      "backend/**"
+    ],
     "files": [
       "dist/**",
       "electron/**",
+      "backend/**",
       "package.json"
     ],
     "mac": {
